@@ -30,6 +30,13 @@ export const MOCK_MUSTAHIK = [
   { id:28, nik_hashed:'hash028', nama:'Iwan Setiawan',         nik:'3273010301710028', desil:4, jenis_kelamin:'m', usia:55, kecamatan:'Babakan Ciparay', kelurahan:'Sukahaji',      kab_kota:'Kota Bandung',     provinsi:'Jawa Barat',  jumlah_tanggungan:3, pekerjaan:'Tukang Sol Sepatu',penghasilan:800000, status_pernikahan:'Menikah',    agama:'Islam',   nominal:480000,   keterangan:'-' },
   { id:29, nik_hashed:'hash029', nama:'Tuti Alawiyah',         nik:'3273010401760029', desil:1, jenis_kelamin:'f', usia:50, kecamatan:'Regol',           kelurahan:'Balong Gede',   kab_kota:'Kota Bandung',     provinsi:'Jawa Barat',  jumlah_tanggungan:5, pekerjaan:'Tidak Bekerja',   penghasilan:0,       status_pernikahan:'Cerai Mati', agama:'Islam',   nominal:1900000,  keterangan:'Janda miskin banyak tanggungan' },
   { id:30, nik_hashed:'hash030', nama:'Firman Hidayat',        nik:'3273010501920030', desil:3, jenis_kelamin:'m', usia:33, kecamatan:'Astanaanyar',     kelurahan:'Panjunan',      kab_kota:'Kota Bandung',     provinsi:'Jawa Barat',  jumlah_tanggungan:2, pekerjaan:'Buruh Harian',    penghasilan:1000000, status_pernikahan:'Menikah',    agama:'Islam',   nominal:660000,   keterangan:'-' },
+
+  // --- Data desil 5-10 (tidak memenuhi kriteria mustahik) ---
+  { id:31, nik_hashed:'hash031', nama:'Hartono Wijaya',        nik:'3201019901990031', desil:6, jenis_kelamin:'m', usia:40, kecamatan:'Bogor Utara',    kelurahan:'Tanah Baru',    kab_kota:'Kota Bogor',       provinsi:'Jawa Barat',  jumlah_tanggungan:2, pekerjaan:'Pegawai Swasta',  penghasilan:4500000, status_pernikahan:'Menikah',    agama:'Islam',   nominal:0,        keterangan:'-' },
+  { id:32, nik_hashed:'hash032', nama:'Dewi Kusuma',           nik:'3578019901990032', desil:8, jenis_kelamin:'f', usia:35, kecamatan:'Tambaksari',      kelurahan:'Pacarkeling',   kab_kota:'Kota Surabaya',    provinsi:'Jawa Timur',  jumlah_tanggungan:3, pekerjaan:'Wiraswasta',      penghasilan:6000000, status_pernikahan:'Menikah',    agama:'Islam',   nominal:0,        keterangan:'-' },
+  { id:33, nik_hashed:'hash033', nama:'Andi Prasetyo',         nik:'3374019901990033', desil:7, jenis_kelamin:'m', usia:45, kecamatan:'Tembalang',       kelurahan:'Tembalang',     kab_kota:'Kota Semarang',    provinsi:'Jawa Tengah', jumlah_tanggungan:4, pekerjaan:'PNS',             penghasilan:5500000, status_pernikahan:'Menikah',    agama:'Islam',   nominal:0,        keterangan:'-' },
+  { id:34, nik_hashed:'hash034', nama:'Sri Wahyuni',           nik:'3275019901990034', desil:5, jenis_kelamin:'f', usia:38, kecamatan:'Karawaci',        kelurahan:'Karawaci',      kab_kota:'Kota Tangerang',   provinsi:'Banten',      jumlah_tanggungan:2, pekerjaan:'Guru Honorer',    penghasilan:2800000, status_pernikahan:'Menikah',    agama:'Islam',   nominal:0,        keterangan:'-' },
+  { id:35, nik_hashed:'hash035', nama:'Rizky Ramadan',         nik:'3273019901990035', desil:9, jenis_kelamin:'m', usia:29, kecamatan:'Coblong',         kelurahan:'Dago',          kab_kota:'Kota Bandung',     provinsi:'Jawa Barat',  jumlah_tanggungan:1, pekerjaan:'Karyawan Swasta', penghasilan:7000000, status_pernikahan:'Belum Menikah', agama:'Islam', nominal:0,        keterangan:'-' },
 ]
 
 export const DESIL_COLORS = {
@@ -42,7 +49,7 @@ export const DESIL_COLORS = {
 export const SUMMARY_STATS = {
   total_mustahik: 30,
   total_kk: 28,
-  total_nominal: MOCK_MUSTAHIK.reduce((a,b)=>a+b.nominal,0),
+  total_nominal: MOCK_MUSTAHIK.filter(m => m.desil <= 4).reduce((a,b)=>a+b.nominal,0),
   desil_breakdown: [1,2,3,4].map(d=>({
     desil: d,
     jumlah: MOCK_MUSTAHIK.filter(m=>m.desil===d).length,
