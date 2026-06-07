@@ -61,7 +61,6 @@
             <span v-if="emailLoading" class="spinner"></span>
             <span v-else>Verifikasi OTP Email</span>
           </button>
-          <!-- prototype hint -->
           <p class="proto-hint">🔧 Prototype: gunakan kode <strong>845988</strong></p>
         </div>
       </transition>
@@ -164,7 +163,7 @@ function submitWaOtp() {
 
 function handleLogout() {
   auth.logout()
-  router.push({ name: 'login' })
+  router.push({ name: 'home' })
 }
 
 // Auto-redirect when both OTPs done
@@ -219,7 +218,6 @@ watch(() => auth.isOtpComplete, (done) => {
   margin: 0 auto;
 }
 
-/* Steps */
 .steps {
   display: flex;
   align-items: flex-start;
@@ -304,7 +302,6 @@ watch(() => auth.isOtpComplete, (done) => {
   opacity: 0.5;
 }
 
-/* Form */
 .otp-form {
   margin-bottom: 1rem;
 }
@@ -422,7 +419,6 @@ watch(() => auth.isOtpComplete, (done) => {
   font-size: 1rem;
 }
 
-/* All done */
 .success-full {
   text-align: center;
   padding: 1.5rem 0;
@@ -466,7 +462,6 @@ watch(() => auth.isOtpComplete, (done) => {
   color: #28251d;
 }
 
-/* Transitions */
 .slide-enter-active, .slide-leave-active {
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }

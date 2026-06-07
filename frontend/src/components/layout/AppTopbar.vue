@@ -48,6 +48,6 @@ const breadcrumbItems = computed(() => {
 
 function handleLogout() {
   authStore.logout()
-  router.push({ name: 'login' })
+  router.push({ name: 'home' })
 }
 </script>
