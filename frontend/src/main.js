@@ -9,6 +9,10 @@ import router from './router'
 import App from './App.vue'
 import 'primeicons/primeicons.css'
 import './assets/main.css'
+import { initViewGuard } from './composables/useViewGuard'
+
+// Aktifkan view-only protection (dikontrol via VITE_VIEW_ONLY di .env)
+initViewGuard()
 
 const app = createApp(App)
 
