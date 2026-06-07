@@ -45,9 +45,9 @@
         </ul>
 
         <!-- Divider -->
-        <div class="my-3 mx-3 border-t border-primary-800"></div>
+        <!-- <div class="my-3 mx-3 border-t border-primary-800"></div> -->
 
-        <!-- Secondary items -->
+        <!-- Secondary items
         <ul class="space-y-0.5 px-2">
           <li v-for="item in secondaryItems" :key="item.to">
             <router-link
@@ -66,7 +66,7 @@
               </transition>
             </router-link>
           </li>
-        </ul>
+        </ul> -->
       </nav>
 
       <!-- User section -->
@@ -200,7 +200,7 @@ const pageLabels = {
   '/dashboard': 'Dashboard',
   '/mustahik':  'Data Mustahik',
   '/report':    'Pemeriksaan DTSEN',
-  '/laz':       'Data LAZ',
+  // '/laz':       'Data LAZ',
 }
 const currentPageLabel = computed(() => pageLabels[route.path] || 'Halaman')
 
