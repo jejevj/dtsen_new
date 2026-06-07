@@ -64,7 +64,6 @@ const userInitials = computed(() => {
 const menuItems = [
   { to: '/dashboard', label: 'Dashboard',     icon: 'pi pi-home' },
   { to: '/mustahik',  label: 'Data Mustahik', icon: 'pi pi-users' },
-  { to: '/report',    label: 'Laporan',        icon: 'pi pi-chart-line' },
-  { to: '/laz',       label: 'Data LAZ',       icon: 'pi pi-building' },
+  { to: '/cari-data', label: 'Cari Data',     icon: 'pi pi-search' },
 ]
 </script>

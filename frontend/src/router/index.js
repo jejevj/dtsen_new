@@ -31,11 +31,13 @@ const routes = [
     meta: { requiresAuth: true, requiresOtp: true }
   },
   {
-    path: '/report',
-    name: 'report',
-    component: () => import('@/views/ReportView.vue'),
+    path: '/cari-data',
+    name: 'cari-data',
+    component: () => import('@/views/CariDataView.vue'),
     meta: { requiresAuth: true, requiresOtp: true }
-  }
+  },
+  // redirect /report ke /cari-data agar link lama tidak 404
+  { path: '/report', redirect: '/cari-data' },
 ]
 
 const router = createRouter({
@@ -46,22 +48,18 @@ const router = createRouter({
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
 
-  // Route requires full OTP verification
   if (to.meta.requiresOtp) {
     if (!auth.isAuthenticated) return next({ name: 'login' })
     if (!auth.isOtpComplete)   return next({ name: 'verify-otp' })
     return next()
   }
 
-  // Route requires login only (OTP page itself)
   if (to.meta.requiresLogin) {
     if (!auth.isAuthenticated) return next({ name: 'login' })
-    // Already completed OTP → skip OTP page, go to dashboard
     if (auth.isOtpComplete)    return next({ name: 'dashboard' })
     return next()
   }
 
-  // Old requiresAuth guard (fallback compat)
   if (to.meta.requiresAuth && !auth.canAccessDashboard) {
     return next({ name: 'login' })
   }

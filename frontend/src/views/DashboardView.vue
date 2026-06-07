@@ -11,16 +11,14 @@
             <span style="margin-left:8px;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;"
               :style="roleBadgeStyle">{{ authStore.user?.role || 'operator' }}</span>
           </p>
+          <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Data mustahik desil 1–4 · Tahun 2024</p>
         </div>
-        <Button icon="pi pi-refresh" label="Perbarui" outlined size="small" :loading="loading" @click="loadData" />
+        <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:8px;font-size:11px;font-weight:600;">PROTOTYPE · Data Simulasi</span>
       </div>
 
       <!-- Stat Cards -->
-      <div class="grid-4" style="display:grid;gap:16px;">
-        <div
-          v-for="stat in statCards" :key="stat.label"
-          style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
-        >
+      <div class="grid-4">
+        <div v-for="stat in statCards" :key="stat.label" class="stat-card">
           <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
             <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
           </div>
@@ -30,33 +28,57 @@
         </div>
       </div>
 
-      <!-- Charts row 1 -->
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row-1">
-        <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
-          <Chart type="pie" :data="genderChartData" :options="pieOpts" style="height:220px;" />
-        </div>
-        <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Tren Penyaluran Tahunan</p>
-          <Chart type="bar" :data="trendChartData" :options="barOpts" style="height:220px;" />
+      <!-- Desil breakdown cards -->
+      <div>
+        <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 12px;">Distribusi Mustahik per Desil</p>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
+          <div v-for="d in SUMMARY_STATS.desil_breakdown" :key="d.desil"
+            style="border-radius:14px;padding:18px;text-align:center;"
+            :style="{ background:DESIL_COLORS[d.desil].bg, border:`1px solid ${DESIL_COLORS[d.desil].text}22` }">
+            <p style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;" :style="{color:DESIL_COLORS[d.desil].text}">Desil {{ d.desil }}</p>
+            <p style="font-size:2rem;font-weight:900;margin:0 0 2px;" :style="{color:DESIL_COLORS[d.desil].text}">{{ d.jumlah }}</p>
+            <p style="font-size:11px;color:#64748b;margin:0 0 6px;">mustahik</p>
+            <p style="font-size:12px;font-weight:600;margin:0;" :style="{color:DESIL_COLORS[d.desil].text}">{{ formatRupiah(d.total_nominal) }}</p>
+          </div>
         </div>
       </div>
 
-      <!-- Charts row 2 -->
-      <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-        <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Penyaluran per Bidang Program</p>
-        <Chart type="bar" :data="bidangChartData" :options="hBarOpts" style="height:280px;" />
+      <!-- Charts row -->
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
+        <!-- Gender Pie -->
+        <div class="card-box">
+          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
+          <Chart type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
+          <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
+            <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>L: {{ SUMMARY_STATS.by_gender.m }}</span>
+            <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>P: {{ SUMMARY_STATS.by_gender.f }}</span>
+          </div>
+        </div>
+        <!-- Desil Bar -->
+        <div class="card-box">
+          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Mustahik per Desil</p>
+          <Chart type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
+        </div>
+      </div>
+
+      <!-- Sebaran Provinsi -->
+      <div class="card-box">
+        <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Sebaran Mustahik per Provinsi</p>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div v-for="p in SUMMARY_STATS.by_provinsi" :key="p.nama"
+            style="flex:1;min-width:160px;background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+            <p style="font-size:12px;color:#64748b;margin:0 0 4px;">{{ p.nama }}</p>
+            <p style="font-size:1.4rem;font-weight:800;color:#1e293b;margin:0;">{{ p.jumlah }}</p>
+            <div style="margin-top:8px;background:#e2e8f0;border-radius:4px;height:6px;">
+              <div :style="{ width: (p.jumlah/SUMMARY_STATS.total_mustahik*100)+'%', height:'6px', borderRadius:'4px', background:'#3b82f6' }"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Quick nav -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" class="quick-nav">
-        <div
-          v-for="nav in quickNav" :key="nav.label"
-          style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05);cursor:pointer;transition:box-shadow 0.2s;"
-          @click="$router.push(nav.to)"
-          @mouseenter="e=>e.currentTarget.style.boxShadow='0 4px 16px rgba(0,0,0,0.1)'"
-          @mouseleave="e=>e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.05)'"
-        >
+        <div v-for="nav in quickNav" :key="nav.label" class="nav-card" @click="$router.push(nav.to)">
           <div :style="{ width:'40px', height:'40px', borderRadius:'10px', background:nav.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'12px' }">
             <i :class="nav.icon" :style="{ color:nav.iconColor, fontSize:'17px' }"></i>
           </div>
@@ -70,39 +92,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import Button    from 'primevue/button'
+import { computed } from 'vue'
 import Chart     from 'primevue/chart'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import ReportService from '@/services/report'
 import { useAuthStore } from '@/stores/auth'
 import { formatRupiah } from '@/utils/formatter'
+import { SUMMARY_STATS, DESIL_COLORS } from '@/data/mockMustahik'
 
 const authStore = useAuthStore()
-const loading   = ref(false)
-const summary   = ref({ total_penyaluran:0, penerima_manfaat:0, nasional:0, provinsi:0, kabkota:0 })
-const gender    = ref({ male_count:0, female_count:0 })
-const bidang    = ref([])
-const trend     = ref([])
-
-async function loadData() {
-  loading.value = true
-  try {
-    const [s, g, b, t] = await Promise.all([
-      ReportService.getHomeSummary(),
-      ReportService.getByGender({}),
-      ReportService.getByBidang({}),
-      ReportService.getTimeseries({}),
-    ])
-    summary.value = s
-    gender.value  = g
-    bidang.value  = b
-    trend.value   = t
-  } finally {
-    loading.value = false
-  }
-}
-onMounted(loadData)
 
 const roleBadgeStyle = computed(() => {
   const map = {
@@ -114,49 +111,68 @@ const roleBadgeStyle = computed(() => {
 })
 
 const statCards = computed(() => [
-  { label:'Total Penyaluran', value:formatRupiah(summary.value.total_penyaluran||0), sub:'Seluruh LAZ',          icon:'pi pi-wallet',   iconBg:'#f0fdf4', iconColor:'#16a34a' },
-  { label:'Penerima Manfaat', value:(summary.value.penerima_manfaat||0).toLocaleString('id-ID'), sub:'Mustahik unik', icon:'pi pi-users',  iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'LAZ Terdaftar',    value:((summary.value.nasional||0)+(summary.value.provinsi||0)+(summary.value.kabkota||0)).toLocaleString('id-ID'), sub:'Nasional+Provinsi+Kab', icon:'pi pi-building', iconBg:'#faf5ff', iconColor:'#7c3aed' },
-  { label:'Bidang Program',   value:(bidang.value.length||0)+'', sub:'Kategori aktif', icon:'pi pi-list', iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Total Mustahik',     value: SUMMARY_STATS.total_mustahik.toLocaleString('id-ID'),       sub:'Desil 1–4',          icon:'pi pi-users',    iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Total KK',           value: SUMMARY_STATS.total_kk.toLocaleString('id-ID'),             sub:'Kepala Keluarga',    icon:'pi pi-home',     iconBg:'#f0fdf4', iconColor:'#16a34a' },
+  { label:'Total Penyaluran',   value: formatRupiah(SUMMARY_STATS.total_nominal),                  sub:'Nilai bantuan',      icon:'pi pi-wallet',   iconBg:'#faf5ff', iconColor:'#7c3aed' },
+  { label:'Provinsi Terlayani', value: SUMMARY_STATS.by_provinsi.length+'',                        sub:'Cakupan wilayah',    icon:'pi pi-map-marker',iconBg:'#fff7ed', iconColor:'#ea580c' },
 ])
 
 const genderChartData = computed(() => ({
   labels: ['Laki-laki','Perempuan'],
-  datasets: [{ data:[gender.value.male_count||0, gender.value.female_count||0], backgroundColor:['#3b82f6','#f472b6'], borderWidth:0 }]
-}))
-const trendChartData = computed(() => ({
-  labels: trend.value.map(d=>d.tahun),
-  datasets: [
-    { label:'Bantuan Langsung',      data:trend.value.map(d=>d.Bantuan_Langsung||0),      backgroundColor:'#16a34a' },
-    { label:'Bantuan Tidak Langsung',data:trend.value.map(d=>d.Bantuan_Tidak_Langsung||0),backgroundColor:'#f59e0b' },
-  ]
-}))
-const bidangChartData = computed(() => ({
-  labels: bidang.value.map(d=>d.bidang_label),
-  datasets:[{ label:'Total Penyaluran (Rp)', data:bidang.value.map(d=>d.total_penyaluran||0), backgroundColor:'rgba(22,163,74,0.75)', borderRadius:4 }]
+  datasets:[{ data:[SUMMARY_STATS.by_gender.m, SUMMARY_STATS.by_gender.f], backgroundColor:['#3b82f6','#f472b6'], borderWidth:0 }]
 }))
 
-const pieOpts  = { plugins:{ legend:{ position:'bottom' } }, responsive:true, maintainAspectRatio:false }
-const barOpts  = { plugins:{ legend:{ position:'bottom' } }, responsive:true, maintainAspectRatio:false, scales:{ y:{ ticks:{ callback:v=>formatRupiah(v) } } } }
-const hBarOpts = { indexAxis:'y', plugins:{ legend:{ display:false } }, responsive:true, maintainAspectRatio:false, scales:{ x:{ ticks:{ callback:v=>formatRupiah(v) } } } }
+const desilBarData = computed(() => ({
+  labels: SUMMARY_STATS.desil_breakdown.map(d=>'Desil '+d.desil),
+  datasets:[{
+    label: 'Jumlah Mustahik',
+    data: SUMMARY_STATS.desil_breakdown.map(d=>d.jumlah),
+    backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e'],
+    borderRadius: 6,
+  }]
+}))
+
+const pieOpts = { plugins:{ legend:{ display:false } }, responsive:true, maintainAspectRatio:false }
+const barOpts = {
+  plugins:{ legend:{ display:false } },
+  responsive:true, maintainAspectRatio:false,
+  scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+}
 
 const quickNav = [
-  { label:'Data Mustahik', desc:'Lihat & filter daftar penerima', to:'/mustahik', icon:'pi pi-users',    iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'Laporan',       desc:'Analitik & grafik penyaluran',    to:'/report',   icon:'pi pi-chart-bar', iconBg:'#f0fdf4', iconColor:'#16a34a' },
-  { label:'Peta Sebaran',  desc:'Visualisasi peta Indonesia',      to:'/',         icon:'pi pi-map',      iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Data Mustahik', desc:'Lihat & filter daftar penerima', to:'/mustahik',  icon:'pi pi-users',    iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Cari Data',     desc:'Pencarian mustahik & filter NIK', to:'/cari-data', icon:'pi pi-search',   iconBg:'#f0fdf4', iconColor:'#16a34a' },
+  { label:'Beranda',       desc:'Kembali ke halaman publik',       to:'/',          icon:'pi pi-globe',    iconBg:'#fff7ed', iconColor:'#ea580c' },
 ]
 </script>
 
 <style scoped>
-.grid-4 { grid-template-columns: repeat(4,1fr); }
-.chart-row-1 { grid-template-columns: 1fr 2fr; }
-.quick-nav   { grid-template-columns: repeat(3,1fr); }
+.grid-4  { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+.desil-grid { }
+.chart-row { grid-template-columns:1fr 2fr; }
+.quick-nav { grid-template-columns:repeat(3,1fr); }
+.stat-card {
+  background:white; border-radius:16px; border:1px solid #f1f5f9;
+  padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.05);
+}
+.card-box {
+  background:white; border-radius:16px; border:1px solid #f1f5f9;
+  padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.05);
+}
+.nav-card {
+  background:white; border-radius:16px; border:1px solid #f1f5f9;
+  padding:20px; box-shadow:0 1px 4px rgba(0,0,0,0.05);
+  cursor:pointer; transition:box-shadow 0.2s;
+}
+.nav-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1); }
 @media (max-width:1024px) {
-  .grid-4      { grid-template-columns: repeat(2,1fr); }
-  .chart-row-1 { grid-template-columns: 1fr; }
+  .grid-4    { grid-template-columns:repeat(2,1fr); }
+  .chart-row { grid-template-columns:1fr; }
+  .desil-grid { grid-template-columns:repeat(2,1fr) !important; }
 }
 @media (max-width:640px) {
-  .grid-4    { grid-template-columns: 1fr 1fr; }
-  .quick-nav { grid-template-columns: 1fr; }
+  .grid-4    { grid-template-columns:1fr 1fr; }
+  .quick-nav { grid-template-columns:1fr; }
+  .desil-grid { grid-template-columns:repeat(2,1fr) !important; }
 }
 </style>
