@@ -11,19 +11,37 @@
  *  - Keyboard shortcuts DevTools:
  *      F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U (view source)
  *  - DevTools console detection (debugger trap loop)
+ *
+ * Toast bridge:
+ *  Karena composable ini dijalankan sebelum app Vue di-mount,
+ *  toast PrimeVue tidak bisa dipanggil langsung.
+ *  Solusi: dispatch CustomEvent 'vg:blocked' yang ditangkap oleh App.vue.
  */
+
+function dispatchBlocked(message) {
+  window.dispatchEvent(new CustomEvent('vg:blocked', { detail: { message } }))
+}
+
 export function initViewGuard() {
   const enabled = import.meta.env.VITE_VIEW_ONLY === 'true'
   if (!enabled) return
 
   // 1. Disable klik kanan
-  document.addEventListener('contextmenu', (e) => e.preventDefault(), true)
+  document.addEventListener('contextmenu', (e) => {
+    e.preventDefault()
+    dispatchBlocked('Klik kanan tidak diizinkan pada halaman ini.')
+  }, true)
 
   // 2. Disable text selection via event
-  document.addEventListener('selectstart', (e) => e.preventDefault(), true)
+  document.addEventListener('selectstart', (e) => {
+    e.preventDefault()
+  }, true)
 
   // 3. Disable drag
-  document.addEventListener('dragstart', (e) => e.preventDefault(), true)
+  document.addEventListener('dragstart', (e) => {
+    e.preventDefault()
+    dispatchBlocked('Fitur drag tidak diizinkan pada halaman ini.')
+  }, true)
 
   // 4. Inject CSS: user-select none + cursor default pada seluruh halaman
   const style = document.createElement('style')
@@ -49,34 +67,40 @@ export function initViewGuard() {
     const key   = e.key
 
     // F12
-    if (key === 'F12') { e.preventDefault(); return }
+    if (key === 'F12') {
+      e.preventDefault()
+      dispatchBlocked('Akses Developer Tools tidak diizinkan.')
+      return
+    }
 
     // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (Chrome DevTools)
     if (ctrl && shift && ['i','I','j','J','c','C'].includes(key)) {
-      e.preventDefault(); return
+      e.preventDefault()
+      dispatchBlocked('Akses Developer Tools tidak diizinkan.')
+      return
     }
 
     // Ctrl+U (View Page Source)
     if (ctrl && ['u','U'].includes(key)) {
-      e.preventDefault(); return
+      e.preventDefault()
+      dispatchBlocked('Melihat sumber halaman tidak diizinkan.')
+      return
     }
 
     // Ctrl+S (Save page)
     if (ctrl && ['s','S'].includes(key)) {
-      e.preventDefault(); return
+      e.preventDefault()
+      dispatchBlocked('Menyimpan halaman tidak diizinkan.')
+      return
     }
-
-    // Ctrl+P (Print — optional, uncomment jika perlu)
-    // if (ctrl && ['p','P'].includes(key)) { e.preventDefault(); return }
   }, true)
 
   // 6. DevTools open detection via debugger trap
   //    Saat DevTools terbuka, debugger statement menyebabkan delay terdeteksi
-  //    dan halaman akan di-reload atau ditampilkan overlay peringatan.
+  //    dan halaman akan ditampilkan overlay peringatan.
   ;(function devtoolsDetect() {
     let devtoolsOpen = false
-
-    const threshold = 160 // ms — DevTools memperlambat loop
+    const threshold  = 160 // ms
 
     function check() {
       const start = performance.now()
@@ -87,6 +111,7 @@ export function initViewGuard() {
       if (delta > threshold) {
         if (!devtoolsOpen) {
           devtoolsOpen = true
+          dispatchBlocked('Developer Tools terdeteksi terbuka. Tutup untuk melanjutkan.')
           showDevtoolsWarning()
         }
       } else {
