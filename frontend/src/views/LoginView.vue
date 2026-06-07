@@ -44,6 +44,33 @@
           <p v-if="errors.password" class="error-msg">{{ errors.password }}</p>
         </div>
 
+        <!-- CAPTCHA -->
+        <div class="form-group">
+          <label for="captcha">Verifikasi Keamanan</label>
+          <div class="captcha-box">
+            <div class="captcha-question">
+              <span class="captcha-text">{{ captcha.question }}</span>
+              <button type="button" class="captcha-refresh" @click="refreshCaptcha" aria-label="Refresh CAPTCHA">
+                <svg viewBox="0 0 20 20" fill="none" :class="{ spinning: captchaRefreshing }">
+                  <path d="M4 4a7 7 0 1 1 0 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M4 1v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+            <input
+              id="captcha"
+              v-model="captchaAnswer"
+              type="text"
+              inputmode="numeric"
+              placeholder="Jawaban"
+              :class="{ error: errors.captcha }"
+              autocomplete="off"
+              maxlength="4"
+            />
+          </div>
+          <p v-if="errors.captcha" class="error-msg">{{ errors.captcha }}</p>
+        </div>
+
         <p v-if="errors.global" class="error-msg global-error">{{ errors.global }}</p>
 
         <button type="submit" class="btn-primary" :disabled="loading">
@@ -66,26 +93,72 @@ const auth   = useAuthStore()
 const router = useRouter()
 
 const form = reactive({ email: '', password: '' })
-const errors = reactive({ email: '', password: '', global: '' })
+const errors = reactive({ email: '', password: '', captcha: '', global: '' })
 const loading      = ref(false)
 const showPassword = ref(false)
+const captchaAnswer    = ref('')
+const captchaRefreshing = ref(false)
+
+// ── CAPTCHA helpers ──────────────────────────────────────────────────────────
+function generateCaptcha() {
+  const ops = ['+', '-', 'x']
+  const op  = ops[Math.floor(Math.random() * ops.length)]
+  let a, b, answer
+  if (op === '+') {
+    a = Math.floor(Math.random() * 20) + 1
+    b = Math.floor(Math.random() * 20) + 1
+    answer = a + b
+  } else if (op === '-') {
+    a = Math.floor(Math.random() * 20) + 10
+    b = Math.floor(Math.random() * 10) + 1
+    answer = a - b
+  } else {
+    a = Math.floor(Math.random() * 9) + 2
+    b = Math.floor(Math.random() * 9) + 2
+    answer = a * b
+  }
+  return { question: `${a} ${op} ${b} = ?`, answer: String(answer) }
+}
+
+const captcha = reactive(generateCaptcha())
+
+function refreshCaptcha() {
+  captchaRefreshing.value = true
+  const next = generateCaptcha()
+  captcha.question = next.question
+  captcha.answer   = next.answer
+  captchaAnswer.value = ''
+  errors.captcha = ''
+  setTimeout(() => { captchaRefreshing.value = false }, 400)
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 function validate() {
-  errors.email = errors.password = errors.global = ''
+  errors.email = errors.password = errors.captcha = errors.global = ''
   if (!form.email)    errors.email    = 'Email wajib diisi.'
   if (!form.password) errors.password = 'Password wajib diisi.'
-  return !errors.email && !errors.password
+  if (!captchaAnswer.value.trim()) {
+    errors.captcha = 'Jawaban CAPTCHA wajib diisi.'
+  } else if (captchaAnswer.value.trim() !== captcha.answer) {
+    errors.captcha = 'Jawaban CAPTCHA salah. Silakan coba lagi.'
+    // auto-refresh captcha on wrong answer
+    refreshCaptcha()
+  }
+  return !errors.email && !errors.password && !errors.captcha
 }
 
 async function handleLogin() {
   if (!validate()) return
   loading.value = true
-  await new Promise(r => setTimeout(r, 700)) // simulate API latency
+  await new Promise(r => setTimeout(r, 700))
   try {
     auth.login(form.email, form.password)
+    // refresh captcha so it cannot be reused
+    refreshCaptcha()
     router.push({ name: 'verify-otp' })
   } catch (e) {
     errors.global = e.message
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -196,6 +269,65 @@ async function handleLogin() {
 }
 
 .toggle-pw:hover { color: #28251d; }
+
+/* CAPTCHA */
+.captcha-box {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.captcha-question {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f3f0ec;
+  border: 1.5px solid #d4d1ca;
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.875rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.captcha-text {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #01696f;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.captcha-refresh {
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  cursor: pointer;
+  color: #7a7974;
+  display: flex;
+  align-items: center;
+}
+
+.captcha-refresh:hover { color: #01696f; }
+
+.captcha-refresh svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.4s ease;
+}
+
+.captcha-refresh svg.spinning {
+  animation: spin 0.4s ease;
+}
+
+.captcha-box input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
 
 .error-msg {
   margin-top: 0.375rem;
