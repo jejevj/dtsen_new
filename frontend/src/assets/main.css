@@ -1,7 +1,12 @@
-/* ============================================================
-   CSS Layer Order: tailwind-base → primevue → tailwind-utilities
-   This prevents PrimeVue from overriding Tailwind utility classes
-   ============================================================ */
+/*
+  CSS Layer Order — HARUS sinkron dengan main.js cssLayer.order:
+  'tailwind-base, primevue, tailwind-utilities'
+
+  Urutan ini memastikan:
+  1. Tailwind reset di layer terendah
+  2. PrimeVue di tengah (dikelola otomatis oleh PrimeVue engine)
+  3. Tailwind utilities menang di atas PrimeVue
+*/
 @layer tailwind-base, primevue, tailwind-utilities;
 
 @layer tailwind-base {
@@ -14,11 +19,14 @@
 }
 
 /* ============ Global resets ============ */
-*, *::before, *::after { box-sizing: border-box; }
+*, *::before, *::after {
+  box-sizing: border-box;
+}
 
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -35,35 +43,21 @@ body {
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-/* ============ PrimeVue overrides ============ */
+/* ============ Landing Navbar: pastikan selalu visible ============ */
+nav.landing-nav {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+}
+
+/* ============ PrimeVue overrides (gunakan :deep atau class biasa) ============ */
 .p-card {
-  border-radius: 12px !important;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / .07), 0 1px 2px -1px rgb(0 0 0 / .07) !important;
+  border-radius: 12px;
 }
 
-.p-datatable .p-datatable-thead > tr > th {
-  background: #f8fafc !important;
-  color: #475569 !important;
-  font-weight: 600;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.p-button {
-  font-weight: 500;
-}
-
-/* Landing page: remove PrimeVue button outline on focus */
-.p-button:focus { box-shadow: none !important; }
-
-/* ============ Utility ============ */
-.section-heading {
-  @apply text-center mb-12;
-}
-.section-heading h2 {
-  @apply text-3xl font-bold text-gray-800 mt-2;
-}
-.section-heading p {
-  @apply text-gray-500 mt-2 max-w-lg mx-auto text-base;
+.p-button:focus-visible {
+  outline: 2px solid var(--p-primary-500);
+  outline-offset: 2px;
 }

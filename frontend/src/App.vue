@@ -1,10 +1,14 @@
 <template>
-  <Toast />
-  <ConfirmDialog />
   <router-view />
 </template>
 
 <script setup>
-import Toast from 'primevue/toast'
-import ConfirmDialog from 'primevue/confirmdialog'
+// App.vue sengaja kosong — layout ditangani oleh masing-masing route wrapper:
+// - LandingLayout  → halaman publik (/, /about, dst)
+// - AppLayout      → halaman dashboard (butuh auth)
+// - AuthLayout     → halaman login/register
 </script>
+
+<style>
+/* tidak ada global style di sini — semua di assets/main.css */
+</style>
