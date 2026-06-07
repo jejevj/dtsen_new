@@ -1,15 +1,27 @@
 """Seed demo users untuk DTSEN — 3 level Penanggung Jawab.
 
-Hierarki:
-  pj_nasional  -> di-assign ke 10 provinsi
-  pj_provinsi  -> di-assign ke 4 kab/kota dalam 1 provinsi
-  pj_kabkota   -> di-assign ke 1 kab/kota
+Hierarki wilayah acuan: JAWA BARAT (32)
+  Provinsi   : Jawa Barat (32) — satu dari 10 yang di-assign ke pj_nasional
+  Kab/Kota   : 4 kab/kota di Jawa Barat — di-assign ke pj_provinsi
+  Kab/Kota   : Kota Bandung (3273) saja — di-assign ke pj_kabkota
 
-Aturan laporan:
-  - pj_nasional : hanya bisa lihat data dari 10 provinsi yang di-assign
-  - pj_provinsi : hanya bisa lihat data dari 4 kab/kota yang di-assign
-  - pj_kabkota  : hanya bisa lihat data dari 1 kab/kota yang di-assign
-  - Semua level  : bisa memeriksa semua NIK pada pemeriksaan dtsen
+Rantai yang jelas:
+  pj_nasional
+    └─ mengawasi 10 provinsi, salah satunya Jawa Barat (32)
+         └─ pj_provinsi_jabar
+              └─ mengawasi 4 kab/kota di Jawa Barat:
+                   3271 Kota Bogor
+                   3272 Kota Sukabumi
+                   3273 Kota Bandung  ← dijaga oleh pj_kabkota_bandung
+                   3274 Kota Cirebon
+                        └─ pj_kabkota_bandung
+                             └─ hanya Kota Bandung (3273)
+
+Aturan akses laporan:
+  pj_nasional      → data dari 10 provinsi yang di-assign
+  pj_provinsi_jabar → data dari 4 kab/kota Jawa Barat yang di-assign
+  pj_kabkota_bandung → data Kota Bandung saja
+  Semua level       → bisa memeriksa semua NIK pada pemeriksaan dtsen
 
 Usage:
     cd backend
@@ -27,39 +39,29 @@ from app.models.user import User, UserWilayah
 from app.models.wilayah import Provinsi, KabKota
 
 # ---------------------------------------------------------------------------
-# Master wilayah dummy (kode mengikuti format Kemendagri)
+# Master wilayah — satu pohon hierarki berpusat di Jawa Barat
 # ---------------------------------------------------------------------------
+
+# 10 Provinsi yang di-assign ke pj_nasional
+# Jawa Barat (32) masuk di sini agar rantai terhubung
 PROVINSI_SEED = [
-    ('11', 'Aceh'),
-    ('12', 'Sumatera Utara'),
-    ('13', 'Sumatera Barat'),
-    ('14', 'Riau'),
-    ('15', 'Jambi'),
-    ('16', 'Sumatera Selatan'),
-    ('17', 'Bengkulu'),
-    ('18', 'Lampung'),
-    ('19', 'Kepulauan Bangka Belitung'),
-    ('21', 'Kepulauan Riau'),
-    # Provinsi referensi untuk pj_provinsi
     ('31', 'DKI Jakarta'),
-    ('32', 'Jawa Barat'),
+    ('32', 'Jawa Barat'),          # <-- provinsi acuan hierarki
     ('33', 'Jawa Tengah'),
     ('34', 'DI Yogyakarta'),
+    ('35', 'Jawa Timur'),
+    ('36', 'Banten'),
+    ('51', 'Bali'),
+    ('52', 'Nusa Tenggara Barat'),
+    ('53', 'Nusa Tenggara Timur'),
+    ('61', 'Kalimantan Barat'),
 ]
 
-# Kab/kota yang berada di DKI Jakarta (31) — untuk pj_provinsi
-KABKOTA_DKI = [
-    ('3171', 'Kota Jakarta Selatan', '31'),
-    ('3172', 'Kota Jakarta Timur',   '31'),
-    ('3173', 'Kota Jakarta Pusat',   '31'),
-    ('3174', 'Kota Jakarta Barat',   '31'),
-]
-
-# Kab/kota untuk pj_kabkota (Kota Bogor — Jawa Barat)
-KABKOTA_JABAR_SAMPLE = [
+# 4 Kab/Kota di Jawa Barat — semua milik provinsi 32
+KABKOTA_JABAR = [
     ('3271', 'Kota Bogor',    '32'),
     ('3272', 'Kota Sukabumi', '32'),
-    ('3273', 'Kota Bandung',  '32'),
+    ('3273', 'Kota Bandung',  '32'),   # <-- kab/kota acuan pj_kabkota
     ('3274', 'Kota Cirebon',  '32'),
 ]
 
@@ -67,7 +69,7 @@ KABKOTA_JABAR_SAMPLE = [
 # Definisi user demo
 # ---------------------------------------------------------------------------
 DEMO_USERS = [
-    # ----- Admin (akses penuh) -----
+    # ----- Admin (akses penuh, tidak perlu assignment wilayah) -----
     {
         'name':     'Administrator DTSEN',
         'username': 'admin',
@@ -75,44 +77,47 @@ DEMO_USERS = [
         'email':    'admin@dtsen.go.id',
         'password': 'Dtsen@2026!',
         'role':     'admin',
-        # Admin tidak butuh assignment wilayah
         'provinsi': [],
         'kabkota':  [],
     },
+
     # ----- Penanggung Jawab Nasional -----
+    # Mengawasi 10 provinsi termasuk Jawa Barat (32)
     {
-        'name':     'PJ Nasional - Wilayah Barat',
+        'name':     'PJ Nasional - Wilayah Jawa & Bali',
         'username': 'pj_nasional',
         'nip':      '198501012019011001',
         'email':    'pj.nasional@dtsen.go.id',
         'password': 'Dtsen@2026!',
         'role':     'pj_nasional',
-        # Di-assign ke 10 provinsi (Sumatera)
-        'provinsi': ['11','12','13','14','15','16','17','18','19','21'],
-        'kabkota':  [],  # pj_nasional tidak di-assign per kab/kota
+        'provinsi': ['31','32','33','34','35','36','51','52','53','61'],
+        'kabkota':  [],
     },
-    # ----- Penanggung Jawab Provinsi (DKI Jakarta) -----
+
+    # ----- Penanggung Jawab Provinsi — Jawa Barat -----
+    # Di-assign ke 4 kab/kota dalam Jawa Barat, berada di bawah pj_nasional
     {
-        'name':     'PJ Provinsi - DKI Jakarta',
-        'username': 'pj_provinsi_dki',
+        'name':     'PJ Provinsi - Jawa Barat',
+        'username': 'pj_provinsi_jabar',
         'nip':      '199001012019011002',
-        'email':    'pj.provinsi.dki@dtsen.go.id',
+        'email':    'pj.provinsi.jabar@dtsen.go.id',
         'password': 'Dtsen@2026!',
         'role':     'pj_provinsi',
-        'provinsi': ['31'],  # induk provinsinya
-        # Di-assign ke 4 kab/kota dalam DKI Jakarta
-        'kabkota':  ['3171','3172','3173','3174'],
+        'provinsi': ['32'],
+        'kabkota':  ['3271', '3272', '3273', '3274'],
     },
-    # ----- Penanggung Jawab Kab/Kota (Kota Bogor) -----
+
+    # ----- Penanggung Jawab Kab/Kota — Kota Bandung -----
+    # Hanya mengawasi Kota Bandung (3273), berada di bawah pj_provinsi_jabar
     {
-        'name':     'PJ Kab/Kota - Kota Bogor',
-        'username': 'pj_kabkota_bogor',
+        'name':     'PJ Kab/Kota - Kota Bandung',
+        'username': 'pj_kabkota_bandung',
         'nip':      '199201012020011003',
-        'email':    'pj.kabkota.bogor@dtsen.go.id',
+        'email':    'pj.kabkota.bandung@dtsen.go.id',
         'password': 'Dtsen@2026!',
         'role':     'pj_kabkota',
-        'provinsi': ['32'],  # induk provinsi Jawa Barat
-        'kabkota':  ['3271'],  # hanya Kota Bogor
+        'provinsi': ['32'],
+        'kabkota':  ['3273'],
     },
 ]
 
@@ -120,27 +125,18 @@ DEMO_USERS = [
 def seed_wilayah(app):
     """Seed data wilayah dummy jika belum ada."""
     with app.app_context():
-        # Provinsi
         for kode, nama in PROVINSI_SEED:
             if not Provinsi.query.get(kode):
                 db.session.add(Provinsi(provinsi_kode=kode, provinsi_nama=nama))
-                print(f'  [WILAYAH] + Provinsi {kode} - {nama}')
+                print(f'  [PROV]  + {kode} {nama}')
         db.session.commit()
 
-        # Kab/Kota DKI
-        for kode, nama, prov in KABKOTA_DKI:
+        for kode, nama, prov in KABKOTA_JABAR:
             if not KabKota.query.get(kode):
                 db.session.add(KabKota(kabkota_kode=kode, kabkota_nama=nama, provinsi_kode=prov))
-                print(f'  [WILAYAH] + KabKota {kode} - {nama}')
-
-        # Kab/Kota Jabar sample
-        for kode, nama, prov in KABKOTA_JABAR_SAMPLE:
-            if not KabKota.query.get(kode):
-                db.session.add(KabKota(kabkota_kode=kode, kabkota_nama=nama, provinsi_kode=prov))
-                print(f'  [WILAYAH] + KabKota {kode} - {nama}')
-
+                print(f'  [KAB]   + {kode} {nama} (Prov {prov})')
         db.session.commit()
-        print('  Seed wilayah selesai.')
+        print('  Seed wilayah selesai.\n')
 
 
 def seed_users(app):
@@ -158,27 +154,39 @@ def seed_users(app):
                     role     = u['role'],
                 )
                 db.session.add(user)
-                db.session.flush()  # dapat user.id sebelum commit
-                print(f'  [USER] + {u["email"]} ({u["role"]})')
+                db.session.flush()
+                print(f'  [USER]  + {u["email"]} ({u["role"]})')
             else:
-                print(f'  [SKIP] {u["email"]} sudah ada.')
+                # Update role jika berubah
+                user.role = u['role']
+                print(f'  [UPDATE] {u["email"]} ({u["role"]})')
 
-            # Hapus assignment lama agar idempotent
+            # Reset assignment wilayah agar idempotent
             UserWilayah.query.filter_by(user_id=user.id).delete()
 
-            # Assign provinsi saja (untuk pj_nasional)
             if u['role'] == 'pj_nasional':
+                # Nasional: satu baris per provinsi, kabkota_kode NULL
                 for prov_kode in u['provinsi']:
-                    db.session.add(UserWilayah(user_id=user.id, provinsi_kode=prov_kode, kabkota_kode=None))
+                    db.session.add(UserWilayah(
+                        user_id       = user.id,
+                        provinsi_kode = prov_kode,
+                        kabkota_kode  = None,
+                    ))
+                print(f'           → assign {len(u["provinsi"])} provinsi')
 
-            # Assign provinsi + kab/kota (untuk pj_provinsi & pj_kabkota)
             elif u['role'] in ('pj_provinsi', 'pj_kabkota'):
+                # Provinsi / Kab-Kota: satu baris per kab/kota
                 prov_kode = u['provinsi'][0] if u['provinsi'] else None
                 for kab_kode in u['kabkota']:
-                    db.session.add(UserWilayah(user_id=user.id, provinsi_kode=prov_kode, kabkota_kode=kab_kode))
+                    db.session.add(UserWilayah(
+                        user_id       = user.id,
+                        provinsi_kode = prov_kode,
+                        kabkota_kode  = kab_kode,
+                    ))
+                print(f'           → assign {len(u["kabkota"])} kab/kota di prov {prov_kode}')
 
         db.session.commit()
-        print('  Seed user selesai.')
+        print('  Seed user selesai.\n')
 
 
 def seed():
@@ -186,23 +194,35 @@ def seed():
     with app.app_context():
         db.create_all()
 
-    print('\n=== Seed Wilayah ===')
+    print('=== Seed Wilayah ===')
     seed_wilayah(app)
 
-    print('\n=== Seed Users ===')
+    print('=== Seed Users ===')
     seed_users(app)
 
-    print('\n=== Ringkasan Kredensial Demo ===')
-    print(f'{"Role":<20} {"Username":<22} {"Email":<35} Password')
-    print('-' * 95)
-    for u in DEMO_USERS:
-        print(f'{u["role"]:<20} {u["username"]:<22} {u["email"]:<35} {u["password"]}')
+    print('=== Ringkasan Hierarki ===')
+    print("""
+  pj_nasional  (pj.nasional@dtsen.go.id)
+  └─ 10 provinsi: 31 DKI, 32 Jabar*, 33 Jateng, 34 DIY, 35 Jatim,
+                  36 Banten, 51 Bali, 52 NTB, 53 NTT, 61 Kalbar
+       └─ pj_provinsi_jabar  (pj.provinsi.jabar@dtsen.go.id)
+          └─ 4 kab/kota Jawa Barat:
+               3271 Kota Bogor
+               3272 Kota Sukabumi
+               3273 Kota Bandung  *
+               3274 Kota Cirebon
+                    └─ pj_kabkota_bandung  (pj.kabkota.bandung@dtsen.go.id)
+                       └─ hanya Kota Bandung (3273)
+
+  admin  (admin@dtsen.go.id) — akses penuh, tidak terbatas wilayah
+""")
+    print('Password semua akun: Dtsen@2026!')
     print()
     print('Aturan akses laporan:')
-    print('  pj_nasional  -> laporan 10 provinsi yang di-assign (Sumatera)')
-    print('  pj_provinsi  -> laporan 4 kab/kota DKI Jakarta yang di-assign')
-    print('  pj_kabkota   -> laporan Kota Bogor saja')
-    print('  Semua level  -> bisa memeriksa NIK manapun (pemeriksaan dtsen)')
+    print('  pj_nasional       → data 10 provinsi yang di-assign')
+    print('  pj_provinsi_jabar → data 4 kab/kota Jawa Barat yang di-assign')
+    print('  pj_kabkota_bandung→ data Kota Bandung saja')
+    print('  Semua level       → boleh memeriksa NIK manapun (pemeriksaan dtsen)')
 
 
 if __name__ == '__main__':
