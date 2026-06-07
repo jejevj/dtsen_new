@@ -36,8 +36,14 @@ const routes = [
     component: () => import('@/views/CariDataView.vue'),
     meta: { requiresAuth: true, requiresOtp: true }
   },
-  // redirect /report ke /cari-data agar link lama tidak 404
-  { path: '/report', redirect: '/cari-data' },
+  {
+    path: '/laporan',
+    name: 'laporan',
+    component: () => import('@/views/PemeriksaanDtsenView.vue'),
+    meta: { requiresAuth: true, requiresOtp: true }
+  },
+  // legacy redirect
+  { path: '/report', redirect: '/laporan' },
 ]
 
 const router = createRouter({
