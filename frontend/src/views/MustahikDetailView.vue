@@ -90,51 +90,29 @@
 
         </div>
 
-        <!-- ===== GRID ROW 2: Program Sosial + Keterangan ===== -->
-        <div class="grid-2">
-
-          <!-- Program Sosial -->
-          <div class="detail-card">
-            <p class="section-title"><i class="pi pi-shield"></i> Program Bantuan Sosial Lain</p>
-            <table class="info-table">
-              <thead>
-                <tr>
-                  <th class="th">Program</th>
-                  <th class="th">Status</th>
-                  <th class="th">Tahun</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="prog in programSosial(mustahik)" :key="prog.nama">
-                  <td class="td-label" style="font-weight:600;color:#374151;">{{ prog.nama }}</td>
-                  <td class="td-value">
-                    <span :style="{ padding:'2px 8px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background: prog.aktif?'#dcfce7':'#f1f5f9', color: prog.aktif?'#15803d':'#94a3b8' }">
-                      {{ prog.aktif ? 'Aktif' : 'Tidak' }}
-                    </span>
-                  </td>
-                  <td class="td-value" style="color:#64748b;">{{ prog.tahun }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Catatan -->
-          <div class="detail-card">
-            <p class="section-title"><i class="pi pi-file-edit"></i> Catatan & Kondisi Khusus</p>
-            <div v-if="mustahik.keterangan && mustahik.keterangan !== '-'" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
-              <div style="display:flex;gap:8px;align-items:flex-start;">
-                <i class="pi pi-exclamation-triangle" style="color:#d97706;font-size:14px;margin-top:2px;flex-shrink:0;"></i>
-                <div>
-                  <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 4px;">Keterangan Khusus</p>
-                  <p style="font-size:13px;color:#78350f;margin:0;">{{ mustahik.keterangan }}</p>
-                </div>
-              </div>
-            </div>
-            <div v-else style="background:#f8fafc;border-radius:10px;padding:14px 16px;">
-              <p style="font-size:13px;color:#94a3b8;margin:0;">Tidak ada catatan khusus.</p>
-            </div>
-          </div>
-
+        <!-- ===== PROGRAM SOSIAL (full width) ===== -->
+        <div class="detail-card">
+          <p class="section-title"><i class="pi pi-shield"></i> Program Bantuan Sosial Lain</p>
+          <table class="info-table">
+            <thead>
+              <tr>
+                <th class="th">Program</th>
+                <th class="th">Status</th>
+                <th class="th">Tahun</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="prog in programSosial(mustahik)" :key="prog.nama">
+                <td class="td-label" style="font-weight:600;color:#374151;">{{ prog.nama }}</td>
+                <td class="td-value">
+                  <span :style="{ padding:'2px 8px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background: prog.aktif?'#dcfce7':'#f1f5f9', color: prog.aktif?'#15803d':'#94a3b8' }">
+                    {{ prog.aktif ? 'Aktif' : 'Tidak' }}
+                  </span>
+                </td>
+                <td class="td-value" style="color:#64748b;">{{ prog.tahun }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <!-- ===== ANGGOTA KELUARGA ===== -->
