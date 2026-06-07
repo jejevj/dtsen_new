@@ -1,85 +1,93 @@
 <template>
-  <footer class="bg-primary-950 text-white">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-8">
+  <footer style="background:#052e16; color:white; font-family:Inter,sans-serif;">
+    <div style="max-width:1280px; margin:0 auto; padding:56px 24px 32px;">
 
       <!-- Top grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 pb-10 border-b border-primary-800">
+      <div class="footer-grid" style="padding-bottom:40px; border-bottom:1px solid rgba(255,255,255,0.08);">
 
         <!-- Brand -->
-        <div class="lg:col-span-2">
-          <div class="flex items-center gap-2.5 mb-4">
-            <div class="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
-              <i class="pi pi-chart-bar text-white"></i>
+        <div class="footer-brand">
+          <!-- Logo -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:#16a34a;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="pi pi-chart-bar" style="color:white;font-size:14px;"></i>
             </div>
             <div>
-              <div class="font-bold text-lg leading-none">DTSEN</div>
-              <div class="text-xs text-primary-400 leading-none">Zakat &amp; Wakaf Nasional</div>
+              <div style="font-weight:700;font-size:16px;color:white;line-height:1;">DTSEN</div>
+              <div style="font-size:11px;color:#86efac;margin-top:2px;line-height:1;">Zakat &amp; Wakaf Nasional</div>
             </div>
           </div>
-          <p class="text-primary-300 text-sm leading-relaxed max-w-xs mb-5">
+
+          <p style="font-size:13.5px;color:#a7f3d0;line-height:1.7;max-width:280px;margin:0 0 20px;">
             Platform pemantauan penyaluran zakat berbasis Data Tunggal Sosial Ekonomi Nasional (DTSEN)
             Bappenas. Transparan, terukur, tepat sasaran.
           </p>
+
           <!-- Badges -->
-          <div class="flex flex-wrap gap-2">
-            <span class="px-2.5 py-1 rounded-full bg-primary-800 text-primary-300 text-xs font-medium">Kementerian Agama RI</span>
-            <span class="px-2.5 py-1 rounded-full bg-primary-800 text-primary-300 text-xs font-medium">BAZNAS</span>
-            <span class="px-2.5 py-1 rounded-full bg-primary-800 text-primary-300 text-xs font-medium">Bappenas</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <span
+              v-for="badge in badges"
+              :key="badge"
+              style="padding:4px 12px;border-radius:99px;background:rgba(255,255,255,0.08);color:#a7f3d0;font-size:11px;font-weight:500;border:1px solid rgba(255,255,255,0.1);"
+            >{{ badge }}</span>
           </div>
         </div>
 
-        <!-- Links -->
+        <!-- Navigasi -->
         <div>
-          <h4 class="text-xs font-semibold uppercase tracking-widest text-primary-400 mb-4">Navigasi</h4>
-          <ul class="space-y-2.5">
-            <li v-for="item in footerLinks" :key="item.label">
-              <a
-                :href="item.href"
-                class="flex items-center gap-2 text-sm text-primary-300 hover:text-white transition-colors group"
-              >
-                <i :class="item.icon + ' text-xs text-primary-500 group-hover:text-primary-300 transition-colors'"></i>
-                {{ item.label }}
-              </a>
-            </li>
-          </ul>
+          <h4 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#6ee7b7;margin:0 0 18px;">Navigasi</h4>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <a
+              v-for="item in footerLinks"
+              :key="item.label"
+              :href="item.href"
+              class="footer-link"
+              style="display:flex;align-items:center;gap:8px;font-size:13.5px;color:#a7f3d0;text-decoration:none;transition:color 0.15s;"
+            >
+              <i :class="item.icon" style="font-size:11px;width:14px;text-align:center;color:#4ade80;"></i>
+              {{ item.label }}
+            </a>
+          </div>
         </div>
 
-        <!-- Contact -->
+        <!-- Kontak -->
         <div>
-          <h4 class="text-xs font-semibold uppercase tracking-widest text-primary-400 mb-4">Kontak</h4>
-          <ul class="space-y-2.5">
-            <li class="flex items-start gap-2 text-sm text-primary-300">
-              <i class="pi pi-envelope text-xs mt-0.5 text-primary-500 flex-shrink-0"></i>
-              <span>info@dtsen.kemenag.go.id</span>
-            </li>
-            <li class="flex items-start gap-2 text-sm text-primary-300">
-              <i class="pi pi-map-marker text-xs mt-0.5 text-primary-500 flex-shrink-0"></i>
-              <span>Jl. Lapangan Banteng Barat No.3-4, Jakarta Pusat</span>
-            </li>
-          </ul>
-          <div class="flex gap-2 mt-5">
+          <h4 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#6ee7b7;margin:0 0 18px;">Kontak</h4>
+          <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+            <div style="display:flex;align-items:flex-start;gap:8px;">
+              <i class="pi pi-envelope" style="font-size:12px;color:#4ade80;margin-top:2px;flex-shrink:0;"></i>
+              <span style="font-size:13px;color:#a7f3d0;line-height:1.5;">info@dtsen.kemenag.go.id</span>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;">
+              <i class="pi pi-map-marker" style="font-size:12px;color:#4ade80;margin-top:2px;flex-shrink:0;"></i>
+              <span style="font-size:13px;color:#a7f3d0;line-height:1.5;">Jl. Lapangan Banteng Barat No.3-4, Jakarta Pusat</span>
+            </div>
+          </div>
+
+          <!-- Social icons -->
+          <div style="display:flex;gap:8px;">
             <a
               v-for="social in socials"
-              :key="social.icon"
+              :key="social.label"
               href="#"
-              :class="['w-8 h-8 rounded-lg flex items-center justify-center transition-colors bg-primary-800 hover:bg-primary-700', social.color]"
+              :title="social.label"
+              class="social-btn"
+              style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;transition:background 0.15s;text-decoration:none;"
             >
-              <i :class="social.icon + ' text-sm'"></i>
+              <i :class="social.icon" :style="{ fontSize:'13px', color: social.color }"></i>
             </a>
           </div>
         </div>
       </div>
 
       <!-- Bottom bar -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-6 text-xs text-primary-400">
-        <span>&copy; {{ year }} DTSEN — Hak Cipta Dilindungi</span>
-        <div class="flex items-center gap-4">
-          <a href="#" class="hover:text-white transition-colors">Kebijakan Privasi</a>
-          <a href="#" class="hover:text-white transition-colors">Syarat Penggunaan</a>
-          <span class="flex items-center gap-1">
-            Dibangun dengan
-            <i class="pi pi-heart text-red-400"></i>
-            menggunakan Vue.js &amp; Flask
+      <div class="footer-bottom" style="padding-top:24px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;">
+        <span style="font-size:12px;color:#6ee7b7;">&copy; {{ year }} DTSEN &mdash; Hak Cipta Dilindungi</span>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
+          <a href="#" class="footer-link" style="font-size:12px;color:#6ee7b7;text-decoration:none;">Kebijakan Privasi</a>
+          <a href="#" class="footer-link" style="font-size:12px;color:#6ee7b7;text-decoration:none;">Syarat Penggunaan</a>
+          <span style="font-size:12px;color:#4ade80;display:flex;align-items:center;gap:4px;">
+            Dibangun dengan <i class="pi pi-heart" style="color:#f87171;font-size:11px;"></i> Vue.js &amp; Flask
           </span>
         </div>
       </div>
@@ -90,17 +98,38 @@
 <script setup>
 const year = new Date().getFullYear()
 
+const badges = ['Kementerian Agama RI', 'BAZNAS', 'Bappenas']
+
 const footerLinks = [
   { label: 'Statistik Nasional', href: '#stats',   icon: 'pi pi-chart-bar' },
   { label: 'Peta Sebaran',       href: '#map',     icon: 'pi pi-map' },
   { label: 'Program Zakat',      href: '#program', icon: 'pi pi-list' },
   { label: 'Login Sistem',       href: '/login',   icon: 'pi pi-sign-in' },
-  { label: 'API Docs',           href: '#',        icon: 'pi pi-code' },
+  { label: 'Dokumentasi API',    href: '#',        icon: 'pi pi-code' },
 ]
 
 const socials = [
-  { icon: 'pi pi-twitter',  color: 'text-sky-400' },
-  { icon: 'pi pi-github',   color: 'text-white' },
-  { icon: 'pi pi-youtube',  color: 'text-red-400' },
+  { icon: 'pi pi-twitter', color: '#38bdf8', label: 'Twitter' },
+  { icon: 'pi pi-github',  color: '#ffffff', label: 'GitHub'  },
+  { icon: 'pi pi-youtube', color: '#f87171', label: 'YouTube' },
 ]
 </script>
+
+<style scoped>
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 48px;
+}
+.footer-link:hover { color: white !important; }
+.social-btn:hover  { background: rgba(255,255,255,0.15) !important; }
+
+@media (max-width: 768px) {
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 32px; }
+  .footer-brand { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+  .footer-grid   { grid-template-columns: 1fr; gap: 28px; }
+  .footer-bottom { flex-direction: column; align-items: flex-start; }
+}
+</style>
