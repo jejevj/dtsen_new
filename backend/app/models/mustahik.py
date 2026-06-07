@@ -38,5 +38,44 @@ class Mustahik(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # --- Relationships ---
+    program = db.relationship('Program', backref='mustahik_list', lazy='joined', foreign_keys=[program_kode])
+
+    # Wilayah domisili
+    provinsi = db.relationship(
+        'Provinsi', backref='mustahik_domisili', lazy='joined',
+        primaryjoin='Mustahik.provinsi_kode == Provinsi.provinsi_kode', foreign_keys=[provinsi_kode]
+    )
+    kabkota = db.relationship(
+        'KabKota', backref='mustahik_domisili', lazy='joined',
+        primaryjoin='Mustahik.kabkota_kode == KabKota.kabkota_kode', foreign_keys=[kabkota_kode]
+    )
+    kecamatan = db.relationship(
+        'Kecamatan', backref='mustahik_domisili', lazy='joined',
+        primaryjoin='Mustahik.kecamatan_kode == Kecamatan.kecamatan_kode', foreign_keys=[kecamatan_kode]
+    )
+    kelurahan = db.relationship(
+        'Kelurahan', backref='mustahik_domisili', lazy='joined',
+        primaryjoin='Mustahik.kelurahan_kode == Kelurahan.kelurahan_kode', foreign_keys=[kelurahan_kode]
+    )
+
+    # Wilayah KTP
+    ktp_provinsi = db.relationship(
+        'Provinsi', backref='mustahik_ktp', lazy='joined',
+        primaryjoin='Mustahik.ktp_provinsi_kode == Provinsi.provinsi_kode', foreign_keys=[ktp_provinsi_kode]
+    )
+    ktp_kabkota = db.relationship(
+        'KabKota', backref='mustahik_ktp', lazy='joined',
+        primaryjoin='Mustahik.ktp_kabkota_kode == KabKota.kabkota_kode', foreign_keys=[ktp_kabkota_kode]
+    )
+    ktp_kecamatan = db.relationship(
+        'Kecamatan', backref='mustahik_ktp', lazy='joined',
+        primaryjoin='Mustahik.ktp_kecamatan_kode == Kecamatan.kecamatan_kode', foreign_keys=[ktp_kecamatan_kode]
+    )
+    ktp_kelurahan = db.relationship(
+        'Kelurahan', backref='mustahik_ktp', lazy='joined',
+        primaryjoin='Mustahik.ktp_kelurahan_kode == Kelurahan.kelurahan_kode', foreign_keys=[ktp_kelurahan_kode]
+    )
+
     def __repr__(self):
         return f'<Mustahik {self.nik} - {self.nama_lengkap}>'
