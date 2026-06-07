@@ -1,9 +1,6 @@
 <template>
   <LandingLayout>
 
-    <!-- Login Modal -->
-    <LoginModal :visible="showLoginModal" @close="showLoginModal = false" />
-
     <!-- ======================================================
          HERO
     ======================================================= -->
@@ -54,7 +51,7 @@
               </button>
               <button
                 style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:transparent;border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background 0.15s;"
-                @click="showLoginModal = true"
+                @click="loginModal.open()"
               >
                 <i class="pi pi-sign-in"></i> Masuk Sistem
               </button>
@@ -94,14 +91,12 @@
     <section id="stats" style="padding:80px 0;background:#f8fafc;">
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
 
-        <!-- Section heading -->
         <div style="text-align:center;margin-bottom:48px;">
           <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#dcfce7;color:#15803d;font-size:12px;font-weight:600;margin-bottom:12px;">Data Real-time</span>
           <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 8px;">Statistik Nasional</h2>
           <p style="font-size:15px;color:#64748b;max-width:480px;margin:0 auto;">Agregat penyaluran zakat seluruh LAZ terdaftar di Indonesia.</p>
         </div>
 
-        <!-- 4 stat cards -->
         <div class="grid-4" style="display:grid;gap:16px;margin-bottom:40px;">
           <div
             v-for="stat in aggStats"
@@ -117,7 +112,6 @@
           </div>
         </div>
 
-        <!-- 3 mini charts -->
         <div class="grid-3" style="display:grid;gap:16px;">
           <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
             <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
@@ -147,7 +141,6 @@
           <p style="font-size:15px;color:#64748b;max-width:480px;margin:0 auto;">Distribusi penerima manfaat zakat per provinsi seluruh Indonesia.</p>
         </div>
 
-        <!-- Toggle -->
         <div style="display:flex;justify-content:center;margin-bottom:24px;">
           <div style="display:inline-flex;background:#f1f5f9;border-radius:10px;padding:4px;gap:4px;">
             <button
@@ -172,14 +165,11 @@
           </div>
         </div>
 
-        <!-- Map -->
         <div style="border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
           <IndonesiaMap :map-data="mapData" :metric="mapMetric" height="480px" />
         </div>
 
-        <!-- Top provinces -->
         <div class="grid-2" style="display:grid;gap:24px;margin-top:32px;">
-          <!-- Mustahik -->
           <div style="background:#f8fafc;border-radius:16px;padding:24px;">
             <h3 style="font-size:14px;font-weight:700;color:#374151;margin:0 0 16px;display:flex;align-items:center;gap:8px;">
               <i class="pi pi-users" style="color:#3b82f6;"></i> Top 5 Mustahik Terbanyak
@@ -198,7 +188,6 @@
             </div>
           </div>
 
-          <!-- Penyaluran -->
           <div style="background:#f8fafc;border-radius:16px;padding:24px;">
             <h3 style="font-size:14px;font-weight:700;color:#374151;margin:0 0 16px;display:flex;align-items:center;gap:8px;">
               <i class="pi pi-wallet" style="color:#16a34a;"></i> Top 5 Penyaluran Terbesar
@@ -264,7 +253,6 @@
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
         <div class="tentang-grid">
 
-          <!-- Left -->
           <div>
             <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;margin-bottom:16px;">Tentang Sistem</span>
             <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 14px;">Mengapa DTSEN?</h2>
@@ -285,7 +273,6 @@
             </div>
           </div>
 
-          <!-- Right: metric cards -->
           <div class="about-cards">
             <div
               v-for="metric in aboutMetrics"
@@ -309,11 +296,11 @@ import { ref, computed, onMounted } from 'vue'
 import Chart         from 'primevue/chart'
 import LandingLayout from '@/components/layout/LandingLayout.vue'
 import IndonesiaMap  from '@/components/charts/IndonesiaMap.vue'
-import LoginModal    from '@/components/common/LoginModal.vue'
 import ReportService from '@/services/report'
-import { formatRupiah } from '@/utils/formatter'
+import { formatRupiah }       from '@/utils/formatter'
+import { useLoginModalStore } from '@/stores/loginModal'
 
-const showLoginModal = ref(false)
+const loginModal = useLoginModalStore()
 const mapMetric  = ref('mustahik')
 const mapData    = ref([])
 const genderData = ref({ male_count: 0, female_count: 0 })
@@ -345,7 +332,6 @@ onMounted(async () => {
   }
 })
 
-// ---- Computed ----
 const heroStats = computed(() => [
   { label: 'Total Penyaluran', value: formatRupiah(summary.value?.total_penyaluran||0), icon:'pi pi-wallet',     sub:'Seluruh LAZ terdaftar' },
   { label: 'LAZ Nasional',     value: summary.value?.nasional||0,                        icon:'pi pi-building',   sub:'Lembaga aktif' },
@@ -377,7 +363,6 @@ const bidangProgram = computed(() => {
   return bidangData.value.map(b=>({...b, pct:((b.total_penyaluran||0)/total)*100}))
 })
 
-// Chart data
 const genderChartData = computed(() => ({
   labels:['Laki-laki','Perempuan'],
   datasets:[{ data:[genderData.value?.male_count||0, genderData.value?.female_count||0], backgroundColor:['#3b82f6','#ec4899'], borderWidth:0 }]
@@ -391,12 +376,10 @@ const trendChartData = computed(() => ({
   datasets:[{ label:'Penyaluran', data:trendData.value.map(d=>(d.Bantuan_Langsung||0)+(d.Bantuan_Tidak_Langsung||0)), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.1)', fill:true, tension:0.4, pointRadius:3 }]
 }))
 
-// Chart options
 const doughnutOpts = { plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } }, responsive:true, maintainAspectRatio:false }
 const barOpts      = { indexAxis:'y', plugins:{ legend:{ display:false } }, responsive:true, maintainAspectRatio:false, scales:{ x:{ ticks:{ font:{ size:9 } } }, y:{ ticks:{ font:{ size:10 } } } } }
 const lineOpts     = { plugins:{ legend:{ display:false } }, responsive:true, maintainAspectRatio:false, scales:{ y:{ ticks:{ font:{ size:9 } } } } }
 
-// Static content
 const bidangColors = [
   { bg:'#f0fdf4', icon:'#16a34a' },
   { bg:'#eff6ff', icon:'#2563eb' },

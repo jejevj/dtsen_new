@@ -1,12 +1,13 @@
 <template>
   <router-view />
+  <LoginModal :visible="loginModal.visible" @close="loginModal.close()" />
 </template>
 
 <script setup>
-// App.vue sengaja kosong — layout ditangani oleh masing-masing route wrapper:
-// - LandingLayout  → halaman publik (/, /about, dst)
-// - AppLayout      → halaman dashboard (butuh auth)
-// - AuthLayout     → halaman login/register
+import LoginModal        from '@/components/common/LoginModal.vue'
+import { useLoginModalStore } from '@/stores/loginModal'
+
+const loginModal = useLoginModalStore()
 </script>
 
 <style>

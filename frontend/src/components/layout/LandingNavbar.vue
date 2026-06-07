@@ -42,7 +42,7 @@
         <button
           class="btn-login nav-desktop"
           style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:#16a34a;color:#fff;transition:background 0.15s;"
-          @click="$router.push('/login')"
+          @click="loginModal.open()"
         >
           <i class="pi pi-sign-in" style="font-size:12px;"></i>
           Masuk
@@ -76,7 +76,7 @@
       </a>
       <button
         style="margin-top:8px;width:100%;padding:10px;border-radius:8px;background:#16a34a;color:white;border:none;font-size:14px;font-weight:600;cursor:pointer;"
-        @click="$router.push('/login')"
+        @click="mobileOpen = false; loginModal.open()"
       >
         Masuk ke Sistem
       </button>
@@ -86,8 +86,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useLoginModalStore } from '@/stores/loginModal'
 
-const mobileOpen = ref(false)
+const mobileOpen  = ref(false)
+const loginModal  = useLoginModalStore()
 
 const navItems = [
   { label: 'Beranda',   href: '#hero',    icon: 'pi pi-home' },
