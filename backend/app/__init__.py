@@ -3,7 +3,11 @@ from flask_cors import CORS
 from .extensions import db, migrate, jwt
 from .api.v1 import api_v1_bp
 from config import config
+from dotenv import load_dotenv
 import os
+
+# Load .env sebelum apapun
+load_dotenv()
 
 
 def create_app(config_name=None):

@@ -2,9 +2,14 @@
 
 Usage:
     cd backend
-    flask shell  # atau
     python seed_users.py
 """
+import os
+from dotenv import load_dotenv
+
+# Load .env sebelum import app
+load_dotenv()
+
 from werkzeug.security import generate_password_hash
 from app import create_app
 from app.extensions import db
