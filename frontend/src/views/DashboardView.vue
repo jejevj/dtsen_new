@@ -11,7 +11,10 @@
             <span style="margin-left:8px;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;"
               :style="roleBadgeStyle">{{ authStore.user?.role || 'operator' }}</span>
           </p>
-          <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Data mustahik desil 1–4 · Tahun 2024</p>
+          <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">
+            Wilayah: <strong style="color:#0f172a;">{{ authStore.user?.wilayah_label || 'Seluruh Indonesia' }}</strong>
+            &nbsp;·&nbsp; Data mustahik desil 1–4 · Tahun 2024
+          </p>
         </div>
         <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:8px;font-size:11px;font-weight:600;">PROTOTYPE · Data Simulasi</span>
       </div>
@@ -32,7 +35,7 @@
       <div>
         <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 12px;">Distribusi Mustahik per Desil</p>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
-          <div v-for="d in SUMMARY_STATS.desil_breakdown" :key="d.desil"
+          <div v-for="d in stats.desil_breakdown" :key="d.desil"
             style="border-radius:14px;padding:18px;text-align:center;"
             :style="{ background:DESIL_COLORS[d.desil].bg, border:`1px solid ${DESIL_COLORS[d.desil].text}22` }">
             <p style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;" :style="{color:DESIL_COLORS[d.desil].text}">Desil {{ d.desil }}</p>
@@ -50,8 +53,8 @@
           <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
           <Chart type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
           <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
-            <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>L: {{ SUMMARY_STATS.by_gender.m }}</span>
-            <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>P: {{ SUMMARY_STATS.by_gender.f }}</span>
+            <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>L: {{ stats.by_gender.m }}</span>
+            <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>P: {{ stats.by_gender.f }}</span>
           </div>
         </div>
         <!-- Desil Bar -->
@@ -61,16 +64,24 @@
         </div>
       </div>
 
-      <!-- Sebaran Provinsi -->
+      <!-- Sebaran Wilayah -->
       <div class="card-box">
-        <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Sebaran Mustahik per Provinsi</p>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;">
-          <div v-for="p in SUMMARY_STATS.by_provinsi" :key="p.nama"
+        <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">
+          Sebaran Mustahik
+          <span style="font-weight:400;color:#94a3b8;">
+            per {{ wilayahGroupLabel }}
+          </span>
+        </p>
+        <div v-if="stats.by_provinsi.length === 0" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px;">
+          Tidak ada data mustahik di wilayah ini.
+        </div>
+        <div v-else style="display:flex;gap:16px;flex-wrap:wrap;">
+          <div v-for="p in stats.by_provinsi" :key="p.nama"
             style="flex:1;min-width:160px;background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
             <p style="font-size:12px;color:#64748b;margin:0 0 4px;">{{ p.nama }}</p>
             <p style="font-size:1.4rem;font-weight:800;color:#1e293b;margin:0;">{{ p.jumlah }}</p>
             <div style="margin-top:8px;background:#e2e8f0;border-radius:4px;height:6px;">
-              <div :style="{ width: (p.jumlah/SUMMARY_STATS.total_mustahik*100)+'%', height:'6px', borderRadius:'4px', background:'#3b82f6' }"></div>
+              <div :style="{ width: stats.total_mustahik ? (p.jumlah/stats.total_mustahik*100)+'%' : '0%', height:'6px', borderRadius:'4px', background:'#3b82f6' }"></div>
             </div>
           </div>
         </div>
@@ -93,13 +104,25 @@
 
 <script setup>
 import { computed } from 'vue'
-import Chart     from 'primevue/chart'
-import AppLayout from '@/components/layout/AppLayout.vue'
+import Chart       from 'primevue/chart'
+import AppLayout   from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
-import { formatRupiah } from '@/utils/formatter'
-import { SUMMARY_STATS, DESIL_COLORS } from '@/data/mockMustahik'
+import { formatRupiah }  from '@/utils/formatter'
+import { DESIL_COLORS, getMockByWilayah, buildSummaryStats } from '@/data/mockMustahik'
 
 const authStore = useAuthStore()
+
+// ── Data ter-filter berdasarkan wilayah user yang login ──────────────────────
+const filteredData = computed(() => getMockByWilayah(authStore.userWilayah))
+const stats        = computed(() => buildSummaryStats(filteredData.value))
+
+// Label grup sebaran (Provinsi jika admin/analis, Kab/Kota jika operator)
+const wilayahGroupLabel = computed(() => {
+  const w = authStore.userWilayah
+  if (!w || w.level === 'provinsi') return 'Provinsi'
+  if (w.level === 'kab_kota')       return 'Kecamatan'
+  return 'Wilayah'
+})
 
 const roleBadgeStyle = computed(() => {
   const map = {
@@ -111,38 +134,38 @@ const roleBadgeStyle = computed(() => {
 })
 
 const statCards = computed(() => [
-  { label:'Total Mustahik',     value: SUMMARY_STATS.total_mustahik.toLocaleString('id-ID'),       sub:'Desil 1–4',          icon:'pi pi-users',    iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'Total KK',           value: SUMMARY_STATS.total_kk.toLocaleString('id-ID'),             sub:'Kepala Keluarga',    icon:'pi pi-home',     iconBg:'#f0fdf4', iconColor:'#16a34a' },
-  { label:'Total Penyaluran',   value: formatRupiah(SUMMARY_STATS.total_nominal),                  sub:'Nilai bantuan',      icon:'pi pi-wallet',   iconBg:'#faf5ff', iconColor:'#7c3aed' },
-  { label:'Provinsi Terlayani', value: SUMMARY_STATS.by_provinsi.length+'',                        sub:'Cakupan wilayah',    icon:'pi pi-map-marker',iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Total Mustahik',     value: stats.value.total_mustahik.toLocaleString('id-ID'),       sub:'Desil 1–4 di wilayah ini', icon:'pi pi-users',     iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Total KK',           value: stats.value.total_kk.toLocaleString('id-ID'),             sub:'Kepala Keluarga',          icon:'pi pi-home',      iconBg:'#f0fdf4', iconColor:'#16a34a' },
+  { label:'Total Penyaluran',   value: formatRupiah(stats.value.total_nominal),                  sub:'Nilai bantuan',            icon:'pi pi-wallet',    iconBg:'#faf5ff', iconColor:'#7c3aed' },
+  { label:'Wilayah Terlayani',  value: stats.value.by_provinsi.length + '',                      sub: authStore.user?.wilayah_label || 'Seluruh Indonesia', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
 ])
 
 const genderChartData = computed(() => ({
   labels: ['Laki-laki','Perempuan'],
-  datasets:[{ data:[SUMMARY_STATS.by_gender.m, SUMMARY_STATS.by_gender.f], backgroundColor:['#3b82f6','#f472b6'], borderWidth:0 }]
+  datasets: [{ data:[stats.value.by_gender.m, stats.value.by_gender.f], backgroundColor:['#3b82f6','#f472b6'], borderWidth:0 }],
 }))
 
 const desilBarData = computed(() => ({
-  labels: SUMMARY_STATS.desil_breakdown.map(d=>'Desil '+d.desil),
-  datasets:[{
+  labels: stats.value.desil_breakdown.map(d => 'Desil '+d.desil),
+  datasets: [{
     label: 'Jumlah Mustahik',
-    data: SUMMARY_STATS.desil_breakdown.map(d=>d.jumlah),
+    data: stats.value.desil_breakdown.map(d => d.jumlah),
     backgroundColor: ['#ef4444','#f97316','#eab308','#22c55e'],
     borderRadius: 6,
-  }]
+  }],
 }))
 
 const pieOpts = { plugins:{ legend:{ display:false } }, responsive:true, maintainAspectRatio:false }
 const barOpts = {
   plugins:{ legend:{ display:false } },
   responsive:true, maintainAspectRatio:false,
-  scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+  scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } },
 }
 
 const quickNav = [
-  { label:'Data Mustahik', desc:'Lihat & filter daftar penerima', to:'/mustahik',  icon:'pi pi-users',    iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'Cari Data',     desc:'Pencarian mustahik & filter NIK', to:'/cari-data', icon:'pi pi-search',   iconBg:'#f0fdf4', iconColor:'#16a34a' },
-  { label:'Beranda',       desc:'Kembali ke halaman publik',       to:'/',          icon:'pi pi-globe',    iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Data Mustahik', desc:'Lihat & filter daftar penerima', to:'/mustahik',  icon:'pi pi-users',  iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Cari Data',     desc:'Pencarian mustahik & filter NIK', to:'/cari-data', icon:'pi pi-search', iconBg:'#f0fdf4', iconColor:'#16a34a' },
+  { label:'Beranda',       desc:'Kembali ke halaman publik',       to:'/',          icon:'pi pi-globe',  iconBg:'#fff7ed', iconColor:'#ea580c' },
 ]
 </script>
 

@@ -106,27 +106,44 @@ export const DESIL_COLORS = {
   4: { bg:'#f0fdf4', text:'#15803d', badge:'success' },
 }
 
-export const SUMMARY_STATS = {
-  total_mustahik: 75,
-  total_kk: 73,
-  total_nominal: MOCK_MUSTAHIK.filter(m => m.desil <= 4).reduce((a,b) => a + b.nominal, 0),
-  desil_breakdown: [1,2,3,4].map(d => ({
-    desil: d,
-    jumlah: MOCK_MUSTAHIK.filter(m => m.desil === d).length,
-    total_nominal: MOCK_MUSTAHIK.filter(m => m.desil === d).reduce((a,b) => a + b.nominal, 0),
-  })),
-  by_gender: {
-    m: MOCK_MUSTAHIK.filter(m => m.jenis_kelamin === 'm').length,
-    f: MOCK_MUSTAHIK.filter(m => m.jenis_kelamin === 'f').length,
-  },
-  by_provinsi: [
-    { nama:'Jawa Barat',       jumlah: MOCK_MUSTAHIK.filter(m => m.provinsi === 'Jawa Barat').length },
-    { nama:'Banten',           jumlah: MOCK_MUSTAHIK.filter(m => m.provinsi === 'Banten').length },
-    { nama:'Jawa Tengah',      jumlah: MOCK_MUSTAHIK.filter(m => m.provinsi === 'Jawa Tengah').length },
-    { nama:'Jawa Timur',       jumlah: MOCK_MUSTAHIK.filter(m => m.provinsi === 'Jawa Timur').length },
-    { nama:'DKI Jakarta',      jumlah: MOCK_MUSTAHIK.filter(m => m.provinsi === 'DKI Jakarta').length },
-    { nama:'D.I. Yogyakarta',  jumlah: MOCK_MUSTAHIK.filter(m => m.provinsi === 'D.I. Yogyakarta').length },
-    { nama:'Sumatera Utara',   jumlah: MOCK_MUSTAHIK.filter(m => m.provinsi === 'Sumatera Utara').length },
-    { nama:'Sulawesi Selatan', jumlah: MOCK_MUSTAHIK.filter(m => m.provinsi === 'Sulawesi Selatan').length },
-  ]
+// ── Helper: filter data berdasarkan wilayah user ──────────────────────────────
+// wilayah: null                           → semua data
+// wilayah: { level:'provinsi', value:'Jawa Barat' }   → filter by provinsi
+// wilayah: { level:'kab_kota', value:'Kota Bogor' }   → filter by kab_kota
+// wilayah: { level:'kecamatan', value:'Bogor Utara' } → filter by kecamatan
+export function getMockByWilayah(wilayah) {
+  if (!wilayah) return MOCK_MUSTAHIK
+  return MOCK_MUSTAHIK.filter(m => m[wilayah.level] === wilayah.value)
 }
+
+// ── Helper: hitung summary stats dari array mustahik terfilter ────────────────
+export function buildSummaryStats(data) {
+  const mustahik = data.filter(m => m.desil >= 1 && m.desil <= 4)
+  const provinsiSet = [...new Set(mustahik.map(m => m.provinsi))]
+
+  return {
+    total_mustahik: mustahik.length,
+    total_kk: new Set(mustahik.map(m => m.nik_hashed.replace(/\d+$/, ''))).size || mustahik.length,
+    total_nominal: mustahik.reduce((a, b) => a + b.nominal, 0),
+    desil_breakdown: [1,2,3,4].map(d => ({
+      desil: d,
+      jumlah: mustahik.filter(m => m.desil === d).length,
+      total_nominal: mustahik.filter(m => m.desil === d).reduce((a,b) => a + b.nominal, 0),
+    })),
+    by_gender: {
+      m: mustahik.filter(m => m.jenis_kelamin === 'm').length,
+      f: mustahik.filter(m => m.jenis_kelamin === 'f').length,
+    },
+    by_provinsi: provinsiSet.map(p => ({
+      nama: p,
+      jumlah: mustahik.filter(m => m.provinsi === p).length,
+    })),
+  }
+}
+
+// Backward-compat: export SUMMARY_STATS global (semua data, untuk komponen yang belum di-update)
+import { buildSummaryStats as _b, getMockByWilayah as _g } from './mockMustahik.js'
+export const SUMMARY_STATS = (() => {
+  const all = _g(null)
+  return _b(all)
+})()

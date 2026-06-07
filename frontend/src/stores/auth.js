@@ -1,52 +1,77 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { findUserByEmail } from '@/data/mockUsers'
 
 // ─── PROTOTYPE: no real API calls ────────────────────────────────────────────
-// Dummy credentials: any username + any password will work for prototype
+// Password dummy untuk SEMUA user: dtsen2024
 // OTP Email  : 845988
 // OTP WA     : 990087
+//
+// Contoh akun:
+//   admin@dtsen.go.id              → Admin Pusat (semua data)
+//   analis.jabar@dtsen.go.id       → Analis Jawa Barat
+//   op.kotabogor@dtsen.go.id       → Operator Kota Bogor
+//   op.surabaya@dtsen.go.id        → Operator Kota Surabaya
+//   (lihat frontend/src/data/mockUsers.js untuk daftar lengkap)
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DUMMY_OTP_EMAIL = '845988'
-const DUMMY_OTP_WA    = '990087'
+const DUMMY_OTP_EMAIL  = '845988'
+const DUMMY_OTP_WA     = '990087'
+const DUMMY_PASSWORD   = 'dtsen2024'
 
 export const useAuthStore = defineStore('auth', () => {
-  // Hydrate from localStorage so page refresh doesn't reset mid-flow
-  const user              = ref(JSON.parse(localStorage.getItem('dtsen_user') || 'null'))
-  const accessToken       = ref(localStorage.getItem('dtsen_token') || null)
-  const emailOtpVerified  = ref(localStorage.getItem('dtsen_otp_email') === 'true')
-  const waOtpVerified     = ref(localStorage.getItem('dtsen_otp_wa')    === 'true')
+  const user             = ref(JSON.parse(localStorage.getItem('dtsen_user') || 'null'))
+  const accessToken      = ref(localStorage.getItem('dtsen_token') || null)
+  const emailOtpVerified = ref(localStorage.getItem('dtsen_otp_email') === 'true')
+  const waOtpVerified    = ref(localStorage.getItem('dtsen_otp_wa')    === 'true')
 
-  // Fully authenticated = logged in AND both OTPs verified
-  const isAuthenticated   = computed(() => !!accessToken.value)
-  const isOtpComplete     = computed(() => emailOtpVerified.value && waOtpVerified.value)
+  const isAuthenticated    = computed(() => !!accessToken.value)
+  const isOtpComplete      = computed(() => emailOtpVerified.value && waOtpVerified.value)
   const canAccessDashboard = computed(() => isAuthenticated.value && isOtpComplete.value)
 
-  // ── login (dummy – accepts any credential) ───────────────────────────────
+  // Wilayah aktif user yang sedang login
+  const userWilayah = computed(() => user.value?.wilayah || null)
+
+  // ── login ─────────────────────────────────────────────────────────────────
   function login(email, password) {
     if (!email || !password) throw new Error('Email dan password wajib diisi.')
-    const dummyUser = { name: 'Admin DTSEN', email, role: 'admin' }
+
+    // Prototype: password harus dtsen2024 KECUALI ada email terdaftar di mockUsers
+    const mockUser = findUserByEmail(email)
+
+    if (mockUser) {
+      // Email terdaftar → cek password dummy
+      if (password !== DUMMY_PASSWORD) throw new Error('Password salah. Gunakan: dtsen2024')
+    }
+    // Email tidak terdaftar → gunakan fallback admin (backward-compat)
+    const resolvedUser = mockUser || {
+      name: 'Admin DTSEN',
+      email,
+      role: 'admin',
+      wilayah: null,
+      wilayah_label: 'Seluruh Indonesia',
+    }
+
     const dummyToken = 'proto-token-' + Date.now()
 
     accessToken.value      = dummyToken
-    user.value             = dummyUser
+    user.value             = resolvedUser
     emailOtpVerified.value = false
     waOtpVerified.value    = false
 
     localStorage.setItem('dtsen_token',     dummyToken)
-    localStorage.setItem('dtsen_user',      JSON.stringify(dummyUser))
+    localStorage.setItem('dtsen_user',      JSON.stringify(resolvedUser))
     localStorage.setItem('dtsen_otp_email', 'false')
     localStorage.setItem('dtsen_otp_wa',    'false')
   }
 
-  // ── verify email OTP ──────────────────────────────────────────────────────
+  // ── verify OTP ────────────────────────────────────────────────────────────
   function verifyEmailOtp(code) {
     if (code.trim() !== DUMMY_OTP_EMAIL) throw new Error('Kode OTP Email tidak valid.')
     emailOtpVerified.value = true
     localStorage.setItem('dtsen_otp_email', 'true')
   }
 
-  // ── verify WA OTP ─────────────────────────────────────────────────────────
   function verifyWaOtp(code) {
     if (code.trim() !== DUMMY_OTP_WA) throw new Error('Kode OTP WhatsApp tidak valid.')
     waOtpVerified.value = true
@@ -63,9 +88,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    user, accessToken,
+    user, accessToken, userWilayah,
     emailOtpVerified, waOtpVerified,
     isAuthenticated, isOtpComplete, canAccessDashboard,
-    login, verifyEmailOtp, verifyWaOtp, logout
+    login, verifyEmailOtp, verifyWaOtp, logout,
   }
 })
