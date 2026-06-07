@@ -113,12 +113,12 @@
         <!-- Right -->
         <div class="flex items-center gap-1">
           <!-- Search -->
-          <Button icon="pi pi-search" text rounded class="text-slate-500 hover:text-primary-700 hover:bg-primary-50 w-9 h-9" />
+          <!-- <Button icon="pi pi-search" text rounded class="text-slate-500 hover:text-primary-700 hover:bg-primary-50 w-9 h-9" /> -->
           <!-- Notification -->
-          <div class="relative">
+          <!-- <div class="relative">
             <Button icon="pi pi-bell" text rounded class="text-slate-500 hover:text-primary-700 hover:bg-primary-50 w-9 h-9" />
             <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500"></span>
-          </div>
+          </div> -->
           <!-- Divider -->
           <div class="w-px h-6 bg-slate-200 mx-1"></div>
           <!-- User pill -->
@@ -143,12 +143,6 @@
               <p class="text-sm font-semibold text-slate-800">{{ user?.name || 'Admin' }}</p>
               <p class="text-xs text-slate-400 truncate">{{ user?.email }}</p>
             </div>
-            <button class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-              <i class="pi pi-user text-xs text-slate-400"></i> Profil Saya
-            </button>
-            <button class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors">
-              <i class="pi pi-cog text-xs text-slate-400"></i> Pengaturan
-            </button>
             <div class="border-t border-slate-100 mt-1"></div>
             <button
               class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
