@@ -210,7 +210,7 @@ function isActive(to) {
 
 function logout() {
   authStore.logout()
-  router.push({ name: 'login' })
+  router.push({ name: 'home' })
 }
 </script>
 
