@@ -1,27 +1,71 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import AuthService from '@/services/auth'
+
+// ─── PROTOTYPE: no real API calls ────────────────────────────────────────────
+// Dummy credentials: any username + any password will work for prototype
+// OTP Email  : 845988
+// OTP WA     : 990087
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DUMMY_OTP_EMAIL = '845988'
+const DUMMY_OTP_WA    = '990087'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
-  const accessToken = ref(localStorage.getItem('access_token') || null)
+  // Hydrate from localStorage so page refresh doesn't reset mid-flow
+  const user              = ref(JSON.parse(localStorage.getItem('dtsen_user') || 'null'))
+  const accessToken       = ref(localStorage.getItem('dtsen_token') || null)
+  const emailOtpVerified  = ref(localStorage.getItem('dtsen_otp_email') === 'true')
+  const waOtpVerified     = ref(localStorage.getItem('dtsen_otp_wa')    === 'true')
 
-  const isAuthenticated = computed(() => !!accessToken.value)
+  // Fully authenticated = logged in AND both OTPs verified
+  const isAuthenticated   = computed(() => !!accessToken.value)
+  const isOtpComplete     = computed(() => emailOtpVerified.value && waOtpVerified.value)
+  const canAccessDashboard = computed(() => isAuthenticated.value && isOtpComplete.value)
 
-  async function login(email, password) {
-    const data = await AuthService.login(email, password)
-    accessToken.value = data.access_token
-    user.value = data.user
-    localStorage.setItem('access_token', data.access_token)
-    localStorage.setItem('user', JSON.stringify(data.user))
+  // ── login (dummy – accepts any credential) ───────────────────────────────
+  function login(email, password) {
+    if (!email || !password) throw new Error('Email dan password wajib diisi.')
+    const dummyUser = { name: 'Admin DTSEN', email, role: 'admin' }
+    const dummyToken = 'proto-token-' + Date.now()
+
+    accessToken.value      = dummyToken
+    user.value             = dummyUser
+    emailOtpVerified.value = false
+    waOtpVerified.value    = false
+
+    localStorage.setItem('dtsen_token',     dummyToken)
+    localStorage.setItem('dtsen_user',      JSON.stringify(dummyUser))
+    localStorage.setItem('dtsen_otp_email', 'false')
+    localStorage.setItem('dtsen_otp_wa',    'false')
   }
 
+  // ── verify email OTP ──────────────────────────────────────────────────────
+  function verifyEmailOtp(code) {
+    if (code.trim() !== DUMMY_OTP_EMAIL) throw new Error('Kode OTP Email tidak valid.')
+    emailOtpVerified.value = true
+    localStorage.setItem('dtsen_otp_email', 'true')
+  }
+
+  // ── verify WA OTP ─────────────────────────────────────────────────────────
+  function verifyWaOtp(code) {
+    if (code.trim() !== DUMMY_OTP_WA) throw new Error('Kode OTP WhatsApp tidak valid.')
+    waOtpVerified.value = true
+    localStorage.setItem('dtsen_otp_wa', 'true')
+  }
+
+  // ── logout ────────────────────────────────────────────────────────────────
   function logout() {
-    accessToken.value = null
-    user.value = null
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('user')
+    accessToken.value      = null
+    user.value             = null
+    emailOtpVerified.value = false
+    waOtpVerified.value    = false
+    ;['dtsen_token','dtsen_user','dtsen_otp_email','dtsen_otp_wa'].forEach(k => localStorage.removeItem(k))
   }
 
-  return { user, accessToken, isAuthenticated, login, logout }
+  return {
+    user, accessToken,
+    emailOtpVerified, waOtpVerified,
+    isAuthenticated, isOtpComplete, canAccessDashboard,
+    login, verifyEmailOtp, verifyWaOtp, logout
+  }
 })
