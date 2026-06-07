@@ -1,9 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
+  content: [
+    './index.html',
+    './src/**/*.{vue,js,ts,jsx,tsx}'
+  ],
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+      },
       colors: {
         primary: {
           50:  '#f0fdf4',
@@ -11,19 +17,17 @@ export default {
           200: '#bbf7d0',
           300: '#86efac',
           400: '#4ade80',
-          500: '#1a7f4f',
+          500: '#22c55e',
           600: '#16a34a',
           700: '#15803d',
           800: '#166534',
-          900: '#14532d'
+          900: '#14532d',
+          950: '#052e16'
         },
-        secondary: {
-          DEFAULT: '#f5a623',
-          dark: '#d48b0f'
-        }
+        secondary: '#f59e0b'
       },
-      fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui']
+      boxShadow: {
+        card: '0 1px 3px 0 rgb(0 0 0 / .07), 0 1px 2px -1px rgb(0 0 0 / .07)'
       }
     }
   },
