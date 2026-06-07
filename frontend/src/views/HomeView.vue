@@ -1,6 +1,9 @@
 <template>
   <LandingLayout>
 
+    <!-- Login Modal -->
+    <LoginModal :visible="showLoginModal" @close="showLoginModal = false" />
+
     <!-- ======================================================
          HERO
     ======================================================= -->
@@ -51,7 +54,7 @@
               </button>
               <button
                 style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:transparent;border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background 0.15s;"
-                @click="$router.push('/login')"
+                @click="showLoginModal = true"
               >
                 <i class="pi pi-sign-in"></i> Masuk Sistem
               </button>
@@ -306,9 +309,11 @@ import { ref, computed, onMounted } from 'vue'
 import Chart         from 'primevue/chart'
 import LandingLayout from '@/components/layout/LandingLayout.vue'
 import IndonesiaMap  from '@/components/charts/IndonesiaMap.vue'
+import LoginModal    from '@/components/common/LoginModal.vue'
 import ReportService from '@/services/report'
 import { formatRupiah } from '@/utils/formatter'
 
+const showLoginModal = ref(false)
 const mapMetric  = ref('mustahik')
 const mapData    = ref([])
 const genderData = ref({ male_count: 0, female_count: 0 })
@@ -422,7 +427,6 @@ function scrollTo(id) {
 </script>
 
 <style scoped>
-/* Responsive grids -- dipisah dari inline style agar bersih */
 .hero-grid    { display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; }
 .hero-cards   { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .grid-4       { grid-template-columns: repeat(4, 1fr); }
