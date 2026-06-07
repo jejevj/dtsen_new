@@ -1,7 +1,10 @@
 <template>
+  <Toast />
+  <ConfirmDialog />
   <router-view />
 </template>
 
 <script setup>
-// App root — routing handled by vue-router
+import Toast from 'primevue/toast'
+import ConfirmDialog from 'primevue/confirmdialog'
 </script>
