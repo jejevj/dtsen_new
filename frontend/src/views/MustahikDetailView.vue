@@ -2,7 +2,7 @@
   <AppLayout>
     <div style="display:flex;flex-direction:column;gap:20px;">
 
-      <!-- Back button -->
+      <!-- Back -->
       <button @click="$router.back()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid #e2e8f0;border-radius:8px;background:white;font-size:13px;font-weight:600;cursor:pointer;color:#374151;width:fit-content;">
         <i class="pi pi-arrow-left" style="font-size:11px;"></i> Kembali
       </button>
@@ -14,115 +14,238 @@
       </div>
 
       <template v-else>
-        <!-- Identity Card -->
+
+        <!-- ===== HEADER IDENTITY ===== -->
         <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
           <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
             <!-- Avatar -->
-            <div :style="{ width:'72px', height:'72px', borderRadius:'16px', background:DESIL_COLORS[mustahik.desil].bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }">
-              <i :class="mustahik.jenis_kelamin==='m' ? 'pi pi-user' : 'pi pi-user'" :style="{ fontSize:'28px', color:DESIL_COLORS[mustahik.desil].text }"></i>
+            <div :style="{ width:'80px', height:'80px', borderRadius:'16px', background:DESIL_COLORS[mustahik.desil].bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, border:'2px solid '+DESIL_COLORS[mustahik.desil].border }">
+              <i :class="mustahik.jenis_kelamin==='m' ? 'pi pi-user' : 'pi pi-user'" :style="{ fontSize:'32px', color:DESIL_COLORS[mustahik.desil].text }"></i>
             </div>
-            <div style="flex:1;">
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <h2 style="font-size:1.3rem;font-weight:800;color:#1e293b;margin:0;">{{ mustahik.nama }}</h2>
-                <span style="padding:3px 12px;border-radius:99px;font-size:11px;font-weight:700;"
-                  :style="{ background:DESIL_COLORS[mustahik.desil].bg, color:DESIL_COLORS[mustahik.desil].text }">
-                  Desil {{ mustahik.desil }}
-                </span>
-                <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;"
-                  :style="{ background: mustahik.jenis_kelamin==='m'?'#eff6ff':'#fdf2f8', color: mustahik.jenis_kelamin==='m'?'#2563eb':'#db2777' }">
-                  {{ mustahik.jenis_kelamin==='m' ? 'Laki-laki' : 'Perempuan' }}
+
+            <div style="flex:1;min-width:0;">
+              <!-- Nama + badges -->
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                <h2 style="font-size:1.25rem;font-weight:800;color:#1e293b;margin:0;">{{ mustahik.nama }}</h2>
+                <span class="badge" :style="{ background:DESIL_COLORS[mustahik.desil].bg, color:DESIL_COLORS[mustahik.desil].text }">Desil {{ mustahik.desil }} — {{ desilLabel(mustahik.desil) }}</span>
+                <span class="badge" :style="{ background: mustahik.jenis_kelamin==='m'?'#eff6ff':'#fdf2f8', color: mustahik.jenis_kelamin==='m'?'#2563eb':'#db2777' }">{{ mustahik.jenis_kelamin==='m'?'Laki-laki':'Perempuan' }}</span>
+              </div>
+
+              <!-- NIK & keterangan khusus -->
+              <p style="font-size:13px;color:#64748b;margin:0 0 6px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNIK(mustahik.nik) }}</strong></p>
+
+              <!-- Badge keterangan khusus -->
+              <div v-if="keteranganBadges(mustahik.keterangan).length" style="display:flex;gap:6px;flex-wrap:wrap;">
+                <span v-for="k in keteranganBadges(mustahik.keterangan)" :key="k" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:#fef3c7;color:#b45309;">
+                  <i class="pi pi-flag" style="font-size:10px;"></i> {{ k }}
                 </span>
               </div>
-              <p style="font-size:13px;color:#64748b;margin:6px 0 0;">NIK: {{ maskNIK(mustahik.nik) }}</p>
-              <p v-if="mustahik.keterangan&&mustahik.keterangan!=='-'" style="font-size:12px;color:#f59e0b;margin:4px 0 0;font-weight:600;">
-                <i class="pi pi-info-circle" style="margin-right:4px;"></i>{{ mustahik.keterangan }}
-              </p>
             </div>
-            <div style="text-align:right;">
-              <p style="font-size:11px;color:#94a3b8;margin:0;">Total Bantuan</p>
-              <p style="font-size:1.4rem;font-weight:900;color:#15803d;margin:2px 0 0;">{{ formatRupiah(mustahik.nominal) }}</p>
+
+            <!-- Total bantuan -->
+            <div style="text-align:right;flex-shrink:0;">
+              <p style="font-size:11px;color:#94a3b8;margin:0;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Total Bantuan</p>
+              <p style="font-size:1.5rem;font-weight:900;color:#15803d;margin:2px 0 0;">{{ formatRupiah(mustahik.nominal) }}</p>
+              <span style="font-size:11px;color:#22c55e;font-weight:600;">&#x2714; Aktif 2024</span>
             </div>
           </div>
         </div>
 
-        <!-- Grid detail -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="detail-grid">
+        <!-- ===== GRID ROW 1: Data Pribadi + Alamat ===== -->
+        <div class="grid-2">
 
           <!-- Data Pribadi -->
           <div class="detail-card">
-            <p class="section-title"><i class="pi pi-id-card" style="margin-right:6px;"></i>Data Pribadi</p>
-            <div class="field-list">
-              <div class="field-row">
-                <span class="field-label">Usia</span>
-                <span class="field-value">{{ mustahik.usia }} tahun</span>
-              </div>
-              <div class="field-row">
-                <span class="field-label">Agama</span>
-                <span class="field-value">{{ mustahik.agama }}</span>
-              </div>
-              <div class="field-row">
-                <span class="field-label">Status Pernikahan</span>
-                <span class="field-value">{{ mustahik.status_pernikahan }}</span>
-              </div>
-              <div class="field-row">
-                <span class="field-label">Pekerjaan</span>
-                <span class="field-value">{{ mustahik.pekerjaan }}</span>
-              </div>
-              <div class="field-row">
-                <span class="field-label">Penghasilan/Bln</span>
-                <span class="field-value" :style="{ color: mustahik.penghasilan===0?'#dc2626':'#374151' }">
-                  {{ mustahik.penghasilan===0 ? 'Tidak ada' : formatRupiah(mustahik.penghasilan) }}
-                </span>
-              </div>
-              <div class="field-row">
-                <span class="field-label">Jumlah Tanggungan</span>
-                <span class="field-value">{{ mustahik.jumlah_tanggungan }} jiwa</span>
-              </div>
-            </div>
+            <p class="section-title"><i class="pi pi-id-card"></i> Data Pribadi</p>
+            <table class="info-table">
+              <tbody>
+                <tr><td class="td-label">Usia</td><td class="td-value">{{ mustahik.usia }} tahun</td></tr>
+                <tr><td class="td-label">Agama</td><td class="td-value">{{ mustahik.agama }}</td></tr>
+                <tr><td class="td-label">Status Pernikahan</td><td class="td-value">{{ mustahik.status_pernikahan }}</td></tr>
+                <tr><td class="td-label">Pekerjaan</td><td class="td-value">{{ mustahik.pekerjaan }}</td></tr>
+                <tr>
+                  <td class="td-label">Penghasilan/Bln</td>
+                  <td class="td-value" :style="{ color: mustahik.penghasilan===0 ? '#dc2626':'#374151' }">
+                    {{ mustahik.penghasilan===0 ? 'Tidak ada penghasilan' : formatRupiah(mustahik.penghasilan) }}
+                  </td>
+                </tr>
+                <tr><td class="td-label">Jumlah Tanggungan</td><td class="td-value">{{ mustahik.jumlah_tanggungan }} jiwa</td></tr>
+              </tbody>
+            </table>
           </div>
 
-          <!-- Domisili -->
+          <!-- Alamat -->
           <div class="detail-card">
-            <p class="section-title"><i class="pi pi-map-marker" style="margin-right:6px;"></i>Alamat Domisili</p>
-            <div class="field-list">
-              <div class="field-row">
-                <span class="field-label">Kelurahan</span>
-                <span class="field-value">{{ mustahik.kelurahan }}</span>
+            <p class="section-title"><i class="pi pi-map-marker"></i> Alamat Domisili</p>
+            <table class="info-table">
+              <tbody>
+                <tr><td class="td-label">Kelurahan</td><td class="td-value">{{ mustahik.kelurahan }}</td></tr>
+                <tr><td class="td-label">Kecamatan</td><td class="td-value">{{ mustahik.kecamatan }}</td></tr>
+                <tr><td class="td-label">Kab / Kota</td><td class="td-value">{{ mustahik.kab_kota }}</td></tr>
+                <tr><td class="td-label">Provinsi</td><td class="td-value">{{ mustahik.provinsi }}</td></tr>
+                <tr><td class="td-label">Kode Pos</td><td class="td-value">{{ fakeKodePos(mustahik.id) }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+
+        <!-- ===== GRID ROW 2: Program Sosial + Keterangan ===== -->
+        <div class="grid-2">
+
+          <!-- Program Sosial -->
+          <div class="detail-card">
+            <p class="section-title"><i class="pi pi-shield"></i> Program Bantuan Sosial Lain</p>
+            <table class="info-table">
+              <thead>
+                <tr>
+                  <th class="th">Program</th>
+                  <th class="th">Status</th>
+                  <th class="th">Tahun</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="prog in programSosial(mustahik)" :key="prog.nama">
+                  <td class="td-label" style="font-weight:600;color:#374151;">{{ prog.nama }}</td>
+                  <td class="td-value">
+                    <span :style="{ padding:'2px 8px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background: prog.aktif?'#dcfce7':'#f1f5f9', color: prog.aktif?'#15803d':'#94a3b8' }">
+                      {{ prog.aktif ? 'Aktif' : 'Tidak' }}
+                    </span>
+                  </td>
+                  <td class="td-value" style="color:#64748b;">{{ prog.tahun }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Catatan -->
+          <div class="detail-card">
+            <p class="section-title"><i class="pi pi-file-edit"></i> Catatan & Kondisi Khusus</p>
+            <div v-if="mustahik.keterangan && mustahik.keterangan !== '-'" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
+              <div style="display:flex;gap:8px;align-items:flex-start;">
+                <i class="pi pi-exclamation-triangle" style="color:#d97706;font-size:14px;margin-top:2px;flex-shrink:0;"></i>
+                <div>
+                  <p style="font-size:13px;font-weight:700;color:#92400e;margin:0 0 4px;">Keterangan Khusus</p>
+                  <p style="font-size:13px;color:#78350f;margin:0;">{{ mustahik.keterangan }}</p>
+                </div>
               </div>
-              <div class="field-row">
-                <span class="field-label">Kecamatan</span>
-                <span class="field-value">{{ mustahik.kecamatan }}</span>
+            </div>
+            <div v-else style="background:#f8fafc;border-radius:10px;padding:14px 16px;">
+              <p style="font-size:13px;color:#94a3b8;margin:0;">Tidak ada catatan khusus.</p>
+            </div>
+
+            <!-- Skor kemiskinan dummy -->
+            <div style="margin-top:14px;">
+              <p style="font-size:12px;color:#64748b;font-weight:600;margin:0 0 8px;">Skor Kemiskinan (Proxy Means Test)</p>
+              <div style="background:#f1f5f9;border-radius:8px;height:10px;overflow:hidden;">
+                <div :style="{ width: skorPmt(mustahik.desil)+'%', height:'100%', background: DESIL_COLORS[mustahik.desil].text, borderRadius:'8px', transition:'width .6s ease' }"></div>
               </div>
-              <div class="field-row">
-                <span class="field-label">Kab/Kota</span>
-                <span class="field-value">{{ mustahik.kab_kota }}</span>
-              </div>
-              <div class="field-row">
-                <span class="field-label">Provinsi</span>
-                <span class="field-value">{{ mustahik.provinsi }}</span>
+              <div style="display:flex;justify-content:space-between;margin-top:4px;">
+                <span style="font-size:11px;color:#94a3b8;">0</span>
+                <span style="font-size:11px;font-weight:700;" :style="{color:DESIL_COLORS[mustahik.desil].text}">{{ skorPmt(mustahik.desil) }} / 100</span>
               </div>
             </div>
           </div>
 
         </div>
 
-        <!-- Bantuan info -->
+        <!-- ===== ANGGOTA KELUARGA ===== -->
         <div class="detail-card">
-          <p class="section-title"><i class="pi pi-wallet" style="margin-right:6px;"></i>Informasi Penyaluran Bantuan</p>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" class="bantuan-grid">
-            <div style="background:#f0fdf4;border-radius:10px;padding:16px;">
-              <p style="font-size:11px;color:#64748b;margin:0 0 4px;font-weight:600;text-transform:uppercase;">Total Bantuan</p>
-              <p style="font-size:1.3rem;font-weight:900;color:#15803d;margin:0;">{{ formatRupiah(mustahik.nominal) }}</p>
+          <p class="section-title"><i class="pi pi-users"></i> Anggota Keluarga</p>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama</th>
+                  <th>Hubungan</th>
+                  <th>L/P</th>
+                  <th>Usia</th>
+                  <th>Pekerjaan</th>
+                  <th>Pendidikan</th>
+                  <th>Ket.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(anggota, i) in anggotaKeluarga(mustahik)" :key="i">
+                  <td style="text-align:center;color:#94a3b8;">{{ i+1 }}</td>
+                  <td style="font-weight:600;color:#1e293b;">{{ anggota.nama }}</td>
+                  <td><span style="padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#eff6ff;color:#2563eb;">{{ anggota.hubungan }}</span></td>
+                  <td style="text-align:center;"><span :style="{color: anggota.jk==='L'?'#2563eb':'#db2777', fontWeight:'700'}">{{ anggota.jk }}</span></td>
+                  <td style="text-align:center;">{{ anggota.usia }} th</td>
+                  <td style="color:#64748b;">{{ anggota.pekerjaan }}</td>
+                  <td style="color:#64748b;">{{ anggota.pendidikan }}</td>
+                  <td>
+                    <span v-if="anggota.ket" style="padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#fef3c7;color:#b45309;">{{ anggota.ket }}</span>
+                    <span v-else style="color:#cbd5e1;">—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ===== RIWAYAT BANTUAN ===== -->
+        <div class="detail-card">
+          <p class="section-title"><i class="pi pi-history"></i> Riwayat Penyaluran Bantuan</p>
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tahun</th>
+                  <th>Periode</th>
+                  <th>Program</th>
+                  <th>Nominal</th>
+                  <th>Metode</th>
+                  <th>Status</th>
+                  <th>Tanggal Cair</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(riwayat, i) in riwayatBantuan(mustahik)" :key="i">
+                  <td style="font-weight:700;color:#374151;">{{ riwayat.tahun }}</td>
+                  <td style="color:#64748b;">{{ riwayat.periode }}</td>
+                  <td style="font-weight:600;color:#374151;">{{ riwayat.program }}</td>
+                  <td style="font-weight:700;color:#15803d;">{{ formatRupiah(riwayat.nominal) }}</td>
+                  <td style="color:#64748b;">{{ riwayat.metode }}</td>
+                  <td>
+                    <span :style="{
+                      padding:'2px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700',
+                      background: riwayat.status==='Tersalurkan'?'#dcfce7':riwayat.status==='Proses'?'#fef3c7':'#fef2f2',
+                      color: riwayat.status==='Tersalurkan'?'#15803d':riwayat.status==='Proses'?'#b45309':'#dc2626'
+                    }">{{ riwayat.status }}</span>
+                  </td>
+                  <td style="color:#64748b;font-size:12px;">{{ riwayat.tanggal }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Subtotal -->
+          <div style="display:flex;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
+            <div style="text-align:right;">
+              <p style="font-size:12px;color:#94a3b8;margin:0;">Total Kumulatif Diterima</p>
+              <p style="font-size:1.2rem;font-weight:900;color:#15803d;margin:2px 0 0;">{{ formatRupiah(totalKumulatif(mustahik)) }}</p>
             </div>
-            <div style="background:#eff6ff;border-radius:10px;padding:16px;">
-              <p style="font-size:11px;color:#64748b;margin:0 0 4px;font-weight:600;text-transform:uppercase;">Desil Kemiskinan</p>
-              <p style="font-size:1.3rem;font-weight:900;margin:0;" :style="{color:DESIL_COLORS[mustahik.desil].text}">Desil {{ mustahik.desil }}</p>
-              <p style="font-size:11px;color:#64748b;margin:4px 0 0;">{{ desilDesc(mustahik.desil) }}</p>
+          </div>
+        </div>
+
+        <!-- ===== INFO PENYALURAN SUMMARY ===== -->
+        <div class="detail-card">
+          <p class="section-title"><i class="pi pi-wallet"></i> Ringkasan Penyaluran</p>
+          <div class="grid-3">
+            <div class="stat-box" style="background:#f0fdf4;">
+              <p class="stat-label">Bantuan Tahun Ini</p>
+              <p class="stat-val" style="color:#15803d;">{{ formatRupiah(mustahik.nominal) }}</p>
             </div>
-            <div style="background:#fff7ed;border-radius:10px;padding:16px;">
-              <p style="font-size:11px;color:#64748b;margin:0 0 4px;font-weight:600;text-transform:uppercase;">Status</p>
-              <p style="font-size:1.1rem;font-weight:700;color:#15803d;margin:0;">Aktif</p>
-              <p style="font-size:11px;color:#64748b;margin:4px 0 0;">Tahun 2024</p>
+            <div class="stat-box" style="background:#eff6ff;">
+              <p class="stat-label">Desil Kemiskinan</p>
+              <p class="stat-val" :style="{color:DESIL_COLORS[mustahik.desil].text}">Desil {{ mustahik.desil }}</p>
+              <p style="font-size:11px;color:#64748b;margin:4px 0 0;">{{ desilLabel(mustahik.desil) }}</p>
+            </div>
+            <div class="stat-box" style="background:#fdf4ff;">
+              <p class="stat-label">Total Kumulatif</p>
+              <p class="stat-val" style="color:#7c3aed;">{{ formatRupiah(totalKumulatif(mustahik)) }}</p>
+              <p style="font-size:11px;color:#64748b;margin:4px 0 0;">Sejak 2022</p>
             </div>
           </div>
         </div>
@@ -144,27 +267,224 @@ const mustahik = computed(() => MOCK_MUSTAHIK.find(m => m.nik_hashed === route.p
 
 function maskNIK(nik) {
   if (!nik) return '-'
-  return nik.slice(0,6) + '****' + nik.slice(-4)
+  return nik.slice(0, 6) + '••••' + nik.slice(-4)
 }
 
-function desilDesc(d) {
-  const map = { 1:'Sangat Miskin', 2:'Miskin', 3:'Hampir Miskin', 4:'Rentan Miskin' }
-  return map[d] || '-'
+function desilLabel(d) {
+  return { 1: 'Sangat Miskin', 2: 'Miskin', 3: 'Hampir Miskin', 4: 'Rentan Miskin' }[d] || '-'
+}
+
+function keteranganBadges(ket) {
+  if (!ket || ket === '-') return []
+  return ket.split(/[,&]/).map(s => s.trim()).filter(Boolean)
+}
+
+function fakeKodePos(id) {
+  const base = [16110, 15111, 50171, 60172, 40111]
+  return String(base[(id - 1) % base.length] + id)
+}
+
+function skorPmt(desil) {
+  return { 1: 85, 2: 65, 3: 45, 4: 28 }[desil] || 50
+}
+
+// ---------- Program Sosial dummy ----------
+function programSosial(m) {
+  const all = [
+    { nama: 'PKH (Program Keluarga Harapan)', aktif: m.desil <= 2, tahun: '2024' },
+    { nama: 'BPJS Kesehatan PBI',             aktif: m.desil <= 3, tahun: '2024' },
+    { nama: 'Bantuan Pangan Non Tunai (BPNT)',aktif: m.desil <= 2, tahun: '2024' },
+    { nama: 'BLT Dana Desa',                   aktif: m.desil === 1, tahun: '2023' },
+    { nama: 'KIP (Kartu Indonesia Pintar)',    aktif: m.jumlah_tanggungan >= 3, tahun: '2024' },
+    { nama: 'PIP (Program Indonesia Pintar)',  aktif: m.jumlah_tanggungan >= 4, tahun: '2023' },
+  ]
+  return all
+}
+
+// ---------- Anggota keluarga dummy statis per id ----------
+function anggotaKeluarga(m) {
+  const pools = [
+    // KK 1 tanggungan 1 – kepala keluarga sendiri
+    [
+      { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
+    ],
+    // tanggungan 2
+    [
+      { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
+      { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 3, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SMP', ket: null },
+    ],
+    // tanggungan 3
+    [
+      { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
+      { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 3, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SMP', ket: null },
+      { nama: namaAnggota(m.id, 2), hubungan: 'Anak', jk: 'L', usia: 12, pekerjaan: 'Pelajar', pendidikan: 'SD', ket: 'KIP' },
+    ],
+    // tanggungan 4
+    [
+      { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
+      { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 3, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SMP', ket: null },
+      { nama: namaAnggota(m.id, 2), hubungan: 'Anak', jk: 'L', usia: 14, pekerjaan: 'Pelajar', pendidikan: 'SMP', ket: 'KIP' },
+      { nama: namaAnggota(m.id, 3), hubungan: 'Anak', jk: 'P', usia: 8,  pekerjaan: 'Pelajar', pendidikan: 'SD',  ket: null },
+    ],
+    // tanggungan 5
+    [
+      { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
+      { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 2, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SD', ket: null },
+      { nama: namaAnggota(m.id, 2), hubungan: 'Anak', jk: 'L', usia: 17, pekerjaan: 'Pelajar', pendidikan: 'SMA', ket: 'KIP' },
+      { nama: namaAnggota(m.id, 3), hubungan: 'Anak', jk: 'P', usia: 10, pekerjaan: 'Pelajar', pendidikan: 'SD',  ket: null },
+      { nama: namaAnggota(m.id, 4), hubungan: 'Orang Tua', jk: 'P', usia: m.usia + 20, pekerjaan: 'Tidak Bekerja', pendidikan: 'SD', ket: 'Lansia' },
+    ],
+    // tanggungan 6
+    [
+      { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
+      { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 2, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SD', ket: null },
+      { nama: namaAnggota(m.id, 2), hubungan: 'Anak', jk: 'L', usia: 19, pekerjaan: 'Tidak Bekerja', pendidikan: 'SMA', ket: null },
+      { nama: namaAnggota(m.id, 3), hubungan: 'Anak', jk: 'P', usia: 14, pekerjaan: 'Pelajar', pendidikan: 'SMP', ket: 'KIP' },
+      { nama: namaAnggota(m.id, 4), hubungan: 'Anak', jk: 'L', usia: 9,  pekerjaan: 'Pelajar', pendidikan: 'SD',  ket: null },
+      { nama: namaAnggota(m.id, 5), hubungan: 'Orang Tua', jk: 'L', usia: m.usia + 22, pekerjaan: 'Tidak Bekerja', pendidikan: 'SD', ket: 'Lansia' },
+    ],
+  ]
+  const idx = Math.min(m.jumlah_tanggungan, 6) - 1
+  return pools[Math.max(0, idx)]
+}
+
+function namaAnggota(id, slot) {
+  const laki  = ['Wahyu','Agus','Hendra','Dian','Fajar','Rizki','Adi','Bayu','Irfan','Doni']
+  const wanita = ['Sari','Dewi','Ani','Rani','Putri','Indah','Maya','Fitri','Rini','Nisa']
+  const fam   = ['Santoso','Wijaya','Hidayat','Kurniawan','Prasetyo','Wibowo','Saputra','Nugroho','Susanto','Ismail']
+  const isL = (id + slot) % 2 === 0
+  const first = isL ? laki[(id + slot) % laki.length] : wanita[(id + slot) % wanita.length]
+  return first + ' ' + fam[(id * slot) % fam.length]
+}
+
+// ---------- Riwayat bantuan dummy ----------
+function riwayatBantuan(m) {
+  const metode = ['Transfer Bank', 'Kantor Pos', 'Transfer Bank']
+  const rows = []
+  const base = Math.round(m.nominal * 0.75)
+  rows.push({ tahun:'2022', periode:'Jan – Des 2022', program:'Zakat Produktif DTSEN', nominal: base,           metode: metode[0], status:'Tersalurkan', tanggal:'15 Des 2022' })
+  rows.push({ tahun:'2023', periode:'Jan – Jun 2023', program:'Zakat Konsumtif DTSEN', nominal: Math.round(base*0.5), metode: metode[1], status:'Tersalurkan', tanggal:'20 Jun 2023' })
+  rows.push({ tahun:'2023', periode:'Jul – Des 2023', program:'Zakat Konsumtif DTSEN', nominal: Math.round(base*0.55),metode: metode[0], status:'Tersalurkan', tanggal:'18 Des 2023' })
+  rows.push({ tahun:'2024', periode:'Jan – Jun 2024', program:'Zakat Produktif DTSEN', nominal: Math.round(m.nominal*0.5), metode: metode[2], status:'Tersalurkan', tanggal:'25 Jun 2024' })
+  rows.push({ tahun:'2024', periode:'Jul – Des 2024', program:'Zakat Produktif DTSEN', nominal: Math.round(m.nominal*0.5), metode: metode[0], status:'Proses',      tanggal:'— (dijadwalkan)' })
+  return rows
+}
+
+function totalKumulatif(m) {
+  return riwayatBantuan(m).filter(r => r.status === 'Tersalurkan').reduce((a, b) => a + b.nominal, 0)
 }
 </script>
 
 <style scoped>
-.detail-card { background:white; border-radius:14px; border:1px solid #f1f5f9; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
-.section-title { font-size:13px; font-weight:700; color:#374151; margin:0 0 14px; display:flex; align-items:center; }
-.field-list { display:flex; flex-direction:column; gap:10px; }
-.field-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; }
-.field-row:last-child { border-bottom:none; }
-.field-label { font-size:12px; color:#94a3b8; font-weight:500; }
-.field-value { font-size:13px; color:#374151; font-weight:600; text-align:right; max-width:55%; }
-.detail-grid { grid-template-columns:1fr 1fr; }
-.bantuan-grid { grid-template-columns:repeat(3,1fr); }
+/* ===== LAYOUT ===== */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
 @media(max-width:768px) {
-  .detail-grid  { grid-template-columns:1fr; }
-  .bantuan-grid { grid-template-columns:1fr; }
+  .grid-2 { grid-template-columns:1fr; }
+  .grid-3 { grid-template-columns:1fr; }
+}
+
+/* ===== CARD ===== */
+.detail-card {
+  background:white;
+  border-radius:14px;
+  border:1px solid #f1f5f9;
+  padding:22px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+}
+.section-title {
+  font-size:13px;
+  font-weight:700;
+  color:#374151;
+  margin:0 0 14px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+/* ===== BADGE ===== */
+.badge {
+  padding:3px 10px;
+  border-radius:99px;
+  font-size:11px;
+  font-weight:700;
+}
+
+/* ===== INFO TABLE (label-value) ===== */
+.info-table { width:100%; border-collapse:collapse; }
+.info-table tr { border-bottom:1px solid #f8fafc; }
+.info-table tr:last-child { border-bottom:none; }
+.td-label {
+  font-size:12px;
+  color:#94a3b8;
+  font-weight:500;
+  padding:9px 4px;
+  width:45%;
+  vertical-align:top;
+}
+.td-value {
+  font-size:13px;
+  color:#374151;
+  font-weight:600;
+  padding:9px 4px;
+  text-align:right;
+}
+.th {
+  font-size:11px;
+  color:#94a3b8;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  padding:6px 8px;
+  text-align:left;
+  border-bottom:1px solid #f1f5f9;
+}
+
+/* ===== DATA TABLE (anggota / riwayat) ===== */
+.data-table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+  min-width:560px;
+}
+.data-table thead tr {
+  background:#f8fafc;
+}
+.data-table th {
+  font-size:11px;
+  color:#94a3b8;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  padding:10px 12px;
+  text-align:left;
+  border-bottom:1px solid #f1f5f9;
+  white-space:nowrap;
+}
+.data-table td {
+  padding:10px 12px;
+  border-bottom:1px solid #f8fafc;
+  vertical-align:middle;
+}
+.data-table tbody tr:last-child td { border-bottom:none; }
+.data-table tbody tr:hover { background:#fafafa; }
+
+/* ===== STAT BOX ===== */
+.stat-box {
+  border-radius:10px;
+  padding:16px;
+}
+.stat-label {
+  font-size:11px;
+  color:#64748b;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  margin:0 0 4px;
+}
+.stat-val {
+  font-size:1.25rem;
+  font-weight:900;
+  margin:0;
 }
 </style>
