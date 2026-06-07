@@ -133,18 +133,6 @@
             <div v-else style="background:#f8fafc;border-radius:10px;padding:14px 16px;">
               <p style="font-size:13px;color:#94a3b8;margin:0;">Tidak ada catatan khusus.</p>
             </div>
-
-            <!-- Skor kemiskinan dummy -->
-            <div style="margin-top:14px;">
-              <p style="font-size:12px;color:#64748b;font-weight:600;margin:0 0 8px;">Skor Kemiskinan (Proxy Means Test)</p>
-              <div style="background:#f1f5f9;border-radius:8px;height:10px;overflow:hidden;">
-                <div :style="{ width: skorPmt(mustahik.desil)+'%', height:'100%', background: DESIL_COLORS[mustahik.desil].text, borderRadius:'8px', transition:'width .6s ease' }"></div>
-              </div>
-              <div style="display:flex;justify-content:space-between;margin-top:4px;">
-                <span style="font-size:11px;color:#94a3b8;">0</span>
-                <span style="font-size:11px;font-weight:700;" :style="{color:DESIL_COLORS[mustahik.desil].text}">{{ skorPmt(mustahik.desil) }} / 100</span>
-              </div>
-            </div>
           </div>
 
         </div>
@@ -284,10 +272,6 @@ function fakeKodePos(id) {
   return String(base[(id - 1) % base.length] + id)
 }
 
-function skorPmt(desil) {
-  return { 1: 85, 2: 65, 3: 45, 4: 28 }[desil] || 50
-}
-
 // ---------- Program Sosial dummy ----------
 function programSosial(m) {
   const all = [
@@ -304,29 +288,24 @@ function programSosial(m) {
 // ---------- Anggota keluarga dummy statis per id ----------
 function anggotaKeluarga(m) {
   const pools = [
-    // KK 1 tanggungan 1 – kepala keluarga sendiri
     [
       { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
     ],
-    // tanggungan 2
     [
       { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
       { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 3, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SMP', ket: null },
     ],
-    // tanggungan 3
     [
       { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
       { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 3, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SMP', ket: null },
       { nama: namaAnggota(m.id, 2), hubungan: 'Anak', jk: 'L', usia: 12, pekerjaan: 'Pelajar', pendidikan: 'SD', ket: 'KIP' },
     ],
-    // tanggungan 4
     [
       { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
       { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 3, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SMP', ket: null },
       { nama: namaAnggota(m.id, 2), hubungan: 'Anak', jk: 'L', usia: 14, pekerjaan: 'Pelajar', pendidikan: 'SMP', ket: 'KIP' },
       { nama: namaAnggota(m.id, 3), hubungan: 'Anak', jk: 'P', usia: 8,  pekerjaan: 'Pelajar', pendidikan: 'SD',  ket: null },
     ],
-    // tanggungan 5
     [
       { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
       { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 2, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SD', ket: null },
@@ -334,7 +313,6 @@ function anggotaKeluarga(m) {
       { nama: namaAnggota(m.id, 3), hubungan: 'Anak', jk: 'P', usia: 10, pekerjaan: 'Pelajar', pendidikan: 'SD',  ket: null },
       { nama: namaAnggota(m.id, 4), hubungan: 'Orang Tua', jk: 'P', usia: m.usia + 20, pekerjaan: 'Tidak Bekerja', pendidikan: 'SD', ket: 'Lansia' },
     ],
-    // tanggungan 6
     [
       { nama: m.nama, hubungan: 'Kepala Keluarga', jk: m.jenis_kelamin === 'm' ? 'L' : 'P', usia: m.usia, pekerjaan: m.pekerjaan, pendidikan: 'SD', ket: null },
       { nama: namaAnggota(m.id, 1), hubungan: 'Pasangan', jk: m.jenis_kelamin === 'm' ? 'P' : 'L', usia: m.usia - 2, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SD', ket: null },
