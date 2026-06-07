@@ -9,17 +9,18 @@ from ...services.auth_service import AuthService
 
 @api_v1_bp.post('/auth/login')
 def login():
-    """Login user and return JWT tokens."""
-    data = request.get_json()
-    result = AuthService.login(data.get('email'), data.get('password'))
+    """Login via email, username, atau NIP."""
+    data       = request.get_json() or {}
+    identifier = data.get('identifier') or data.get('email')
+    password   = data.get('password')
+    result     = AuthService.login(identifier, password)
     return jsonify(result), result.get('status_code', 200)
 
 
 @api_v1_bp.post('/auth/refresh')
 @jwt_required(refresh=True)
 def refresh():
-    """Refresh access token."""
-    identity = get_jwt_identity()
+    identity     = get_jwt_identity()
     access_token = create_access_token(identity=identity)
     return jsonify({'access_token': access_token}), 200
 
@@ -27,7 +28,6 @@ def refresh():
 @api_v1_bp.get('/auth/me')
 @jwt_required()
 def me():
-    """Get current authenticated user."""
     identity = get_jwt_identity()
-    result = AuthService.get_user(identity)
+    result   = AuthService.get_user(identity)
     return jsonify(result), 200
