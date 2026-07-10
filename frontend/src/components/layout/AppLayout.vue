@@ -1,6 +1,9 @@
 <template>
   <div class="flex h-screen w-screen overflow-hidden bg-slate-50" style="font-family: Inter, sans-serif;">
 
+    <!-- ===== WATERMARK DIAGONAL (security evidence) ===== -->
+    <WatermarkOverlay />
+
     <!-- ===== SIDEBAR ===== -->
     <aside
       :class="[
@@ -164,6 +167,7 @@ import Button from 'primevue/button'
 import Avatar from 'primevue/avatar'
 import Dialog from 'primevue/dialog'
 import { useAuthStore } from '@/stores/auth'
+import WatermarkOverlay from '@/components/common/WatermarkOverlay.vue'
 
 const route      = useRoute()
 const router     = useRouter()
