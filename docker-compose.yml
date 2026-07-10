@@ -2,10 +2,8 @@ version: '3.9'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DTSEN Stack
-#  dtsen_api      : Flask/Gunicorn  → host:8778  (sama dengan setup lama)
-#  dtsen_frontend : Vue + Nginx     → host:8786  (ganti dtsen-frontend.service)
-#
-# Nginx proxy /api/* → dtsen_api:5000 (internal, no CORS)
+#  dtsen_api      : Flask/Gunicorn  → host:8778
+#  dtsen_frontend : Vue + Nginx     → host:8786
 #
 # Deploy:
 #   cp backend/.env.example backend/.env && nano backend/.env
@@ -17,7 +15,6 @@ version: '3.9'
 
 services:
 
-  # ── Backend API ─────────────────────────────────────────────────────────────
   api:
     build:
       context: ./backend
@@ -33,17 +30,17 @@ services:
     volumes:
       - dtsen_uploads:/app/uploads
     ports:
-      - "8778:5000"     # sama dengan port lama di backend/docker-compose.yml
+      - "8778:5000"
     networks:
       - dtsen_net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      # wget tersedia di python:slim, curl tidak
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/api/v1/health"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 10s
 
-  # ── Frontend (Vue build + Nginx proxy) ──────────────────────────────────────
   frontend:
     build:
       context: ./frontend
@@ -54,10 +51,9 @@ services:
     container_name: dtsen_frontend
     restart: unless-stopped
     ports:
-      - "8786:80"       # host:8786 → nginx:80
+      - "8786:80"
     depends_on:
-      api:
-        condition: service_healthy
+      - api          # service_started: tidak tunggu healthy, langsung jalan
     networks:
       - dtsen_net
 
