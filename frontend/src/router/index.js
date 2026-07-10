@@ -1,9 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore }       from '@/stores/auth'
+import { useLoginModalStore } from '@/stores/loginModal'
 
 const routes = [
   { path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
-  { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue') },
+
+  {
+    // /login tidak punya halaman — LoginView akan redirect ke / dan buka modal
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue')
+  },
 
   {
     path: '/verify-otp',
@@ -50,27 +57,28 @@ const router = createRouter({
   routes,
 })
 
-// ── Navigation Guard ──────────────────────────────────────────────────────────
 router.beforeEach(async (to, _from, next) => {
-  const auth = useAuthStore()
+  const auth       = useAuthStore()
+  const loginModal = useLoginModalStore()
 
-  // Halaman publik — langsung lanjut
-  if (!to.meta.requiresAuth && !to.meta.requiresLogin) {
-    // Jika sudah login dan mau ke /login → redirect dashboard
-    if (to.name === 'login' && auth.isAuthenticated) return next({ name: 'dashboard' })
-    return next()
+  // Halaman publik
+  if (!to.meta.requiresAuth && !to.meta.requiresLogin) return next()
+
+  // Tidak ada token — buka modal login, tetap di /
+  if (!auth.accessToken) {
+    loginModal.open()
+    return next({ name: 'home' })
   }
 
-  // Belum ada token sama sekali
-  if (!auth.accessToken) return next({ name: 'login' })
-
-  // Ada token tapi user belum di-fetch (misal: reload browser)
+  // Ada token tapi user belum di-fetch (reload browser)
   if (!auth.user) {
     const ok = await auth.fetchMe()
-    if (!ok) return next({ name: 'login' })
+    if (!ok) {
+      loginModal.open()
+      return next({ name: 'home' })
+    }
   }
 
-  // Semua OK
   next()
 })
 
