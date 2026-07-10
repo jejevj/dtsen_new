@@ -51,79 +51,136 @@
         </div>
       </div>
 
-      <!-- Table -->
-      <div style="background:white;border-radius:14px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,0.04);overflow:hidden;">
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-              <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
-                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">#</th>
-                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Nama</th>
-                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Desil</th>
-                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Gender</th>
-                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Kecamatan</th>
-                <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Provinsi</th>
-                <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Tanggungan</th>
-                <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Nominal</th>
-                <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="paginated.length===0">
-                <td colspan="9" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px;">Tidak ada data yang sesuai filter</td>
-              </tr>
-              <tr
-                v-for="(row,i) in paginated" :key="row.id"
-                style="border-bottom:1px solid #f1f5f9;transition:background .15s;"
-                :style="{ background: hoveredRow===row.id ? '#f8fafc' : 'white' }"
-                @mouseenter="hoveredRow=row.id"
-                @mouseleave="hoveredRow=null"
-              >
-                <td style="padding:10px 14px;color:#94a3b8;">{{ (currentPage-1)*perPage+i+1 }}</td>
-                <td style="padding:10px 14px;">
-                  <router-link :to="`/mustahik/${row.nik_hashed}`" style="color:#2563eb;font-weight:600;text-decoration:none;"
-                    @mouseover="e=>e.target.style.textDecoration='underline'"
-                    @mouseout="e=>e.target.style.textDecoration='none'">{{ row.nama }}</router-link>
-                </td>
-                <td style="padding:10px 14px;">
-                  <span style="padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700;"
-                    :style="{ background:DESIL_COLORS[row.desil].bg, color:DESIL_COLORS[row.desil].text }">
-                    Desil {{ row.desil }}
-                  </span>
-                </td>
-                <td style="padding:10px 14px;">
-                  <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;"
-                    :style="{ color: row.jenis_kelamin==='m' ? '#2563eb' : '#db2777' }">
-                    <i :class="row.jenis_kelamin==='m' ? 'pi pi-mars' : 'pi pi-venus'" style="font-size:11px;"></i>
-                    {{ row.jenis_kelamin==='m' ? 'L' : 'P' }}
-                  </span>
-                </td>
-                <td style="padding:10px 14px;color:#374151;">{{ row.kecamatan }}</td>
-                <td style="padding:10px 14px;color:#374151;">{{ row.provinsi }}</td>
-                <td style="padding:10px 14px;text-align:right;color:#374151;">{{ row.jumlah_tanggungan }} jiwa</td>
-                <td style="padding:10px 14px;text-align:right;font-weight:700;color:#15803d;">{{ formatRupiah(row.nominal) }}</td>
-                <td style="padding:10px 14px;text-align:center;">
-                  <button @click="$router.push(`/mustahik/${row.nik_hashed}`)"
-                    style="padding:5px 12px;border:1px solid #e2e8f0;border-radius:7px;background:white;font-size:12px;cursor:pointer;color:#374151;font-weight:600;display:inline-flex;align-items:center;gap:5px;">
-                    <i class="pi pi-eye" style="font-size:11px;"></i> Detail
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <!-- Table dengan watermark di background -->
+      <div style="position:relative;background:white;border-radius:14px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,0.04);overflow:hidden;">
 
-        <!-- Pagination -->
-        <div style="padding:12px 16px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-          <p style="font-size:12px;color:#64748b;margin:0;">Menampilkan {{ (currentPage-1)*perPage+1 }}–{{ Math.min(currentPage*perPage,filtered.length) }} dari {{ filtered.length }} data</p>
-          <div style="display:flex;gap:4px;">
-            <button v-for="p in totalPages" :key="p" @click="currentPage=p"
-              style="width:30px;height:30px;border-radius:7px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;"
-              :style="{ background: p===currentPage ? '#2563eb' : 'white', color: p===currentPage ? 'white' : '#374151', borderColor: p===currentPage ? '#2563eb' : '#e2e8f0' }">
-              {{ p }}
-            </button>
+        <!-- ===== WATERMARK TABEL ===== -->
+        <div
+          aria-hidden="true"
+          style="
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+          "
+        >
+          <div
+            style="
+              position: absolute;
+              top: -40%;
+              left: -40%;
+              width: 180%;
+              height: 180%;
+              display: flex;
+              flex-wrap: wrap;
+              align-content: flex-start;
+              transform: rotate(-35deg);
+              transform-origin: center center;
+            "
+          >
+            <div
+              v-for="i in 80"
+              :key="i"
+              style="
+                display: block;
+                width: 50%;
+                padding: 22px 0;
+                text-align: center;
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: rgba(15, 23, 42, 0.07);
+                white-space: nowrap;
+                font-family: Inter, sans-serif;
+                line-height: 1;
+              "
+            >
+              DO NOT COPY &nbsp;&bull;&nbsp; {{ userIdentifier }}
+            </div>
           </div>
         </div>
+        <!-- ===== END WATERMARK ===== -->
+
+        <!-- Konten tabel di z-index 1 -->
+        <div style="position:relative;z-index:1;">
+          <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead>
+                <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">#</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Nama</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Desil</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Gender</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Kecamatan</th>
+                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Provinsi</th>
+                  <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Tanggungan</th>
+                  <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Nominal</th>
+                  <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="paginated.length===0">
+                  <td colspan="9" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px;">Tidak ada data yang sesuai filter</td>
+                </tr>
+                <tr
+                  v-for="(row,i) in paginated" :key="row.id"
+                  style="border-bottom:1px solid #f1f5f9;transition:background .15s;"
+                  :style="{ background: hoveredRow===row.id ? '#f0f9ff' : 'transparent' }"
+                  @mouseenter="hoveredRow=row.id"
+                  @mouseleave="hoveredRow=null"
+                >
+                  <td style="padding:10px 14px;color:#94a3b8;">{{ (currentPage-1)*perPage+i+1 }}</td>
+                  <td style="padding:10px 14px;">
+                    <router-link :to="`/mustahik/${row.nik_hashed}`" style="color:#2563eb;font-weight:600;text-decoration:none;"
+                      @mouseover="e=>e.target.style.textDecoration='underline'"
+                      @mouseout="e=>e.target.style.textDecoration='none'">{{ row.nama }}</router-link>
+                  </td>
+                  <td style="padding:10px 14px;">
+                    <span style="padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700;"
+                      :style="{ background:DESIL_COLORS[row.desil].bg, color:DESIL_COLORS[row.desil].text }">
+                      Desil {{ row.desil }}
+                    </span>
+                  </td>
+                  <td style="padding:10px 14px;">
+                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;"
+                      :style="{ color: row.jenis_kelamin==='m' ? '#2563eb' : '#db2777' }">
+                      <i :class="row.jenis_kelamin==='m' ? 'pi pi-mars' : 'pi pi-venus'" style="font-size:11px;"></i>
+                      {{ row.jenis_kelamin==='m' ? 'L' : 'P' }}
+                    </span>
+                  </td>
+                  <td style="padding:10px 14px;color:#374151;">{{ row.kecamatan }}</td>
+                  <td style="padding:10px 14px;color:#374151;">{{ row.provinsi }}</td>
+                  <td style="padding:10px 14px;text-align:right;color:#374151;">{{ row.jumlah_tanggungan }} jiwa</td>
+                  <td style="padding:10px 14px;text-align:right;font-weight:700;color:#15803d;">{{ formatRupiah(row.nominal) }}</td>
+                  <td style="padding:10px 14px;text-align:center;">
+                    <button @click="$router.push(`/mustahik/${row.nik_hashed}`)"
+                      style="padding:5px 12px;border:1px solid #e2e8f0;border-radius:7px;background:white;font-size:12px;cursor:pointer;color:#374151;font-weight:600;display:inline-flex;align-items:center;gap:5px;">
+                      <i class="pi pi-eye" style="font-size:11px;"></i> Detail
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div style="padding:12px 16px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <p style="font-size:12px;color:#64748b;margin:0;">Menampilkan {{ (currentPage-1)*perPage+1 }}–{{ Math.min(currentPage*perPage,filtered.length) }} dari {{ filtered.length }} data</p>
+            <div style="display:flex;gap:4px;">
+              <button v-for="p in totalPages" :key="p" @click="currentPage=p"
+                style="width:30px;height:30px;border-radius:7px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;"
+                :style="{ background: p===currentPage ? '#2563eb' : 'white', color: p===currentPage ? 'white' : '#374151', borderColor: p===currentPage ? '#2563eb' : '#e2e8f0' }">
+                {{ p }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- end z-index:1 -->
+
       </div>
     </div>
   </AppLayout>
@@ -134,6 +191,25 @@ import { ref, computed } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { MOCK_MUSTAHIK, DESIL_COLORS } from '@/data/mockMustahik'
 import { formatRupiah } from '@/utils/formatter'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+
+/**
+ * Identitas user untuk watermark tabel.
+ * Fallback berlapis: email → tuser_email → notelp → user_id → 'CONFIDENTIAL'
+ */
+const userIdentifier = computed(() => {
+  const u = authStore.user
+  if (!u) return 'CONFIDENTIAL'
+  return (
+    u.email       ||
+    u.tuser_email ||
+    u.notelp      ||
+    u.user_id     ||
+    'CONFIDENTIAL'
+  )
+})
 
 const q              = ref('')
 const filterDesil    = ref('')
