@@ -1,61 +1,38 @@
 <template>
   <AppLayout>
-    <!-- Wrapper utama: position relative agar watermark absolute di dalamnya -->
-    <div style="position:relative; display:flex; flex-direction:column; gap:24px;">
+    <!-- Wrapper utama: position relative sebagai jangkar SVG watermark -->
+    <div class="dash-wrapper">
 
-      <!-- ===== WATERMARK BACKGROUND ===== -->
-      <div
-        aria-hidden="true"
-        style="
-          position: absolute;
-          inset: 0;
-          z-index: 0;
-          pointer-events: none;
-          overflow: hidden;
-          user-select: none;
-          -webkit-user-select: none;
-        "
-      >
-        <div
-          style="
-            position: absolute;
-            top: -30%;
-            left: -30%;
-            width: 160%;
-            height: 160%;
-            display: flex;
-            flex-wrap: wrap;
-            align-content: flex-start;
-            transform: rotate(-35deg);
-            transform-origin: center center;
-          "
-        >
-          <div
-            v-for="i in 60"
-            :key="i"
-            style="
-              display: block;
-              width: 50%;
-              padding: 28px 0;
-              text-align: center;
-              font-size: 12px;
-              font-weight: 700;
-              letter-spacing: 0.1em;
-              text-transform: uppercase;
-              color: rgba(15, 23, 42, 0.10);
-              white-space: nowrap;
-              font-family: Inter, sans-serif;
-              line-height: 1;
-            "
-          >
-            DO NOT COPY &nbsp;&bull;&nbsp; {{ userEmail }}
-          </div>
-        </div>
+      <!-- ===== WATERMARK SVG PATTERN ===== -->
+      <div class="wm-overlay" aria-hidden="true">
+        <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id="dash-wm" x="0" y="0" width="320" height="120"
+              patternUnits="userSpaceOnUse"
+              patternTransform="rotate(-35)">
+              <text x="10" y="40"
+                font-family="Inter, sans-serif"
+                font-size="11"
+                font-weight="700"
+                letter-spacing="2"
+                fill="rgba(15,23,42,0.09)"
+                text-anchor="start">DO NOT COPY</text>
+              <text x="10" y="68"
+                font-family="Inter, sans-serif"
+                font-size="10"
+                font-weight="600"
+                letter-spacing="1"
+                fill="rgba(15,23,42,0.07)"
+                text-anchor="start">{{ userEmail }}</text>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#dash-wm)" />
+        </svg>
       </div>
       <!-- ===== END WATERMARK ===== -->
 
       <!-- Semua konten di z-index 1 agar di atas watermark -->
-      <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:24px;">
+      <div class="dash-content">
 
         <!-- Header -->
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
@@ -103,7 +80,6 @@
 
         <!-- Charts row -->
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
-          <!-- Gender Pie -->
           <div class="card-box">
             <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
             <Chart type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
@@ -112,7 +88,6 @@
               <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>P: {{ stats.by_gender.f }}</span>
             </div>
           </div>
-          <!-- Desil Bar -->
           <div class="card-box">
             <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Mustahik per Desil</p>
             <Chart type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
@@ -123,9 +98,7 @@
         <div class="card-box">
           <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">
             Sebaran Mustahik
-            <span style="font-weight:400;color:#94a3b8;">
-              per {{ wilayahGroupLabel }}
-            </span>
+            <span style="font-weight:400;color:#94a3b8;">per {{ wilayahGroupLabel }}</span>
           </p>
           <div v-if="stats.by_provinsi.length === 0" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px;">
             Tidak ada data mustahik di wilayah ini.
@@ -154,7 +127,7 @@
         </div>
 
       </div>
-      <!-- end z-index:1 wrapper -->
+      <!-- end dash-content -->
 
     </div>
   </AppLayout>
@@ -170,28 +143,15 @@ import { DESIL_COLORS, getMockByWilayah, buildSummaryStats } from '@/data/mockMu
 
 const authStore = useAuthStore()
 
-/**
- * Ambil identitas user untuk watermark.
- * Prioritas: email > notelp > user_id > 'CONFIDENTIAL'
- * Ini menangani kasus user yang login pakai notelp (email-nya null di DB).
- */
 const userEmail = computed(() => {
   const u = authStore.user
   if (!u) return 'CONFIDENTIAL'
-  return (
-    u.email        ||
-    u.tuser_email  ||
-    u.notelp       ||
-    u.user_id      ||
-    'CONFIDENTIAL'
-  )
+  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
-// ── Data ter-filter berdasarkan wilayah user yang login ──────────────────────
 const filteredData = computed(() => getMockByWilayah(authStore.userWilayah))
 const stats        = computed(() => buildSummaryStats(filteredData.value))
 
-// Label grup sebaran
 const wilayahGroupLabel = computed(() => {
   const w = authStore.userWilayah
   if (!w || w.level === 'provinsi') return 'Provinsi'
@@ -210,10 +170,10 @@ const roleBadgeStyle = computed(() => {
 })
 
 const statCards = computed(() => [
-  { label:'Total Mustahik',     value: stats.value.total_mustahik.toLocaleString('id-ID'),       sub:'Desil 1–4 di wilayah ini', icon:'pi pi-users',     iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'Total KK',           value: stats.value.total_kk.toLocaleString('id-ID'),             sub:'Kepala Keluarga',          icon:'pi pi-home',      iconBg:'#f0fdf4', iconColor:'#16a34a' },
-  { label:'Total Penyaluran',   value: formatRupiah(stats.value.total_nominal),                  sub:'Nilai bantuan',            icon:'pi pi-wallet',    iconBg:'#faf5ff', iconColor:'#7c3aed' },
-  { label:'Wilayah Terlayani',  value: stats.value.by_provinsi.length + '',                      sub: authStore.user?.wilayah_label || 'Seluruh Indonesia', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Total Mustahik',    value: stats.value.total_mustahik.toLocaleString('id-ID'),  sub:'Desil 1–4 di wilayah ini', icon:'pi pi-users',      iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Total KK',          value: stats.value.total_kk.toLocaleString('id-ID'),        sub:'Kepala Keluarga',          icon:'pi pi-home',       iconBg:'#f0fdf4', iconColor:'#16a34a' },
+  { label:'Total Penyaluran',  value: formatRupiah(stats.value.total_nominal),             sub:'Nilai bantuan',            icon:'pi pi-wallet',     iconBg:'#faf5ff', iconColor:'#7c3aed' },
+  { label:'Wilayah Terlayani', value: stats.value.by_provinsi.length + '',                 sub: authStore.user?.wilayah_label || 'Seluruh Indonesia', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
 ])
 
 const genderChartData = computed(() => ({
@@ -246,8 +206,39 @@ const quickNav = [
 </script>
 
 <style scoped>
+/* Jangkar watermark — mengikuti tinggi konten */
+.dash-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* SVG overlay memenuhi seluruh .dash-wrapper */
+.wm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.wm-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Konten di atas watermark */
+.dash-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
 .grid-4  { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-.desil-grid { }
 .chart-row { grid-template-columns:1fr 2fr; }
 .quick-nav { grid-template-columns:repeat(3,1fr); }
 .stat-card {
