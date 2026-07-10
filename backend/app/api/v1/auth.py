@@ -7,6 +7,7 @@ from . import api_v1_bp
 from ...services.auth_service import AuthService
 from ...services.otp_service  import generate_otp, save_otp, verify_otp, send_otp_email
 from ...services.wa_service   import send_wa_otp, normalize_contact
+from ...extensions            import db
 
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -15,7 +16,7 @@ def _mask_email(email: str) -> str:
         return ''
     local, domain = email.split('@', 1)
     masked = local[:2] + '***' if len(local) > 2 else '***'
-    return f"{masked}@{domain}"
+    return f'{masked}@{domain}'
 
 def _mask_phone(phone: str) -> str:
     if not phone or len(phone) < 5:
@@ -23,7 +24,6 @@ def _mask_phone(phone: str) -> str:
     return phone[:4] + '****' + phone[-2:]
 
 def _parse_otp_key(otp_key: str):
-    """otp_key: otp_email_{id}_{type} atau otp_wa_{id}_{type}"""
     parts     = otp_key.split('_')
     user_id   = int(parts[2])
     user_type = parts[3]
@@ -33,11 +33,33 @@ def _make_identity(user_id: int, user_type: str) -> dict:
     return {'type': user_type, 'id': user_id}
 
 def _get_phone(user: dict) -> str:
-    """Ambil nomor HP dari berbagai kemungkinan nama field, normalisasi ke 628xxx."""
     for field in ('notelp', 'tuser_notelp', 'phone', 'handphone', 'no_hp', 'telepon'):
         val = user.get(field)
         if val and str(val).strip():
             return normalize_contact(str(val).strip())
+    return ''
+
+def _fetch_phone_from_db(user_id: int, user_type: str) -> str:
+    """
+    Fallback: query langsung ke DB jika payload tidak punya notelp.
+    Cek tuser dan t_dtsen_akses.
+    """
+    try:
+        if user_type == 'tuser':
+            row = db.session.execute(
+                db.text("SELECT notelp FROM tuser WHERE iduser = :id LIMIT 1"),
+                {'id': user_id}
+            ).fetchone()
+        else:
+            row = db.session.execute(
+                db.text("SELECT notelp FROM t_dtsen_akses WHERE dtsen_akses_id = :id LIMIT 1"),
+                {'id': user_id}
+            ).fetchone()
+        if row and row[0] and str(row[0]).strip():
+            return normalize_contact(str(row[0]).strip())
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f'[AUTH] _fetch_phone_from_db error: {e}')
     return ''
 
 
@@ -60,10 +82,12 @@ def login():
         user.get('email') or user.get('tuser_email') or
         (identifier if '@' in (identifier or '') else None)
     )
-    phone = _get_phone(user)  # sudah dinormalisasi 628xxx
+
+    # Ambil phone dari payload, fallback ke DB jika kosong
+    phone = _get_phone(user) or _fetch_phone_from_db(user_id, user_type)
 
     otp_code = generate_otp()
-    otp_key  = f"otp_email_{user_id}_{user_type}"
+    otp_key  = f'otp_email_{user_id}_{user_type}'
     save_otp(otp_key, otp_code)
 
     sent = send_otp_email(email, otp_code, user_name, user_id, user_type) if email else False
@@ -76,7 +100,7 @@ def login():
             'id':           user_id,
             'user_type':    user_type,
             'email_masked': _mask_email(email),
-            'phone':        phone,           # sudah 628xxx, disimpan di sessionStorage frontend
+            'phone':        phone,
             'phone_masked': _mask_phone(phone),
         }
     }), 200
@@ -85,6 +109,7 @@ def login():
 # ── Step 2: Verifikasi OTP Email → kirim OTP WA ────────────────────────────
 @api_v1_bp.post('/auth/otp/verify-email')
 def otp_verify_email():
+    from flask import current_app
     data    = request.get_json() or {}
     otp_key = data.get('otp_key', '')
     code    = data.get('code', '')
@@ -97,19 +122,25 @@ def otp_verify_email():
 
     user_id, user_type = _parse_otp_key(otp_key)
 
-    # Ambil phone dari DB (fallback jika hint tidak tersedia)
+    # Coba dari payload user dulu, fallback langsung query DB
     user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
     user      = user_data.get('user', {})
-    phone     = _get_phone(user)
+    phone     = _get_phone(user) or _fetch_phone_from_db(user_id, user_type)
+
+    current_app.logger.info(
+        f'[AUTH] verify-email user_id={user_id} user_type={user_type} '
+        f'payload_notelp={user.get("notelp")!r} resolved_phone={phone!r}'
+    )
 
     wa_code = generate_otp()
-    wa_key  = f"otp_wa_{user_id}_{user_type}"
+    wa_key  = f'otp_wa_{user_id}_{user_type}'
     save_otp(wa_key, wa_code)
 
     sent = send_wa_otp(phone, wa_code, user_id, user_type) if phone else False
 
     return jsonify({
-        'message':     'OTP email valid. OTP WhatsApp telah dikirim.',
+        'message':     'OTP email valid. OTP WhatsApp telah dikirim.' if sent else
+                       'OTP email valid. Nomor HP tidak tersedia, WA tidak dikirim.',
         'wa_otp_sent': sent,
         'wa_otp_key':  wa_key,
         'user_hint': {
@@ -181,7 +212,7 @@ def otp_resend_wa():
     user_id, user_type = _parse_otp_key(wa_key)
     user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
     user      = user_data.get('user', {})
-    phone     = _get_phone(user)
+    phone     = _get_phone(user) or _fetch_phone_from_db(user_id, user_type)
 
     wa_code = generate_otp()
     save_otp(wa_key, wa_code)
