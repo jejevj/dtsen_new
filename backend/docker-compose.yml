@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dtsen_api
+    restart: always
+    ports:
+      - "8778:5000"
+    environment:
+      FLASK_APP: wsgi.py
+      FLASK_ENV: production
+      SECRET_KEY: dev-secret-key
+      JWT_SECRET_KEY: dev-jwt-secret
+      JWT_ACCESS_TOKEN_EXPIRES: 3600
+      JWT_REFRESH_TOKEN_EXPIRES: 2592000
+      DATABASE_URL: mysql+pymysql://admin:qwert12345!@151.243.222.251:43306/db_simzat_haha
+      CORS_ORIGINS: "*"
+      DEFAULT_PAGE_SIZE: 20
+      MAX_PAGE_SIZE: 100
+    volumes:
+      - .:/app
