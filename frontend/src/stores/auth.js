@@ -10,10 +10,13 @@ export const useAuthStore = defineStore('auth', () => {
   const loading      = ref(false)
   const error        = ref(null)
 
+  // Disimpan sementara selama proses OTP (tidak di-persist)
+  const pendingOtpKey   = ref(sessionStorage.getItem('dtsen_otp_key') || null)
+  const pendingUserHint = ref(JSON.parse(sessionStorage.getItem('dtsen_otp_hint') || 'null'))
+
   // ── Computed ──────────────────────────────────────────────────────────────
-  const isAuthenticated = computed(() => !!accessToken.value && !!user.value)
-  // OTP dinonaktifkan sementara — langsung ke dashboard setelah login
-  const isOtpComplete      = computed(() => true)
+  const isAuthenticated    = computed(() => !!accessToken.value && !!user.value)
+  const hasPendingOtp      = computed(() => !!pendingOtpKey.value)
   const canAccessDashboard = computed(() => isAuthenticated.value)
 
   const isTuser = computed(() => user.value?.user_type === 'tuser')
@@ -26,23 +29,19 @@ export const useAuthStore = defineStore('auth', () => {
   // ── Actions ───────────────────────────────────────────────────────────────
 
   /**
-   * Login dengan email atau notelp + password.
-   * Backend akan mencari di tuser dulu, lalu t_dtsen_akses.
+   * Step 1 — Login: kirim credentials ke backend.
+   * Backend kirim OTP ke email, frontend redirect ke /verify-otp.
    */
   async function login(identifier, password) {
     loading.value = true
     error.value   = null
     try {
       const { data } = await authService.login(identifier, password)
-
-      accessToken.value  = data.access_token
-      refreshToken.value = data.refresh_token
-      user.value         = data.user
-
-      localStorage.setItem('dtsen_access_token',  data.access_token)
-      localStorage.setItem('dtsen_refresh_token', data.refresh_token)
-      localStorage.setItem('dtsen_user',          JSON.stringify(data.user))
-
+      // Simpan otp_key & hint di sessionStorage (hilang saat tab ditutup)
+      pendingOtpKey.value   = data.otp_key
+      pendingUserHint.value = data.user_hint
+      sessionStorage.setItem('dtsen_otp_key',  data.otp_key)
+      sessionStorage.setItem('dtsen_otp_hint', JSON.stringify(data.user_hint))
       return data
     } catch (err) {
       const msg = err.response?.data?.message || 'Login gagal. Periksa koneksi Anda.'
@@ -54,9 +53,35 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Verifikasi token saat app dibuka / reload.
-   * Jika 401, token dihapus otomatis oleh interceptor di api.js.
+   * Step 2 — Verifikasi OTP email: kirim kode ke backend.
+   * Jika benar, terima JWT dan simpan.
    */
+  async function verifyEmailOtp(code) {
+    loading.value = true
+    error.value   = null
+    try {
+      const { data } = await authService.verifyOtp(pendingOtpKey.value, code)
+      accessToken.value  = data.access_token
+      refreshToken.value = data.refresh_token
+      user.value         = data.user
+      localStorage.setItem('dtsen_access_token',  data.access_token)
+      localStorage.setItem('dtsen_refresh_token', data.refresh_token)
+      localStorage.setItem('dtsen_user',          JSON.stringify(data.user))
+      _clearOtpPending()
+      return data
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Kode OTP salah atau sudah kadaluarsa.'
+      error.value = msg
+      throw new Error(msg)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function resendOtp() {
+    return authService.resendOtp(pendingOtpKey.value)
+  }
+
   async function fetchMe() {
     if (!accessToken.value) return false
     try {
@@ -69,37 +94,29 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  /**
-   * Logout — hapus semua state dan storage.
-   */
   async function logout() {
-    try {
-      await authService.logout()
-    } catch { /* abaikan error logout */ }
-    finally {
-      _clearState()
-    }
+    try { await authService.logout() } catch { /* abaikan */ }
+    finally { _clearState() }
+  }
+
+  function _clearOtpPending() {
+    pendingOtpKey.value   = null
+    pendingUserHint.value = null
+    sessionStorage.removeItem('dtsen_otp_key')
+    sessionStorage.removeItem('dtsen_otp_hint')
   }
 
   function _clearState() {
-    user.value         = null
-    accessToken.value  = null
-    refreshToken.value = null
-    error.value        = null
-    ;['dtsen_access_token', 'dtsen_refresh_token', 'dtsen_user'].forEach(k =>
-      localStorage.removeItem(k)
-    )
+    user.value = null; accessToken.value = null; refreshToken.value = null; error.value = null
+    _clearOtpPending()
+    ;['dtsen_access_token','dtsen_refresh_token','dtsen_user'].forEach(k => localStorage.removeItem(k))
   }
-
-  // Compat lama — masih dipakai beberapa komponen
-  function verifyEmailOtp() {}
-  function verifyWaOtp()    {}
 
   return {
     user, accessToken, refreshToken, loading, error,
-    isAuthenticated, isOtpComplete, canAccessDashboard,
+    pendingOtpKey, pendingUserHint,
+    isAuthenticated, hasPendingOtp, canAccessDashboard,
     isTuser, isDtsen, userDisplayName,
-    login, logout, fetchMe,
-    verifyEmailOtp, verifyWaOtp,
+    login, logout, fetchMe, verifyEmailOtp, resendOtp,
   }
 })

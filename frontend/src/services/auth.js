@@ -2,37 +2,28 @@ import api from './api'
 
 export const authService = {
   /**
-   * Login — kirim identifier (email/notelp) + password ke backend
+   * Step 1 — Login: kirim credentials, server kirim OTP ke email.
+   * Response: { message, otp_key, otp_sent, user_hint }
    */
   login(identifier, password) {
     return api.post('/auth/login', { identifier, password })
   },
 
   /**
-   * Verifikasi token masih valid + ambil profil user saat ini
+   * Step 2 — Verify OTP: kirim kode + otp_key, terima JWT.
+   * Response: { access_token, refresh_token, user }
    */
-  me() {
-    return api.get('/auth/me')
+  verifyOtp(otp_key, code) {
+    return api.post('/auth/otp/verify', { otp_key, code })
   },
 
   /**
-   * Logout — sinyal ke backend, hapus token di client
+   * Kirim ulang OTP.
    */
-  logout() {
-    return api.post('/auth/logout').finally(() => {
-      localStorage.removeItem('dtsen_access_token')
-      localStorage.removeItem('dtsen_refresh_token')
-      localStorage.removeItem('dtsen_user')
-    })
+  resendOtp(otp_key) {
+    return api.post('/auth/otp/resend', { otp_key })
   },
 
-  /**
-   * Refresh access token menggunakan refresh token
-   */
-  refresh() {
-    const refreshToken = localStorage.getItem('dtsen_refresh_token')
-    return api.post('/auth/refresh', {}, {
-      headers: { Authorization: `Bearer ${refreshToken}` }
-    })
-  },
+  me()     { return api.get('/auth/me') },
+  logout() { return api.post('/auth/logout') },
 }
