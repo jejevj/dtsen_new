@@ -16,7 +16,8 @@ const routes = [
     path: '/verify-otp',
     name: 'verify-otp',
     component: () => import('@/views/OtpVerificationView.vue'),
-    meta: { requiresLogin: true }
+    // requiresOtp: hanya butuh pendingOtpKey di store, bukan accessToken
+    meta: { requiresOtp: true }
   },
   {
     path: '/dashboard',
@@ -61,10 +62,19 @@ router.beforeEach(async (to, _from, next) => {
   const auth       = useAuthStore()
   const loginModal = useLoginModalStore()
 
-  // Halaman publik
-  if (!to.meta.requiresAuth && !to.meta.requiresLogin) return next()
+  // ── 1. Halaman OTP: cukup ada pendingOtpKey, tidak perlu accessToken ──────
+  if (to.meta.requiresOtp) {
+    if (!auth.pendingOtpKey) {
+      // Tidak ada sesi OTP aktif — kembali ke home tanpa buka modal
+      return next({ name: 'home' })
+    }
+    return next()
+  }
 
-  // Tidak ada token — buka modal login, tetap di /
+  // ── 2. Halaman publik (home, login, dsb) ─────────────────────────────────
+  if (!to.meta.requiresAuth) return next()
+
+  // ── 3. Halaman privat: wajib accessToken ─────────────────────────────────
   if (!auth.accessToken) {
     loginModal.open()
     return next({ name: 'home' })
