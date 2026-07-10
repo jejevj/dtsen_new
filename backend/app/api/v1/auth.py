@@ -9,7 +9,7 @@ from ...services.otp_service  import generate_otp, save_otp, verify_otp, send_ot
 from ...services.wa_service   import send_wa_otp
 
 
-# ── Helper ──────────────────────────────────────────────────────────────────
+# ── Helper ─────────────────────────────────────────────────────────────────────────
 def _mask_email(email: str) -> str:
     if not email or '@' not in email:
         return ''
@@ -19,19 +19,31 @@ def _mask_email(email: str) -> str:
 
 def _mask_phone(phone: str) -> str:
     if not phone or len(phone) < 5:
-        return ''
+        return phone or ''
     return phone[:4] + '****' + phone[-2:]
 
 def _parse_otp_key(otp_key: str):
-    """otp_key format: otp_email_{id}_{user_type} atau otp_wa_{id}_{user_type}"""
+    """otp_key: otp_email_{id}_{type} atau otp_wa_{id}_{type}"""
     parts = otp_key.split('_')
-    # ['otp','email','{id}','{type}'] or ['otp','wa','{id}','{type}']
+    # ['otp', 'email'/'wa', '{id}', '{type}']
     user_id   = int(parts[2])
     user_type = parts[3]
     return user_id, user_type
 
+def _make_identity(user_id: int, user_type: str) -> dict:
+    """Buat identity dict konsisten untuk AuthService."""
+    return {'type': user_type, 'id': user_id}
 
-# ── Step 1: Login → kirim OTP Email ─────────────────────────────────────────
+def _get_phone(user: dict) -> str:
+    """Ambil nomor HP dari berbagai kemungkinan nama field."""
+    for field in ('notelp', 'tuser_notelp', 'phone', 'handphone', 'no_hp', 'telepon'):
+        val = user.get(field)
+        if val and str(val).strip():
+            return str(val).strip()
+    return ''
+
+
+# ── Step 1: Login → kirim OTP Email ─────────────────────────────────────────────
 @api_v1_bp.post('/auth/login')
 def login():
     data       = request.get_json() or {}
@@ -83,11 +95,10 @@ def otp_verify_email():
         return jsonify({'message': 'Kode OTP email salah atau sudah kadaluarsa.'}), 401
 
     user_id, user_type = _parse_otp_key(otp_key)
-    identity  = {'id': user_id, 'user_type': user_type}
-    user_data = AuthService.get_current_user(identity)
+    user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
     user      = user_data.get('user', {})
 
-    phone = user.get('notelp') or user.get('tuser_notelp') or user.get('phone') or ''
+    phone = _get_phone(user)
 
     wa_code = generate_otp()
     wa_key  = f"otp_wa_{user_id}_{user_type}"
@@ -100,8 +111,8 @@ def otp_verify_email():
         'wa_otp_sent': sent,
         'wa_otp_key':  wa_key,
         'user_hint': {
-            'id':          user_id,
-            'user_type':   user_type,
+            'id':           user_id,
+            'user_type':    user_type,
             'phone_masked': _mask_phone(phone),
         }
     }), 200
@@ -110,9 +121,9 @@ def otp_verify_email():
 # ── Step 3: Verifikasi OTP WA → kembalikan JWT ───────────────────────────────
 @api_v1_bp.post('/auth/otp/verify-wa')
 def otp_verify_wa():
-    data    = request.get_json() or {}
-    wa_key  = data.get('wa_otp_key', '')
-    code    = data.get('code', '')
+    data   = request.get_json() or {}
+    wa_key = data.get('wa_otp_key', '')
+    code   = data.get('code', '')
 
     if not wa_key or not code:
         return jsonify({'message': 'wa_otp_key dan code wajib diisi.'}), 400
@@ -121,7 +132,7 @@ def otp_verify_wa():
         return jsonify({'message': 'Kode OTP WhatsApp salah atau sudah kadaluarsa.'}), 401
 
     user_id, user_type = _parse_otp_key(wa_key)
-    identity = {'id': user_id, 'user_type': user_type}
+    identity = _make_identity(user_id, user_type)
 
     access_token  = create_access_token(identity=identity)
     refresh_token = create_refresh_token(identity=identity)
@@ -137,7 +148,7 @@ def otp_verify_wa():
     }), 200
 
 
-# ── Resend OTP Email ─────────────────────────────────────────────────────────
+# ── Resend OTP Email ──────────────────────────────────────────────────────────────────
 @api_v1_bp.post('/auth/otp/resend-email')
 def otp_resend_email():
     data    = request.get_json() or {}
@@ -146,9 +157,9 @@ def otp_resend_email():
         return jsonify({'message': 'otp_key wajib diisi.'}), 400
 
     user_id, user_type = _parse_otp_key(otp_key)
-    identity  = {'id': user_id, 'user_type': user_type}
-    user      = AuthService.get_current_user(identity).get('user', {})
-    email     = user.get('email') or user.get('tuser_email')
+    user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
+    user      = user_data.get('user', {})
+    email     = user.get('email') or user.get('tuser_email') or ''
     user_name = user.get('user_fullname') or user.get('nama_lengkap') or ''
 
     otp_code = generate_otp()
@@ -158,7 +169,7 @@ def otp_resend_email():
     return jsonify({'message': 'OTP email dikirim ulang.', 'otp_sent': sent}), 200
 
 
-# ── Resend OTP WA ─────────────────────────────────────────────────────────────
+# ── Resend OTP WA ───────────────────────────────────────────────────────────────────
 @api_v1_bp.post('/auth/otp/resend-wa')
 def otp_resend_wa():
     data   = request.get_json() or {}
@@ -167,9 +178,9 @@ def otp_resend_wa():
         return jsonify({'message': 'wa_otp_key wajib diisi.'}), 400
 
     user_id, user_type = _parse_otp_key(wa_key)
-    identity = {'id': user_id, 'user_type': user_type}
-    user     = AuthService.get_current_user(identity).get('user', {})
-    phone    = user.get('notelp') or user.get('tuser_notelp') or user.get('phone') or ''
+    user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
+    user      = user_data.get('user', {})
+    phone     = _get_phone(user)
 
     wa_code = generate_otp()
     save_otp(wa_key, wa_code)
@@ -178,7 +189,7 @@ def otp_resend_wa():
     return jsonify({'message': 'OTP WhatsApp dikirim ulang.', 'wa_otp_sent': sent}), 200
 
 
-# ── Standard endpoints ────────────────────────────────────────────────────────
+# ── Standard endpoints ──────────────────────────────────────────────────────────────────
 @api_v1_bp.post('/auth/refresh')
 @jwt_required(refresh=True)
 def refresh():
