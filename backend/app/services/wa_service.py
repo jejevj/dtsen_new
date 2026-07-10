@@ -1,11 +1,11 @@
 """
 WhatsApp OTP Service via Google Apps Script gateway.
-Menggunakan urllib (built-in) — tidak perlu library tambahan.
-Biaya tetap: Rp 650 per hit (dicatat di t_log_wa_dtsen).
+Google Apps Script (GAS) mengeluarkan redirect 302 saat POST —
+gunakan `requests` dengan allow_redirects=True agar tetap POST setelah redirect.
 """
 import json
 import re
-import urllib.request
+import requests as _requests
 from flask        import current_app
 from ..extensions import db
 
@@ -20,36 +20,24 @@ WA_COST = 650  # Rp per hit
 def normalize_contact(phone: str) -> str:
     """
     Normalisasi nomor HP ke format 628xxx.
-    Contoh:
-      08531234567  → 628531234567
+      08531234567   → 628531234567
+      8531234567    → 628531234567
       +628531234567 → 628531234567
       628531234567  → 628531234567
-      8531234567    → 628531234567
     """
     if not phone:
         return ''
-    # Hapus karakter non-digit kecuali tanda + di depan
-    phone = re.sub(r'[\s\-\.\(\)]', '', phone).strip()
-    # Hapus tanda +
-    phone = phone.lstrip('+')
-    # Awalan 0 → 62
+    phone = re.sub(r'[\s\-\.\(\)]', '', phone).strip().lstrip('+')
     if phone.startswith('0'):
         phone = '62' + phone[1:]
-    # Awalan 8 (tanpa kode negara) → 628
     elif phone.startswith('8'):
         phone = '62' + phone
-    # Sudah 62xxx, biarkan
-    # Validasi minimal 10 digit
     if not re.match(r'^62\d{9,13}$', phone):
         return ''
     return phone
 
 
 def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool:
-    """
-    Kirim OTP via WA gateway. Catat hasilnya ke t_log_wa_dtsen.
-    Return True jika berhasil.
-    """
     contact = normalize_contact(phone)
     status  = 'failed'
     error   = None
@@ -60,25 +48,50 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
         _log(user_id, user_type, phone or '', status, error)
         return False
 
+    payload = {
+        'key':     WA_KEY,
+        'contact': contact,
+        'code':    str(otp_code),
+    }
+
     try:
-        payload = json.dumps({
-            'key':     WA_KEY,
-            'contact': contact,
-            'code':    otp_code,
-        }).encode('utf-8')
+        # GAS redirect 302 POST → POST (bukan GET)
+        # requests secara default ubah POST redirect jadi GET —
+        # pakai session + event hook untuk paksa tetap POST
+        session = _requests.Session()
 
-        req = urllib.request.Request(
+        def force_post_on_redirect(r, *args, **kwargs):
+            if r.is_redirect:
+                redirected = _requests.Request(
+                    method='POST',
+                    url=r.headers['Location'],
+                    json=payload,
+                    headers={'Content-Type': 'application/json'},
+                )
+                prep = session.prepare_request(redirected)
+                return session.send(prep, timeout=15, allow_redirects=False)
+
+        resp = session.post(
             WA_GATEWAY_URL,
-            data=payload,
+            json=payload,
             headers={'Content-Type': 'application/json'},
-            method='POST',
+            timeout=15,
+            allow_redirects=True,
+            hooks={'response': force_post_on_redirect},
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            body = resp.read().decode('utf-8', errors='ignore')
-            current_app.logger.info(f'[WA] gateway response: {body[:200]}')
 
-        status = 'sent'
-        return True
+        body = resp.text[:300]
+        current_app.logger.info(
+            f'[WA] gateway status={resp.status_code} contact={contact} body={body}'
+        )
+
+        # GAS sukses biasanya return 200 dengan JSON {"status":"ok"} atau plain text
+        if resp.status_code == 200:
+            status = 'sent'
+            return True
+        else:
+            error = f'HTTP {resp.status_code}: {body}'
+            return False
 
     except Exception as e:
         error = str(e)
@@ -86,8 +99,7 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
         return False
 
     finally:
-        if status == 'sent' or error != f'Nomor tidak valid setelah normalisasi: {phone!r}':
-            _log(user_id, user_type, contact, status, error)
+        _log(user_id, user_type, contact, status, error)
 
 
 def _log(user_id: int, user_type: str, contact: str, status: str, error):
@@ -99,7 +111,7 @@ def _log(user_id: int, user_type: str, contact: str, status: str, error):
                 "VALUES (:uid, :ut, :ct, :st, :cost, :err)"
             ),
             {'uid': user_id, 'ut': user_type, 'ct': contact,
-             'st': status, 'cost': WA_COST, 'err': error}
+             'st': status, 'cost': WA_COST if status == 'sent' else 0, 'err': error}
         )
         db.session.commit()
     except Exception as db_err:
