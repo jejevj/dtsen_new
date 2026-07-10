@@ -1,10 +1,12 @@
 """
 WhatsApp OTP Service via Google Apps Script gateway.
+Menggunakan urllib (built-in) — tidak perlu library tambahan.
 Biaya tetap: Rp 650 per hit (dicatat di t_log_wa_dtsen).
 """
-import requests
-from flask  import current_app
-from ..extensions import db
+import json
+import urllib.request
+from flask          import current_app
+from ..extensions   import db
 
 WA_GATEWAY_URL = (
     'https://script.google.com/macros/s/'
@@ -36,20 +38,29 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
     error   = None
 
     try:
-        resp = requests.post(
+        payload = json.dumps({
+            'key':     WA_KEY,
+            'contact': contact,
+            'code':    otp_code,
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
             WA_GATEWAY_URL,
-            json={'key': WA_KEY, 'contact': contact, 'code': otp_code},
-            timeout=15,
-            allow_redirects=True,
+            data=payload,
+            headers={'Content-Type': 'application/json'},
+            method='POST',
         )
-        resp.raise_for_status()
-        # Gateway mengembalikan JSON; anggap berhasil jika status HTTP 2xx
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            resp.read()  # consume response
+
         status = 'sent'
         return True
+
     except Exception as e:
         error = str(e)
         current_app.logger.error(f'[WA] send_wa_otp error to {contact}: {e}')
         return False
+
     finally:
         try:
             db.session.execute(
