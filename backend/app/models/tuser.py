@@ -36,7 +36,7 @@ class TUser(db.Model):
     # Uncomment saat sudah ditambahkan:
     # tipe_organisasi = db.Column(db.String(255), nullable=True)
     # is_soal_user    = db.Column(db.String(1), nullable=True, comment='flag Y, N, NULL')
-    # is_dtsen_user   = db.Column(db.String(1), nullable=True, comment='flag Y, N, NULL')
+    is_dtsen_user   = db.Column(db.String(1), nullable=True, comment='flag Y, N, NULL')
     # ---------------------------------------------------------------------------
 
     @property
