@@ -126,21 +126,27 @@ const firstInput = ref(null)
 
 const form   = reactive({ identifier: '', password: '' })
 const errors = reactive({ identifier: '', password: '', captcha: '', global: '' })
-const showPw           = ref(false)
-const captchaAnswer    = ref('')
+const showPw            = ref(false)
+const captchaAnswer     = ref('')
 const captchaRefreshing = ref(false)
 
-// ── CAPTCHA ─────────────────────────────────────────────────────────────────────
+// ── CAPTCHA ──────────────────────────────────────────────────────────────────
 function generateCaptcha() {
   const ops = ['+', '-', 'x']
   const op  = ops[Math.floor(Math.random() * ops.length)]
   let a, b, answer
   if (op === '+') {
-    a = Math.floor(Math.random() * 20) + 1; b = Math.floor(Math.random() * 20) + 1; answer = a + b
+    a = Math.floor(Math.random() * 20) + 1
+    b = Math.floor(Math.random() * 20) + 1
+    answer = a + b
   } else if (op === '-') {
-    a = Math.floor(Math.random() * 20) + 10; b = Math.floor(Math.random() * 10) + 1; answer = a - b
+    a = Math.floor(Math.random() * 20) + 10
+    b = Math.floor(Math.random() * 10) + 1
+    answer = a - b
   } else {
-    a = Math.floor(Math.random() * 9) + 2; b = Math.floor(Math.random() * 9) + 2; answer = a * b
+    a = Math.floor(Math.random() * 9) + 2
+    b = Math.floor(Math.random() * 9) + 2
+    answer = a * b
   }
   return { question: `${a} ${op} ${b} = ?`, answer: String(answer) }
 }
@@ -149,8 +155,10 @@ const captcha = reactive(generateCaptcha())
 function refreshCaptcha() {
   captchaRefreshing.value = true
   const next = generateCaptcha()
-  captcha.question = next.question; captcha.answer = next.answer
-  captchaAnswer.value = ''; errors.captcha = ''
+  captcha.question = next.question
+  captcha.answer   = next.answer
+  captchaAnswer.value = ''
+  errors.captcha      = ''
   setTimeout(() => { captchaRefreshing.value = false }, 400)
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -164,8 +172,12 @@ watch(() => props.visible, async (val) => {
 })
 
 function resetForm() {
-  form.identifier = ''; form.password = ''
-  errors.identifier = ''; errors.password = ''; errors.captcha = ''; errors.global = ''
+  form.identifier = ''
+  form.password   = ''
+  errors.identifier = ''
+  errors.password   = ''
+  errors.captcha    = ''
+  errors.global     = ''
   captchaAnswer.value = ''
   refreshCaptcha()
 }
@@ -175,21 +187,42 @@ function handleClose() {
   if (router.currentRoute.value.name === 'login') router.replace({ name: 'home' })
 }
 
+/**
+ * Validasi semua field termasuk CAPTCHA.
+ * Mengembalikan true hanya jika SEMUA field valid.
+ * refreshCaptcha() TIDAK dipanggil di sini agar state tetap konsisten
+ * sebelum keputusan lanjut/batal diambil oleh handleLogin().
+ */
 function validate() {
-  errors.identifier = errors.password = errors.captcha = errors.global = ''
-  if (!form.identifier) errors.identifier = 'Email atau No. HP wajib diisi.'
-  if (!form.password)   errors.password   = 'Password wajib diisi.'
+  errors.identifier = ''
+  errors.password   = ''
+  errors.captcha    = ''
+  errors.global     = ''
+
+  if (!form.identifier.trim())
+    errors.identifier = 'Email atau No. HP wajib diisi.'
+
+  if (!form.password)
+    errors.password = 'Password wajib diisi.'
+
   if (!captchaAnswer.value.trim()) {
-    errors.captcha = 'Jawaban CAPTCHA wajib diisi.'
+    errors.captcha = 'Jawaban verifikasi keamanan wajib diisi.'
   } else if (captchaAnswer.value.trim() !== captcha.answer) {
-    errors.captcha = 'Jawaban CAPTCHA salah.'
-    refreshCaptcha()
+    errors.captcha = 'Jawaban verifikasi keamanan salah. Silakan coba lagi.'
   }
+
   return !errors.identifier && !errors.password && !errors.captcha
 }
 
 async function handleLogin() {
-  if (!validate()) return
+  // Hentikan proses jika validasi gagal (termasuk CAPTCHA salah)
+  const isValid = validate()
+  if (!isValid) {
+    // Jika captcha salah, refresh soal agar tidak bisa brute-force
+    if (errors.captcha) refreshCaptcha()
+    return
+  }
+
   try {
     await auth.login(form.identifier, form.password)
     // Credentials valid → OTP sudah dikirim ke email → pindah ke halaman verifikasi
