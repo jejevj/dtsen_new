@@ -1,7 +1,7 @@
 """
 WhatsApp OTP Service via Google Apps Script gateway.
-Google Apps Script (GAS) mengeluarkan redirect 302 saat POST —
-gunakan `requests` dengan allow_redirects=True agar tetap POST setelah redirect.
+GAS mengeluarkan redirect 302 saat POST — gunakan requests + force-POST hook.
+Sukses ditentukan dari response body: {"status": "Sukses", ...}
 """
 import json
 import re
@@ -14,7 +14,7 @@ WA_GATEWAY_URL = (
     'AKfycbxhGs3fRj7eB-cTIkQgvwz_1UGquheoh11fREdoEdPnVb4kGzS1lxcYb-4HwNp8pXLV/exec'
 )
 WA_KEY  = '1Z8eo8ByZ1Mw35FWfiT6LUepGaLj5suwDGnG_OcYn3dY'
-WA_COST = 650  # Rp per hit
+WA_COST = 650  # Rp per hit (selalu dikenakan jika status=Sukses)
 
 
 def normalize_contact(phone: str) -> str:
@@ -37,15 +37,26 @@ def normalize_contact(phone: str) -> str:
     return phone
 
 
+def _is_success(resp_body: str) -> bool:
+    """Cek response GAS: sukses jika JSON status == 'Sukses' (case-insensitive)."""
+    try:
+        data = json.loads(resp_body)
+        return str(data.get('status', '')).lower() == 'sukses'
+    except Exception:
+        # Fallback: cek plain text
+        return 'sukses' in resp_body.lower()
+
+
 def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool:
     contact = normalize_contact(phone)
     status  = 'failed'
     error   = None
+    cost    = 0
 
     if not contact:
         error = f'Nomor tidak valid setelah normalisasi: {phone!r}'
         current_app.logger.warning(f'[WA] {error}')
-        _log(user_id, user_type, phone or '', status, error)
+        _log(user_id, user_type, phone or '', status, cost, error)
         return False
 
     payload = {
@@ -55,20 +66,17 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
     }
 
     try:
-        # GAS redirect 302 POST → POST (bukan GET)
-        # requests secara default ubah POST redirect jadi GET —
-        # pakai session + event hook untuk paksa tetap POST
         session = _requests.Session()
 
         def force_post_on_redirect(r, *args, **kwargs):
+            """Paksa POST saat GAS redirect 302."""
             if r.is_redirect:
-                redirected = _requests.Request(
+                prep = session.prepare_request(_requests.Request(
                     method='POST',
                     url=r.headers['Location'],
                     json=payload,
                     headers={'Content-Type': 'application/json'},
-                )
-                prep = session.prepare_request(redirected)
+                ))
                 return session.send(prep, timeout=15, allow_redirects=False)
 
         resp = session.post(
@@ -80,17 +88,17 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
             hooks={'response': force_post_on_redirect},
         )
 
-        body = resp.text[:300]
+        body = resp.text
         current_app.logger.info(
-            f'[WA] gateway status={resp.status_code} contact={contact} body={body}'
+            f'[WA] gateway status={resp.status_code} contact={contact} body={body[:300]}'
         )
 
-        # GAS sukses biasanya return 200 dengan JSON {"status":"ok"} atau plain text
-        if resp.status_code == 200:
+        if resp.status_code == 200 and _is_success(body):
             status = 'sent'
+            cost   = WA_COST   # Rp 650 dikenakan hanya jika benar-benar sukses
             return True
         else:
-            error = f'HTTP {resp.status_code}: {body}'
+            error = f'HTTP {resp.status_code}: {body[:200]}'
             return False
 
     except Exception as e:
@@ -99,10 +107,10 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
         return False
 
     finally:
-        _log(user_id, user_type, contact, status, error)
+        _log(user_id, user_type, contact, status, cost, error)
 
 
-def _log(user_id: int, user_type: str, contact: str, status: str, error):
+def _log(user_id: int, user_type: str, contact: str, status: str, cost: int, error):
     try:
         db.session.execute(
             db.text(
@@ -111,7 +119,7 @@ def _log(user_id: int, user_type: str, contact: str, status: str, error):
                 "VALUES (:uid, :ut, :ct, :st, :cost, :err)"
             ),
             {'uid': user_id, 'ut': user_type, 'ct': contact,
-             'st': status, 'cost': WA_COST if status == 'sent' else 0, 'err': error}
+             'st': status, 'cost': cost, 'err': error}
         )
         db.session.commit()
     except Exception as db_err:
