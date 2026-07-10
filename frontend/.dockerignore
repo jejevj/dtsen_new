@@ -27,4 +27,3 @@ logs/
 # Docker
 Dockerfile
 .dockerignore
-nginx.conf
