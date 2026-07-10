@@ -3,7 +3,7 @@ version: '3.9'
 # ─────────────────────────────────────────────────────────────────────────────
 # DTSEN Stack
 #  dtsen_api      : Flask/Gunicorn backend  (internal, tidak dibuka ke host)
-#  dtsen_frontend : Vue build + Nginx        (port 5173, ganti systemctl)
+#  dtsen_frontend : Vue build + Nginx        (port 8786, ganti systemctl)
 #
 # Nginx di dalam container mem-proxy /api/* → dtsen_api:5000 (no CORS)
 #
@@ -15,8 +15,7 @@ version: '3.9'
 #   docker compose up -d --build
 #
 # Update selanjutnya:
-#   git pull
-#   docker compose up -d --build --no-deps frontend
+#   git pull && docker compose up -d --build --no-deps frontend
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -58,7 +57,7 @@ services:
     container_name: dtsen_frontend
     restart: unless-stopped
     ports:
-      - "5173:80"       # host:5173 → container nginx:80 (sama dengan port systemctl lama)
+      - "8786:80"       # host:8786 → nginx:80 (sama dengan port systemctl lama)
     depends_on:
       api:
         condition: service_healthy
