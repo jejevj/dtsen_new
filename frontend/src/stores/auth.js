@@ -1,96 +1,105 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { findUserByEmail } from '@/data/mockUsers'
-
-// ─── PROTOTYPE: no real API calls ────────────────────────────────────────────
-// Password dummy untuk SEMUA user: dtsen2024
-// OTP Email  : 845988
-// OTP WA     : 990087
-//
-// Contoh akun:
-//   admin@dtsen.go.id              → Admin Pusat (semua data)
-//   analis.jabar@dtsen.go.id       → Analis Jawa Barat
-//   op.kotabogor@dtsen.go.id       → Operator Kota Bogor
-//   op.surabaya@dtsen.go.id        → Operator Kota Surabaya
-//   (lihat frontend/src/data/mockUsers.js untuk daftar lengkap)
-// ─────────────────────────────────────────────────────────────────────────────
-
-const DUMMY_OTP_EMAIL  = '845988'
-const DUMMY_OTP_WA     = '990087'
-const DUMMY_PASSWORD   = 'dtsen2024'
+import { authService } from '@/services/auth'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user             = ref(JSON.parse(localStorage.getItem('dtsen_user') || 'null'))
-  const accessToken      = ref(localStorage.getItem('dtsen_token') || null)
-  const emailOtpVerified = ref(localStorage.getItem('dtsen_otp_email') === 'true')
-  const waOtpVerified    = ref(localStorage.getItem('dtsen_otp_wa')    === 'true')
+  // ── State ─────────────────────────────────────────────────────────────────
+  const user         = ref(JSON.parse(localStorage.getItem('dtsen_user') || 'null'))
+  const accessToken  = ref(localStorage.getItem('dtsen_access_token') || null)
+  const refreshToken = ref(localStorage.getItem('dtsen_refresh_token') || null)
+  const loading      = ref(false)
+  const error        = ref(null)
 
-  const isAuthenticated    = computed(() => !!accessToken.value)
-  const isOtpComplete      = computed(() => emailOtpVerified.value && waOtpVerified.value)
-  const canAccessDashboard = computed(() => isAuthenticated.value && isOtpComplete.value)
+  // ── Computed ──────────────────────────────────────────────────────────────
+  const isAuthenticated = computed(() => !!accessToken.value && !!user.value)
+  // OTP dinonaktifkan sementara — langsung ke dashboard setelah login
+  const isOtpComplete      = computed(() => true)
+  const canAccessDashboard = computed(() => isAuthenticated.value)
 
-  // Wilayah aktif user yang sedang login
-  const userWilayah = computed(() => user.value?.wilayah || null)
+  const isTuser = computed(() => user.value?.user_type === 'tuser')
+  const isDtsen = computed(() => user.value?.user_type === 'dtsen')
+  const userDisplayName = computed(() => {
+    if (!user.value) return ''
+    return user.value.user_fullname || user.value.nama_lengkap || user.value.email || ''
+  })
 
-  // ── login ─────────────────────────────────────────────────────────────────
-  function login(email, password) {
-    if (!email || !password) throw new Error('Email dan password wajib diisi.')
+  // ── Actions ───────────────────────────────────────────────────────────────
 
-    // Prototype: password harus dtsen2024 KECUALI ada email terdaftar di mockUsers
-    const mockUser = findUserByEmail(email)
+  /**
+   * Login dengan email atau notelp + password.
+   * Backend akan mencari di tuser dulu, lalu t_dtsen_akses.
+   */
+  async function login(identifier, password) {
+    loading.value = true
+    error.value   = null
+    try {
+      const { data } = await authService.login(identifier, password)
 
-    if (mockUser) {
-      // Email terdaftar → cek password dummy
-      if (password !== DUMMY_PASSWORD) throw new Error('Password salah. Gunakan: dtsen2024')
+      accessToken.value  = data.access_token
+      refreshToken.value = data.refresh_token
+      user.value         = data.user
+
+      localStorage.setItem('dtsen_access_token',  data.access_token)
+      localStorage.setItem('dtsen_refresh_token', data.refresh_token)
+      localStorage.setItem('dtsen_user',          JSON.stringify(data.user))
+
+      return data
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Login gagal. Periksa koneksi Anda.'
+      error.value = msg
+      throw new Error(msg)
+    } finally {
+      loading.value = false
     }
-    // Email tidak terdaftar → gunakan fallback admin (backward-compat)
-    const resolvedUser = mockUser || {
-      name: 'Admin DTSEN',
-      email,
-      role: 'admin',
-      wilayah: null,
-      wilayah_label: 'Seluruh Indonesia',
+  }
+
+  /**
+   * Verifikasi token saat app dibuka / reload.
+   * Jika 401, token dihapus otomatis oleh interceptor di api.js.
+   */
+  async function fetchMe() {
+    if (!accessToken.value) return false
+    try {
+      const { data } = await authService.me()
+      user.value = data
+      localStorage.setItem('dtsen_user', JSON.stringify(data))
+      return true
+    } catch {
+      return false
     }
-
-    const dummyToken = 'proto-token-' + Date.now()
-
-    accessToken.value      = dummyToken
-    user.value             = resolvedUser
-    emailOtpVerified.value = false
-    waOtpVerified.value    = false
-
-    localStorage.setItem('dtsen_token',     dummyToken)
-    localStorage.setItem('dtsen_user',      JSON.stringify(resolvedUser))
-    localStorage.setItem('dtsen_otp_email', 'false')
-    localStorage.setItem('dtsen_otp_wa',    'false')
   }
 
-  // ── verify OTP ────────────────────────────────────────────────────────────
-  function verifyEmailOtp(code) {
-    if (code.trim() !== DUMMY_OTP_EMAIL) throw new Error('Kode OTP Email tidak valid.')
-    emailOtpVerified.value = true
-    localStorage.setItem('dtsen_otp_email', 'true')
+  /**
+   * Logout — hapus semua state dan storage.
+   */
+  async function logout() {
+    try {
+      await authService.logout()
+    } catch { /* abaikan error logout */ }
+    finally {
+      _clearState()
+    }
   }
 
-  function verifyWaOtp(code) {
-    if (code.trim() !== DUMMY_OTP_WA) throw new Error('Kode OTP WhatsApp tidak valid.')
-    waOtpVerified.value = true
-    localStorage.setItem('dtsen_otp_wa', 'true')
+  function _clearState() {
+    user.value         = null
+    accessToken.value  = null
+    refreshToken.value = null
+    error.value        = null
+    ;['dtsen_access_token', 'dtsen_refresh_token', 'dtsen_user'].forEach(k =>
+      localStorage.removeItem(k)
+    )
   }
 
-  // ── logout ────────────────────────────────────────────────────────────────
-  function logout() {
-    accessToken.value      = null
-    user.value             = null
-    emailOtpVerified.value = false
-    waOtpVerified.value    = false
-    ;['dtsen_token','dtsen_user','dtsen_otp_email','dtsen_otp_wa'].forEach(k => localStorage.removeItem(k))
-  }
+  // Compat lama — masih dipakai beberapa komponen
+  function verifyEmailOtp() {}
+  function verifyWaOtp()    {}
 
   return {
-    user, accessToken, userWilayah,
-    emailOtpVerified, waOtpVerified,
+    user, accessToken, refreshToken, loading, error,
     isAuthenticated, isOtpComplete, canAccessDashboard,
-    login, verifyEmailOtp, verifyWaOtp, logout,
+    isTuser, isDtsen, userDisplayName,
+    login, logout, fetchMe,
+    verifyEmailOtp, verifyWaOtp,
   }
 })

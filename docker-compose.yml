@@ -1,0 +1,68 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DTSEN Stack
+#  dtsen_api      : Flask/Gunicorn backend  (internal port 5000)
+#  dtsen_frontend : Vue/Nginx frontend       (expose ke host 80)
+#
+# Nginx di dalam container frontend mem-proxy /api/* ke dtsen_api:5000
+# sehingga tidak ada CORS issue.
+#
+# Cara deploy:
+#   cp backend/.env.example backend/.env   # isi DATABASE_URL dll
+#   docker compose up -d --build
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: dtsen_api:latest
+    container_name: dtsen_api
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      FLASK_APP: wsgi.py
+      FLASK_ENV: production
+    volumes:
+      # Upload files persist di host
+      - dtsen_uploads:/app/uploads
+    expose:
+      - "5000"        # hanya internal, tidak dibuka ke host
+    networks:
+      - dtsen_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ── Frontend (Vue build + Nginx proxy) ──────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1    # nginx akan proxy /api/* ke dtsen_api
+    image: dtsen_frontend:latest
+    container_name: dtsen_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"       # expose ke host
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - dtsen_net
+
+volumes:
+  dtsen_uploads:
+
+networks:
+  dtsen_net:
+    driver: bridge

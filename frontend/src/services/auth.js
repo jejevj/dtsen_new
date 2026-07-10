@@ -1,16 +1,38 @@
-import axios from 'axios'
+import api from './api'
 
-const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'
-
-export default {
-  async login(identifier, password) {
-    const { data } = await axios.post(`${API}/auth/login`, { identifier, password })
-    return data
+export const authService = {
+  /**
+   * Login — kirim identifier (email/notelp) + password ke backend
+   */
+  login(identifier, password) {
+    return api.post('/auth/login', { identifier, password })
   },
-  async me(token) {
-    const { data } = await axios.get(`${API}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` }
+
+  /**
+   * Verifikasi token masih valid + ambil profil user saat ini
+   */
+  me() {
+    return api.get('/auth/me')
+  },
+
+  /**
+   * Logout — sinyal ke backend, hapus token di client
+   */
+  logout() {
+    return api.post('/auth/logout').finally(() => {
+      localStorage.removeItem('dtsen_access_token')
+      localStorage.removeItem('dtsen_refresh_token')
+      localStorage.removeItem('dtsen_user')
     })
-    return data
-  }
+  },
+
+  /**
+   * Refresh access token menggunakan refresh token
+   */
+  refresh() {
+    const refreshToken = localStorage.getItem('dtsen_refresh_token')
+    return api.post('/auth/refresh', {}, {
+      headers: { Authorization: `Bearer ${refreshToken}` }
+    })
+  },
 }
