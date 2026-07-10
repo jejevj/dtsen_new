@@ -32,6 +32,7 @@ class AuthService:
         - identifier bisa email atau notelp
         - Dicari di tuser dulu, lalu t_dtsen_akses
         - Password diverifikasi dengan MD5
+        - Khusus tuser: is_dtsen_user harus 'Y' agar bisa login
         """
         if not identifier or not password:
             return {'message': 'Identifier dan password wajib diisi.', 'status_code': 400}
@@ -47,6 +48,15 @@ class AuthService:
         ).first()
 
         if tuser:
+            # Cek flag akses DTSEN terlebih dahulu
+            is_dtsen = (tuser.is_dtsen_user or '').strip().upper()
+            if is_dtsen != 'Y':
+                return {
+                    'message': 'Akun Anda tidak memiliki akses ke aplikasi DTSEN.',
+                    'status_code': 403,
+                    'error_code': 'DTSEN_ACCESS_DENIED',
+                }
+
             if tuser.is_expired == 'Y':
                 return {'message': 'Akun sudah kadaluarsa.', 'status_code': 403}
             if tuser.approve != 1:
@@ -94,7 +104,11 @@ class AuthService:
             }
 
         # --- Tidak ditemukan di mana pun ---
-        return {'message': 'Email/No. HP atau password salah.', 'status_code': 401}
+        return {
+            'message': 'Akun dengan email/nomor HP tersebut tidak ditemukan.',
+            'status_code': 404,
+            'error_code': 'ACCOUNT_NOT_FOUND',
+        }
 
     # ------------------------------------------------------------------
     # GET CURRENT USER  (/auth/me)
@@ -128,17 +142,18 @@ class AuthService:
     @staticmethod
     def _tuser_payload(u: TUser) -> dict:
         return {
-            'id':           u.iduser,
-            'user_type':    'tuser',
-            'user_id':      u.user_id,
-            'user_fullname':u.user_fullname,
-            'email':        u.email,
-            'notelp':       u.notelp,
-            'user_grup':    u.user_grup,
-            'list_office':  u.list_office,
-            'profpict':     u.profpict,
-            'is_subscribe': u.is_subscribe,
-            'is_expired':   u.is_expired,
+            'id':            u.iduser,
+            'user_type':     'tuser',
+            'user_id':       u.user_id,
+            'user_fullname': u.user_fullname,
+            'email':         u.email,
+            'notelp':        u.notelp,
+            'user_grup':     u.user_grup,
+            'list_office':   u.list_office,
+            'profpict':      u.profpict,
+            'is_subscribe':  u.is_subscribe,
+            'is_expired':    u.is_expired,
+            'is_dtsen_user': u.is_dtsen_user,
         }
 
     @staticmethod
