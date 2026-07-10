@@ -130,7 +130,7 @@ const showPw           = ref(false)
 const captchaAnswer    = ref('')
 const captchaRefreshing = ref(false)
 
-// ── CAPTCHA ──────────────────────────────────────────────────────────────────
+// ── CAPTCHA ─────────────────────────────────────────────────────────────────────
 function generateCaptcha() {
   const ops = ['+', '-', 'x']
   const op  = ops[Math.floor(Math.random() * ops.length)]
@@ -155,7 +155,6 @@ function refreshCaptcha() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Focus input pertama saat modal dibuka
 watch(() => props.visible, async (val) => {
   if (val) {
     resetForm()
@@ -173,7 +172,6 @@ function resetForm() {
 
 function handleClose() {
   emit('close')
-  // Jika URL masih /login, kembalikan ke /
   if (router.currentRoute.value.name === 'login') router.replace({ name: 'home' })
 }
 
@@ -194,15 +192,15 @@ async function handleLogin() {
   if (!validate()) return
   try {
     await auth.login(form.identifier, form.password)
+    // Credentials valid → OTP sudah dikirim ke email → pindah ke halaman verifikasi
     loginModal.close()
-    router.push({ name: 'dashboard' })
+    router.push({ name: 'verify-otp' })
   } catch (e) {
     errors.global = e.message
     refreshCaptcha()
   }
 }
 
-// Tutup dengan Escape
 if (typeof window !== 'undefined') {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && props.visible) handleClose()
@@ -320,7 +318,6 @@ if (typeof window !== 'undefined') {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Transition */
 .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
 .modal-enter-active .lm-card, .modal-leave-active .lm-card { transition: transform 0.2s ease, opacity 0.2s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
