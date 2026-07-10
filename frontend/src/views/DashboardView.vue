@@ -1,102 +1,160 @@
 <template>
   <AppLayout>
-    <div style="display:flex;flex-direction:column;gap:24px;">
+    <!-- Wrapper utama: position relative agar watermark absolute di dalamnya -->
+    <div style="position:relative; display:flex; flex-direction:column; gap:24px;">
 
-      <!-- Header -->
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <!-- ===== WATERMARK BACKGROUND ===== -->
+      <div
+        aria-hidden="true"
+        style="
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          pointer-events: none;
+          overflow: hidden;
+          user-select: none;
+          -webkit-user-select: none;
+        "
+      >
+        <div
+          style="
+            position: absolute;
+            top: -30%;
+            left: -30%;
+            width: 160%;
+            height: 160%;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            transform: rotate(-35deg);
+            transform-origin: center center;
+          "
+        >
+          <div
+            v-for="i in 60"
+            :key="i"
+            style="
+              display: block;
+              width: 50%;
+              padding: 28px 0;
+              text-align: center;
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.1em;
+              text-transform: uppercase;
+              color: rgba(15, 23, 42, 0.10);
+              white-space: nowrap;
+              font-family: Inter, sans-serif;
+              line-height: 1;
+            "
+          >
+            DO NOT COPY &nbsp;&bull;&nbsp; {{ userEmail }}
+          </div>
+        </div>
+      </div>
+      <!-- ===== END WATERMARK ===== -->
+
+      <!-- Semua konten di z-index 1 agar di atas watermark -->
+      <div style="position:relative; z-index:1; display:flex; flex-direction:column; gap:24px;">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+          <div>
+            <h2 style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 4px;">Dashboard</h2>
+            <p style="font-size:13px;color:#64748b;margin:0;">
+              Selamat datang, <strong>{{ authStore.user?.name || 'Pengguna' }}</strong>
+              <span style="margin-left:8px;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;"
+                :style="roleBadgeStyle">{{ authStore.user?.role || 'operator' }}</span>
+            </p>
+            <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">
+              Wilayah: <strong style="color:#0f172a;">{{ authStore.user?.wilayah_label || 'Seluruh Indonesia' }}</strong>
+              &nbsp;·&nbsp; Data mustahik desil 1–4 · Tahun 2024
+            </p>
+          </div>
+          <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:8px;font-size:11px;font-weight:600;">PROTOTYPE · Data Simulasi</span>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="grid-4">
+          <div v-for="stat in statCards" :key="stat.label" class="stat-card">
+            <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+              <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+            </div>
+            <p style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 3px;">{{ stat.value }}</p>
+            <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
+            <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
+          </div>
+        </div>
+
+        <!-- Desil breakdown cards -->
         <div>
-          <h2 style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 4px;">Dashboard</h2>
-          <p style="font-size:13px;color:#64748b;margin:0;">
-            Selamat datang, <strong>{{ authStore.user?.name || 'Pengguna' }}</strong>
-            <span style="margin-left:8px;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;"
-              :style="roleBadgeStyle">{{ authStore.user?.role || 'operator' }}</span>
-          </p>
-          <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">
-            Wilayah: <strong style="color:#0f172a;">{{ authStore.user?.wilayah_label || 'Seluruh Indonesia' }}</strong>
-            &nbsp;·&nbsp; Data mustahik desil 1–4 · Tahun 2024
-          </p>
-        </div>
-        <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:8px;font-size:11px;font-weight:600;">PROTOTYPE · Data Simulasi</span>
-      </div>
-
-      <!-- Stat Cards -->
-      <div class="grid-4">
-        <div v-for="stat in statCards" :key="stat.label" class="stat-card">
-          <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
-            <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
-          </div>
-          <p style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 3px;">{{ stat.value }}</p>
-          <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
-          <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
-        </div>
-      </div>
-
-      <!-- Desil breakdown cards -->
-      <div>
-        <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 12px;">Distribusi Mustahik per Desil</p>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
-          <div v-for="d in stats.desil_breakdown" :key="d.desil"
-            style="border-radius:14px;padding:18px;text-align:center;"
-            :style="{ background:DESIL_COLORS[d.desil].bg, border:`1px solid ${DESIL_COLORS[d.desil].text}22` }">
-            <p style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;" :style="{color:DESIL_COLORS[d.desil].text}">Desil {{ d.desil }}</p>
-            <p style="font-size:2rem;font-weight:900;margin:0 0 2px;" :style="{color:DESIL_COLORS[d.desil].text}">{{ d.jumlah }}</p>
-            <p style="font-size:11px;color:#64748b;margin:0 0 6px;">mustahik</p>
-            <p style="font-size:12px;font-weight:600;margin:0;" :style="{color:DESIL_COLORS[d.desil].text}">{{ formatRupiah(d.total_nominal) }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts row -->
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
-        <!-- Gender Pie -->
-        <div class="card-box">
-          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
-          <Chart type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
-          <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
-            <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>L: {{ stats.by_gender.m }}</span>
-            <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>P: {{ stats.by_gender.f }}</span>
-          </div>
-        </div>
-        <!-- Desil Bar -->
-        <div class="card-box">
-          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Mustahik per Desil</p>
-          <Chart type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
-        </div>
-      </div>
-
-      <!-- Sebaran Wilayah -->
-      <div class="card-box">
-        <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">
-          Sebaran Mustahik
-          <span style="font-weight:400;color:#94a3b8;">
-            per {{ wilayahGroupLabel }}
-          </span>
-        </p>
-        <div v-if="stats.by_provinsi.length === 0" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px;">
-          Tidak ada data mustahik di wilayah ini.
-        </div>
-        <div v-else style="display:flex;gap:16px;flex-wrap:wrap;">
-          <div v-for="p in stats.by_provinsi" :key="p.nama"
-            style="flex:1;min-width:160px;background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
-            <p style="font-size:12px;color:#64748b;margin:0 0 4px;">{{ p.nama }}</p>
-            <p style="font-size:1.4rem;font-weight:800;color:#1e293b;margin:0;">{{ p.jumlah }}</p>
-            <div style="margin-top:8px;background:#e2e8f0;border-radius:4px;height:6px;">
-              <div :style="{ width: stats.total_mustahik ? (p.jumlah/stats.total_mustahik*100)+'%' : '0%', height:'6px', borderRadius:'4px', background:'#3b82f6' }"></div>
+          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 12px;">Distribusi Mustahik per Desil</p>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
+            <div v-for="d in stats.desil_breakdown" :key="d.desil"
+              style="border-radius:14px;padding:18px;text-align:center;"
+              :style="{ background:DESIL_COLORS[d.desil].bg, border:`1px solid ${DESIL_COLORS[d.desil].text}22` }">
+              <p style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;" :style="{color:DESIL_COLORS[d.desil].text}">Desil {{ d.desil }}</p>
+              <p style="font-size:2rem;font-weight:900;margin:0 0 2px;" :style="{color:DESIL_COLORS[d.desil].text}">{{ d.jumlah }}</p>
+              <p style="font-size:11px;color:#64748b;margin:0 0 6px;">mustahik</p>
+              <p style="font-size:12px;font-weight:600;margin:0;" :style="{color:DESIL_COLORS[d.desil].text}">{{ formatRupiah(d.total_nominal) }}</p>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Quick nav -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" class="quick-nav">
-        <div v-for="nav in quickNav" :key="nav.label" class="nav-card" @click="$router.push(nav.to)">
-          <div :style="{ width:'40px', height:'40px', borderRadius:'10px', background:nav.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'12px' }">
-            <i :class="nav.icon" :style="{ color:nav.iconColor, fontSize:'17px' }"></i>
+        <!-- Charts row -->
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
+          <!-- Gender Pie -->
+          <div class="card-box">
+            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
+            <Chart type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
+            <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
+              <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>L: {{ stats.by_gender.m }}</span>
+              <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>P: {{ stats.by_gender.f }}</span>
+            </div>
           </div>
-          <p style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 2px;">{{ nav.label }}</p>
-          <p style="font-size:12px;color:#94a3b8;margin:0;">{{ nav.desc }}</p>
+          <!-- Desil Bar -->
+          <div class="card-box">
+            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Mustahik per Desil</p>
+            <Chart type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
+          </div>
         </div>
+
+        <!-- Sebaran Wilayah -->
+        <div class="card-box">
+          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">
+            Sebaran Mustahik
+            <span style="font-weight:400;color:#94a3b8;">
+              per {{ wilayahGroupLabel }}
+            </span>
+          </p>
+          <div v-if="stats.by_provinsi.length === 0" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px;">
+            Tidak ada data mustahik di wilayah ini.
+          </div>
+          <div v-else style="display:flex;gap:16px;flex-wrap:wrap;">
+            <div v-for="p in stats.by_provinsi" :key="p.nama"
+              style="flex:1;min-width:160px;background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
+              <p style="font-size:12px;color:#64748b;margin:0 0 4px;">{{ p.nama }}</p>
+              <p style="font-size:1.4rem;font-weight:800;color:#1e293b;margin:0;">{{ p.jumlah }}</p>
+              <div style="margin-top:8px;background:#e2e8f0;border-radius:4px;height:6px;">
+                <div :style="{ width: stats.total_mustahik ? (p.jumlah/stats.total_mustahik*100)+'%' : '0%', height:'6px', borderRadius:'4px', background:'#3b82f6' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick nav -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" class="quick-nav">
+          <div v-for="nav in quickNav" :key="nav.label" class="nav-card" @click="$router.push(nav.to)">
+            <div :style="{ width:'40px', height:'40px', borderRadius:'10px', background:nav.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'12px' }">
+              <i :class="nav.icon" :style="{ color:nav.iconColor, fontSize:'17px' }"></i>
+            </div>
+            <p style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 2px;">{{ nav.label }}</p>
+            <p style="font-size:12px;color:#94a3b8;margin:0;">{{ nav.desc }}</p>
+          </div>
+        </div>
+
       </div>
+      <!-- end z-index:1 wrapper -->
 
     </div>
   </AppLayout>
@@ -112,11 +170,13 @@ import { DESIL_COLORS, getMockByWilayah, buildSummaryStats } from '@/data/mockMu
 
 const authStore = useAuthStore()
 
+const userEmail = computed(() => authStore.user?.email || authStore.user?.username || 'CONFIDENTIAL')
+
 // ── Data ter-filter berdasarkan wilayah user yang login ──────────────────────
 const filteredData = computed(() => getMockByWilayah(authStore.userWilayah))
 const stats        = computed(() => buildSummaryStats(filteredData.value))
 
-// Label grup sebaran (Provinsi jika admin/analis, Kab/Kota jika operator)
+// Label grup sebaran
 const wilayahGroupLabel = computed(() => {
   const w = authStore.userWilayah
   if (!w || w.level === 'provinsi') return 'Provinsi'
