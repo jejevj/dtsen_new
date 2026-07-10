@@ -46,8 +46,12 @@ def save_otp(key: str, code: str) -> None:
     db.session.commit()
 
 
-def verify_otp(key: str, code: str) -> bool:
-    """Verifikasi OTP. Hapus dari DB jika valid."""
+def verify_otp(key: str, code: str, soft_delete: bool = False) -> bool:
+    """
+    Verifikasi OTP.
+    - soft_delete=False (default): hapus row setelah valid (untuk WA step final)
+    - soft_delete=True: tandai used=1 tapi JANGAN hapus (untuk Email step tengah)
+    """
     row = db.session.execute(
         db.text("""
             SELECT id, code, expires_at, used
@@ -67,7 +71,6 @@ def verify_otp(key: str, code: str) -> bool:
         return False
 
     if datetime.utcnow() > expires_at:
-        # Hapus yang expired
         db.session.execute(db.text("DELETE FROM t_otp_dtsen WHERE id = :id"), {'id': otp_id})
         db.session.commit()
         return False
@@ -75,8 +78,15 @@ def verify_otp(key: str, code: str) -> bool:
     if stored_code != code.strip():
         return False
 
-    # Tandai sebagai used dan hapus
-    db.session.execute(db.text("DELETE FROM t_otp_dtsen WHERE id = :id"), {'id': otp_id})
+    if soft_delete:
+        # Tandai used=1, biarkan row ada supaya tidak bisa dipakai ulang
+        db.session.execute(
+            db.text("UPDATE t_otp_dtsen SET used = 1 WHERE id = :id"),
+            {'id': otp_id}
+        )
+    else:
+        # Hapus permanen — dipakai untuk step final (verify-wa)
+        db.session.execute(db.text("DELETE FROM t_otp_dtsen WHERE id = :id"), {'id': otp_id})
     db.session.commit()
     return True
 
@@ -127,7 +137,7 @@ def send_otp_email(
                       </td></tr>
                     </table>
                     <p style="margin:20px 0 8px;font-size:13px;color:#9ca3af;text-align:center;">
-                      ⏱ Kode berlaku selama <strong>{OTP_TTL_MINUTES} menit</strong>.
+                      &#9201; Kode berlaku selama <strong>{OTP_TTL_MINUTES} menit</strong>.
                     </p>
                     <p style="margin:0 0 24px;font-size:13px;color:#9ca3af;text-align:center;">
                       Setelah OTP email, Anda akan diminta memasukkan OTP WhatsApp.

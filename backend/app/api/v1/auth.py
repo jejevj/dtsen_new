@@ -40,10 +40,6 @@ def _get_phone(user: dict) -> str:
     return ''
 
 def _fetch_phone_from_db(user_id: int, user_type: str) -> str:
-    """
-    Fallback: query langsung ke DB jika payload tidak punya notelp.
-    Cek tuser dan t_dtsen_akses.
-    """
     try:
         if user_type == 'tuser':
             row = db.session.execute(
@@ -83,7 +79,6 @@ def login():
         (identifier if '@' in (identifier or '') else None)
     )
 
-    # Ambil phone dari payload, fallback ke DB jika kosong
     phone = _get_phone(user) or _fetch_phone_from_db(user_id, user_type)
 
     otp_code = generate_otp()
@@ -117,12 +112,13 @@ def otp_verify_email():
     if not otp_key or not code:
         return jsonify({'message': 'otp_key dan code wajib diisi.'}), 400
 
-    if not verify_otp(otp_key, code):
+    # soft_delete=True: row tetap ada (used=1) tapi tidak bisa dipakai ulang
+    # sehingga WA OTP yang digenerate sesudahnya tidak terganggu
+    if not verify_otp(otp_key, code, soft_delete=True):
         return jsonify({'message': 'Kode OTP email salah atau sudah kadaluarsa.'}), 401
 
     user_id, user_type = _parse_otp_key(otp_key)
 
-    # Coba dari payload user dulu, fallback langsung query DB
     user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
     user      = user_data.get('user', {})
     phone     = _get_phone(user) or _fetch_phone_from_db(user_id, user_type)
@@ -154,14 +150,24 @@ def otp_verify_email():
 # ── Step 3: Verifikasi OTP WA → kembalikan JWT ────────────────────────────
 @api_v1_bp.post('/auth/otp/verify-wa')
 def otp_verify_wa():
+    from flask import current_app
     data   = request.get_json() or {}
-    wa_key = data.get('wa_otp_key', '')
+    # Frontend bisa kirim dengan key 'wa_otp_key' ATAU 'otp_key'
+    wa_key = data.get('wa_otp_key') or data.get('otp_key', '')
     code   = data.get('code', '')
+
+    current_app.logger.info(f'[AUTH] verify-wa wa_key={wa_key!r} code={code!r}')
 
     if not wa_key or not code:
         return jsonify({'message': 'wa_otp_key dan code wajib diisi.'}), 400
 
-    if not verify_otp(wa_key, code):
+    # Pastikan key adalah WA key, bukan email key
+    if not wa_key.startswith('otp_wa_'):
+        current_app.logger.warning(f'[AUTH] verify-wa: key bukan WA key: {wa_key!r}')
+        return jsonify({'message': 'Key OTP tidak valid untuk verifikasi WhatsApp.'}), 400
+
+    # soft_delete=False: hapus permanen setelah dipakai (step final)
+    if not verify_otp(wa_key, code, soft_delete=False):
         return jsonify({'message': 'Kode OTP WhatsApp salah atau sudah kadaluarsa.'}), 401
 
     user_id, user_type = _parse_otp_key(wa_key)
@@ -205,7 +211,7 @@ def otp_resend_email():
 @api_v1_bp.post('/auth/otp/resend-wa')
 def otp_resend_wa():
     data   = request.get_json() or {}
-    wa_key = data.get('wa_otp_key', '')
+    wa_key = data.get('wa_otp_key') or data.get('otp_key', '')
     if not wa_key:
         return jsonify({'message': 'wa_otp_key wajib diisi.'}), 400
 
