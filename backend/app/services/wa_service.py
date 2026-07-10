@@ -1,6 +1,6 @@
 """
 WhatsApp OTP Service via Google Apps Script gateway.
-GAS mengeluarkan redirect 302 saat POST — gunakan requests + force-POST hook.
+GAS mengeluarkan redirect 302 saat POST — tangani manual tanpa allow_redirects.
 Sukses ditentukan dari response body: {"status": "Sukses", ...}
 """
 import json
@@ -55,7 +55,7 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
 
     if not contact:
         error = f'Nomor tidak valid setelah normalisasi: {phone!r}'
-        current_app.logger.warning(f'[WA] {error}')
+        current_app.logger.warning('[WA] %s', error)
         _log(user_id, user_type, phone or '', status, cost, error)
         return False
 
@@ -64,38 +64,49 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
         'contact': contact,
         'code':    str(otp_code),
     }
+    headers = {'Content-Type': 'application/json'}
 
     try:
-        session = _requests.Session()
-
-        def force_post_on_redirect(r, *args, **kwargs):
-            """Paksa POST saat GAS redirect 302."""
-            if r.is_redirect:
-                prep = session.prepare_request(_requests.Request(
-                    method='POST',
-                    url=r.headers['Location'],
-                    json=payload,
-                    headers={'Content-Type': 'application/json'},
-                ))
-                return session.send(prep, timeout=15, allow_redirects=False)
-
-        resp = session.post(
+        # Step 1: POST awal, jangan ikuti redirect otomatis
+        resp = _requests.post(
             WA_GATEWAY_URL,
             json=payload,
-            headers={'Content-Type': 'application/json'},
+            headers=headers,
             timeout=15,
-            allow_redirects=True,
-            hooks={'response': force_post_on_redirect},
+            allow_redirects=False,
         )
+
+        current_app.logger.info(
+            '[WA] step1 status=%s contact=%s location=%s',
+            resp.status_code, contact,
+            resp.headers.get('Location', '-')
+        )
+
+        # Step 2: Jika GAS balas 3xx, ikuti redirect dengan POST
+        if resp.status_code in (301, 302, 303, 307, 308):
+            redirect_url = resp.headers.get('Location')
+            if redirect_url:
+                resp = _requests.post(
+                    redirect_url,
+                    json=payload,
+                    headers=headers,
+                    timeout=15,
+                    allow_redirects=False,
+                )
+                current_app.logger.info(
+                    '[WA] step2 (after redirect) status=%s contact=%s',
+                    resp.status_code, contact
+                )
 
         body = resp.text
         current_app.logger.info(
-            f'[WA] gateway status={resp.status_code} contact={contact} body={body[:300]}'
+            '[WA] FINAL status=%s contact=%s body=%s',
+            resp.status_code, contact, body[:500]
         )
 
         if resp.status_code == 200 and _is_success(body):
             status = 'sent'
-            cost   = WA_COST   # Rp 650 dikenakan hanya jika benar-benar sukses
+            cost   = WA_COST
             return True
         else:
             error = f'HTTP {resp.status_code}: {body[:200]}'
@@ -103,7 +114,7 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
 
     except Exception as e:
         error = str(e)
-        current_app.logger.error(f'[WA] send_wa_otp error to {contact}: {e}')
+        current_app.logger.error('[WA] send_wa_otp error to %s: %s', contact, e)
         return False
 
     finally:
@@ -123,5 +134,5 @@ def _log(user_id: int, user_type: str, contact: str, status: str, cost: int, err
         )
         db.session.commit()
     except Exception as db_err:
-        current_app.logger.error(f'[WA] log insert error: {db_err}')
+        current_app.logger.error('[WA] log insert error: %s', db_err)
         db.session.rollback()

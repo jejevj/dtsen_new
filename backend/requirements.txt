@@ -26,6 +26,7 @@ psycopg2-binary==2.9.12
 PyJWT==2.13.0
 PyMySQL==1.1.1
 python-dotenv==1.0.1
+python-json-logger>=2.0.7
 PyYAML==6.0.3
 referencing==0.37.0
 requests==2.32.3
