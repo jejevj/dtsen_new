@@ -1,7 +1,11 @@
 """
 WhatsApp OTP Service via Google Apps Script gateway.
-GAS mengeluarkan redirect 302 saat POST — tangani manual tanpa allow_redirects.
-Sukses ditentukan dari response body: {"status": "Sukses", ...}
+
+Flow GAS:
+  1. POST ke script.google.com/exec  → 302 redirect ke googleusercontent.com/macros/echo?...
+  2. GET ke echo URL                 → 200 JSON {"status": "Sukses", ...}
+
+PENTING: redirect harus diikuti dengan GET, bukan POST.
 """
 import json
 import re
@@ -43,7 +47,6 @@ def _is_success(resp_body: str) -> bool:
         data = json.loads(resp_body)
         return str(data.get('status', '')).lower() == 'sukses'
     except Exception:
-        # Fallback: cek plain text
         return 'sukses' in resp_body.lower()
 
 
@@ -64,14 +67,13 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
         'contact': contact,
         'code':    str(otp_code),
     }
-    headers = {'Content-Type': 'application/json'}
 
     try:
-        # Step 1: POST awal, jangan ikuti redirect otomatis
+        # Step 1: POST ke GAS, jangan ikuti redirect otomatis
         resp = _requests.post(
             WA_GATEWAY_URL,
             json=payload,
-            headers=headers,
+            headers={'Content-Type': 'application/json'},
             timeout=15,
             allow_redirects=False,
         )
@@ -82,19 +84,17 @@ def send_wa_otp(phone: str, otp_code: str, user_id: int, user_type: str) -> bool
             resp.headers.get('Location', '-')
         )
 
-        # Step 2: Jika GAS balas 3xx, ikuti redirect dengan POST
+        # Step 2: GAS selalu redirect 302 ke echo URL → ikuti dengan GET
         if resp.status_code in (301, 302, 303, 307, 308):
             redirect_url = resp.headers.get('Location')
             if redirect_url:
-                resp = _requests.post(
+                resp = _requests.get(
                     redirect_url,
-                    json=payload,
-                    headers=headers,
                     timeout=15,
-                    allow_redirects=False,
+                    allow_redirects=True,  # boleh ikuti redirect lanjutan jika ada
                 )
                 current_app.logger.info(
-                    '[WA] step2 (after redirect) status=%s contact=%s',
+                    '[WA] step2 GET echo status=%s contact=%s',
                     resp.status_code, contact
                 )
 
