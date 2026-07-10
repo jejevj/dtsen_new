@@ -36,10 +36,10 @@ services:
     healthcheck:
       # wget tersedia di python:slim, curl tidak
       test: ["CMD", "wget", "-qO-", "http://localhost:5000/api/v1/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
   frontend:
     build:
@@ -53,7 +53,7 @@ services:
     ports:
       - "8786:80"
     depends_on:
-      - api          # service_started: tidak tunggu healthy, langsung jalan
+      - api
     networks:
       - dtsen_net
 
