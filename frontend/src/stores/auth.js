@@ -10,12 +10,15 @@ export const useAuthStore = defineStore('auth', () => {
   const error        = ref(null)
 
   // OTP step 1 — Email
-  const pendingOtpKey   = ref(sessionStorage.getItem('dtsen_otp_key')  || null)
+  const pendingOtpKey   = ref(sessionStorage.getItem('dtsen_otp_key')   || null)
   const pendingUserHint = ref(JSON.parse(sessionStorage.getItem('dtsen_otp_hint') || 'null'))
 
   // OTP step 2 — WA
-  const pendingWaKey    = ref(sessionStorage.getItem('dtsen_wa_key')   || null)
+  const pendingWaKey    = ref(sessionStorage.getItem('dtsen_wa_key')    || null)
   const pendingWaHint   = ref(JSON.parse(sessionStorage.getItem('dtsen_wa_hint')  || 'null'))
+
+  // Nomor HP user — disimpan saat login berhasil (sudah 628xxx)
+  const pendingPhone    = ref(sessionStorage.getItem('dtsen_pending_phone') || null)
 
   const isAuthenticated    = computed(() => !!accessToken.value && !!user.value)
   const hasPendingOtp      = computed(() => !!pendingOtpKey.value)
@@ -29,15 +32,19 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value.user_fullname || user.value.nama_lengkap || user.value.email || ''
   })
 
-  /** Login → OTP email dikirim, simpan otp_key */
+  /** Login → OTP email dikirim, simpan otp_key + phone */
   async function login(identifier, password) {
     loading.value = true; error.value = null
     try {
       const { data } = await authService.login(identifier, password)
       pendingOtpKey.value   = data.otp_key
       pendingUserHint.value = data.user_hint
-      sessionStorage.setItem('dtsen_otp_key',  data.otp_key)
-      sessionStorage.setItem('dtsen_otp_hint', JSON.stringify(data.user_hint))
+      // Simpan phone dari user_hint (sudah dinormalisasi 628xxx di backend)
+      const phone = data.user_hint?.phone || ''
+      pendingPhone.value = phone
+      sessionStorage.setItem('dtsen_otp_key',       data.otp_key)
+      sessionStorage.setItem('dtsen_otp_hint',      JSON.stringify(data.user_hint))
+      sessionStorage.setItem('dtsen_pending_phone', phone)
       return data
     } catch (err) {
       const msg = err.response?.data?.message || 'Login gagal.'
@@ -54,7 +61,7 @@ export const useAuthStore = defineStore('auth', () => {
       pendingWaHint.value = data.user_hint
       sessionStorage.setItem('dtsen_wa_key',  data.wa_otp_key)
       sessionStorage.setItem('dtsen_wa_hint', JSON.stringify(data.user_hint))
-      // email step selesai, hapus
+      // Hapus step email
       pendingOtpKey.value = null; pendingUserHint.value = null
       sessionStorage.removeItem('dtsen_otp_key')
       sessionStorage.removeItem('dtsen_otp_hint')
@@ -109,7 +116,8 @@ export const useAuthStore = defineStore('auth', () => {
   function _clearOtpPending() {
     pendingOtpKey.value = null; pendingUserHint.value = null
     pendingWaKey.value  = null; pendingWaHint.value  = null
-    ;['dtsen_otp_key','dtsen_otp_hint','dtsen_wa_key','dtsen_wa_hint']
+    pendingPhone.value  = null
+    ;['dtsen_otp_key','dtsen_otp_hint','dtsen_wa_key','dtsen_wa_hint','dtsen_pending_phone']
       .forEach(k => sessionStorage.removeItem(k))
   }
 
@@ -123,7 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     user, accessToken, refreshToken, loading, error,
-    pendingOtpKey, pendingUserHint, pendingWaKey, pendingWaHint,
+    pendingOtpKey, pendingUserHint, pendingWaKey, pendingWaHint, pendingPhone,
     isAuthenticated, hasPendingOtp, hasPendingWaOtp, canAccessDashboard,
     isTuser, isDtsen, userDisplayName,
     login, logout, fetchMe,
