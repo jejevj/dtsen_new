@@ -100,7 +100,6 @@ const verified  = ref(false)
 const resending = ref(false)
 const otpInput  = ref(null)
 
-// Redirect ke home jika tidak ada pending OTP
 onMounted(async () => {
   if (!auth.hasPendingOtp) {
     router.replace({ name: 'home' })
@@ -112,29 +111,30 @@ onMounted(async () => {
   startResendCooldown()
 })
 
-// Email hint
 const maskedEmail = computed(() => auth.pendingUserHint?.email_masked || 'email terdaftar')
 
-// ── Countdown 10 menit ───────────────────────────────────────────────────────
-const OTP_TTL  = 10 * 60   // 10 menit
-const countdown     = ref(OTP_TTL)
+// Countdown 10 menit
+const OTP_TTL       = 10 * 60
+const countdown      = ref(OTP_TTL)
 const resendCooldown = ref(60)
-let countdownTimer:  ReturnType<typeof setInterval> | null = null
-let resendTimer:     ReturnType<typeof setInterval> | null = null
+let countdownTimer  = null
+let resendTimer     = null
 
 function startCountdown() {
+  if (countdownTimer) clearInterval(countdownTimer)
   countdown.value = OTP_TTL
   countdownTimer  = setInterval(() => {
     if (countdown.value > 0) countdown.value--
-    else clearInterval(countdownTimer!)
+    else clearInterval(countdownTimer)
   }, 1000)
 }
 
 function startResendCooldown() {
+  if (resendTimer) clearInterval(resendTimer)
   resendCooldown.value = 60
   resendTimer = setInterval(() => {
     if (resendCooldown.value > 0) resendCooldown.value--
-    else clearInterval(resendTimer!)
+    else clearInterval(resendTimer)
   }, 1000)
 }
 
@@ -145,10 +145,9 @@ const mmss = computed(() => {
 })
 
 onUnmounted(() => {
-  clearInterval(countdownTimer!)
-  clearInterval(resendTimer!)
+  clearInterval(countdownTimer)
+  clearInterval(resendTimer)
 })
-// ─────────────────────────────────────────────────────────────────────────────
 
 async function submitOtp() {
   otpError.value = ''
@@ -174,7 +173,7 @@ async function handleResend() {
     startCountdown()
     startResendCooldown()
     code.value = ''
-  } catch (e) {
+  } catch {
     otpError.value = 'Gagal mengirim ulang OTP. Coba lagi.'
   } finally {
     resending.value = false
