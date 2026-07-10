@@ -1,8 +1,42 @@
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, verify_jwt_in_request
 from . import api_v1_bp
 from ...services.report_service import ReportService
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PUBLIC endpoints — digunakan di landing page (HomeView), tanpa token
+# ─────────────────────────────────────────────────────────────────────────────
+
+@api_v1_bp.get('/public/report/summary')
+def public_summary():
+    return jsonify(ReportService.get_summary({})), 200
+
+
+@api_v1_bp.get('/public/report/gender')
+def public_by_gender():
+    return jsonify(ReportService.get_by_gender({})), 200
+
+
+@api_v1_bp.get('/public/report/bidang')
+def public_by_bidang():
+    return jsonify(ReportService.get_by_bidang({})), 200
+
+
+@api_v1_bp.get('/public/report/timeseries')
+def public_timeseries():
+    return jsonify(ReportService.get_timeseries({})), 200
+
+
+@api_v1_bp.get('/public/report/map')
+def public_map():
+    level = request.args.get('level', '1')
+    return jsonify(ReportService.get_map_data(level)), 200
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PROTECTED endpoints — wajib JWT token
+# ─────────────────────────────────────────────────────────────────────────────
 
 @api_v1_bp.get('/report/summary')
 @jwt_required()
