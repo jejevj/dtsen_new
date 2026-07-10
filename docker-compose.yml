@@ -2,20 +2,17 @@ version: '3.9'
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DTSEN Stack
-#  dtsen_api      : Flask/Gunicorn backend  (internal, tidak dibuka ke host)
-#  dtsen_frontend : Vue build + Nginx        (port 8786, ganti systemctl)
+#  dtsen_api      : Flask/Gunicorn  → host:8778  (sama dengan setup lama)
+#  dtsen_frontend : Vue + Nginx     → host:8786  (ganti dtsen-frontend.service)
 #
-# Nginx di dalam container mem-proxy /api/* → dtsen_api:5000 (no CORS)
+# Nginx proxy /api/* → dtsen_api:5000 (internal, no CORS)
 #
-# Cara deploy (pertama kali):
-#   cp backend/.env.example backend/.env
-#   nano backend/.env                    # isi DATABASE_URL, SECRET_KEY, dll
-#   systemctl stop dtsen-frontend        # matikan service lama
-#   systemctl disable dtsen-frontend     # cegah nyala otomatis
+# Deploy:
+#   cp backend/.env.example backend/.env && nano backend/.env
+#   systemctl stop dtsen-frontend && systemctl disable dtsen-frontend
 #   docker compose up -d --build
-#
-# Update selanjutnya:
-#   git pull && docker compose up -d --build --no-deps frontend
+# Update:
+#   git pull && docker compose up -d --build
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -35,16 +32,16 @@ services:
       FLASK_ENV: production
     volumes:
       - dtsen_uploads:/app/uploads
-    expose:
-      - "5000"          # hanya internal network, tidak ke host
+    ports:
+      - "8778:5000"     # sama dengan port lama di backend/docker-compose.yml
     networks:
       - dtsen_net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # ── Frontend (Vue build + Nginx proxy) ──────────────────────────────────────
   frontend:
@@ -52,12 +49,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: /api/v1    # nginx proxy /api/* → dtsen_api:5000
+        VITE_API_BASE_URL: /api/v1
     image: dtsen_frontend:latest
     container_name: dtsen_frontend
     restart: unless-stopped
     ports:
-      - "8786:80"       # host:8786 → nginx:80 (sama dengan port systemctl lama)
+      - "8786:80"       # host:8786 → nginx:80
     depends_on:
       api:
         condition: service_healthy
