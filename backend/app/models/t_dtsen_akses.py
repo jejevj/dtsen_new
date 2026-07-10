@@ -3,6 +3,9 @@ from datetime import datetime
 
 
 class TDtsenAkses(db.Model):
+    """
+    Model untuk tabel t_dtsen_akses (user eksternal DTSEN / LAZ).
+    """
     __tablename__ = 't_dtsen_akses'
 
     dtsen_akses_id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -33,11 +36,17 @@ class TDtsenAkses(db.Model):
     sent_at                = db.Column(db.DateTime, nullable=True)
     activated_at           = db.Column(db.DateTime, nullable=True)
     created_at             = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
-    updated_at             = db.Column(db.DateTime, nullable=True)  # plain datetime, no ON UPDATE
+    updated_at             = db.Column(db.DateTime, nullable=True)
+
+    @property
+    def user_type(self):
+        """Selalu 'dtsen' — dipakai auth service untuk membedakan tipe user."""
+        return 'dtsen'
 
     def to_dict(self):
         return {
             'dtsen_akses_id':         self.dtsen_akses_id,
+            'user_type':              self.user_type,
             'laz_kode':               self.laz_kode,
             'nik':                    self.nik,
             'nama_lengkap':           self.nama_lengkap,
@@ -52,7 +61,6 @@ class TDtsenAkses(db.Model):
             'berkas_bast':            self.berkas_bast,
             'statuses':               self.statuses,
             'catatan':                self.catatan,
-            'dtsen_akses_password':   self.dtsen_akses_password,
             'deleted_at':             self.deleted_at.isoformat() if self.deleted_at else None,
             'sent_at':                self.sent_at.isoformat() if self.sent_at else None,
             'activated_at':           self.activated_at.isoformat() if self.activated_at else None,
