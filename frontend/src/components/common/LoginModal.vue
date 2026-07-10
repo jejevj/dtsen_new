@@ -21,6 +21,28 @@
             </button>
           </div>
 
+          <!-- Alert Error Banner -->
+          <Transition name="alert">
+            <div v-if="alertMessage" class="lm-alert" role="alert" aria-live="assertive">
+              <svg class="lm-alert-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="9" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M10 6v4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                <circle cx="10" cy="13.5" r="0.9" fill="currentColor"/>
+              </svg>
+              <div class="lm-alert-body">
+                <p class="lm-alert-title">{{ alertMessage.title }}</p>
+                <ul v-if="alertMessage.details.length" class="lm-alert-list">
+                  <li v-for="d in alertMessage.details" :key="d">{{ d }}</li>
+                </ul>
+              </div>
+              <button class="lm-alert-close" @click="alertMessage = null" aria-label="Tutup notifikasi">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M4 4l8 8M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </Transition>
+
           <!-- Form -->
           <form @submit.prevent="handleLogin" novalidate>
             <div class="lm-group">
@@ -94,8 +116,6 @@
               <p v-if="errors.captcha" class="lm-err">{{ errors.captcha }}</p>
             </div>
 
-            <p v-if="errors.global" class="lm-err lm-err-global">{{ errors.global }}</p>
-
             <button type="submit" class="lm-btn" :disabled="auth.loading">
               <span v-if="auth.loading" class="lm-spinner"></span>
               <span v-else>Masuk</span>
@@ -125,10 +145,13 @@ const router     = useRouter()
 const firstInput = ref(null)
 
 const form   = reactive({ identifier: '', password: '' })
-const errors = reactive({ identifier: '', password: '', captcha: '', global: '' })
+const errors = reactive({ identifier: '', password: '', captcha: '' })
 const showPw            = ref(false)
 const captchaAnswer     = ref('')
 const captchaRefreshing = ref(false)
+
+/** Alert banner: { title: string, details: string[], type: 'error' | 'warning' } */
+const alertMessage = ref(null)
 
 // ── CAPTCHA ──────────────────────────────────────────────────────────────────
 function generateCaptcha() {
@@ -163,6 +186,15 @@ function refreshCaptcha() {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Alert helper ───────────────────────────────────────────────────────────────
+function showAlert(title, details = []) {
+  alertMessage.value = { title, details }
+}
+function clearAlert() {
+  alertMessage.value = null
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 watch(() => props.visible, async (val) => {
   if (val) {
     resetForm()
@@ -177,8 +209,8 @@ function resetForm() {
   errors.identifier = ''
   errors.password   = ''
   errors.captcha    = ''
-  errors.global     = ''
   captchaAnswer.value = ''
+  clearAlert()
   refreshCaptcha()
 }
 
@@ -190,32 +222,42 @@ function handleClose() {
 /**
  * Validasi semua field termasuk CAPTCHA.
  * Mengembalikan true hanya jika SEMUA field valid.
- * refreshCaptcha() TIDAK dipanggil di sini agar state tetap konsisten
- * sebelum keputusan lanjut/batal diambil oleh handleLogin().
  */
 function validate() {
   errors.identifier = ''
   errors.password   = ''
   errors.captcha    = ''
-  errors.global     = ''
+  clearAlert()
 
-  if (!form.identifier.trim())
+  const details = []
+
+  if (!form.identifier.trim()) {
     errors.identifier = 'Email atau No. HP wajib diisi.'
+    details.push('Email atau No. HP wajib diisi.')
+  }
 
-  if (!form.password)
+  if (!form.password) {
     errors.password = 'Password wajib diisi.'
+    details.push('Password wajib diisi.')
+  }
 
   if (!captchaAnswer.value.trim()) {
     errors.captcha = 'Jawaban verifikasi keamanan wajib diisi.'
+    details.push('Jawaban verifikasi keamanan wajib diisi.')
   } else if (captchaAnswer.value.trim() !== captcha.answer) {
-    errors.captcha = 'Jawaban verifikasi keamanan salah. Silakan coba lagi.'
+    errors.captcha = 'Jawaban verifikasi keamanan salah.'
+    details.push('Jawaban verifikasi keamanan salah. Soal telah diperbarui, silakan coba lagi.')
   }
 
-  return !errors.identifier && !errors.password && !errors.captcha
+  if (details.length > 0) {
+    showAlert('Periksa kembali isian Anda', details)
+    return false
+  }
+
+  return true
 }
 
 async function handleLogin() {
-  // Hentikan proses jika validasi gagal (termasuk CAPTCHA salah)
   const isValid = validate()
   if (!isValid) {
     // Jika captcha salah, refresh soal agar tidak bisa brute-force
@@ -229,7 +271,7 @@ async function handleLogin() {
     loginModal.close()
     router.push({ name: 'verify-otp' })
   } catch (e) {
-    errors.global = e.message
+    showAlert('Login gagal', [e.message])
     refreshCaptcha()
   }
 }
@@ -283,6 +325,59 @@ if (typeof window !== 'undefined') {
   font-size: 0.8rem; color: #6b7280; margin: 0;
 }
 
+/* ───── Alert Banner ─────────────────────────────────────────────────── */
+.lm-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #dc2626;
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.875rem;
+  margin-bottom: 1.125rem;
+  position: relative;
+}
+.lm-alert-icon {
+  width: 18px; height: 18px;
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.lm-alert-body { flex: 1; min-width: 0; }
+.lm-alert-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #991b1b;
+  margin: 0 0 0.25rem;
+}
+.lm-alert-list {
+  margin: 0;
+  padding-left: 1rem;
+  list-style: disc;
+}
+.lm-alert-list li {
+  font-size: 0.8rem;
+  color: #b91c1c;
+  line-height: 1.5;
+}
+.lm-alert-close {
+  background: none; border: none; cursor: pointer;
+  color: #ef4444; padding: 0.15rem;
+  display: flex; flex-shrink: 0;
+  border-radius: 0.25rem;
+  transition: color 0.15s, background 0.15s;
+}
+.lm-alert-close:hover { color: #991b1b; background: #fee2e2; }
+.lm-alert-close svg { width: 14px; height: 14px; }
+
+/* Alert transition */
+.alert-enter-active { transition: all 0.25s ease; }
+.alert-leave-active { transition: all 0.2s ease; }
+.alert-enter-from   { opacity: 0; transform: translateY(-6px); }
+.alert-leave-to     { opacity: 0; transform: translateY(-4px); }
+/* ────────────────────────────────────────────────────────────────── */
+
 .lm-group { margin-bottom: 1.125rem; }
 .lm-group label {
   display: block; font-size: 0.875rem; font-weight: 500;
@@ -330,7 +425,6 @@ if (typeof window !== 'undefined') {
 .lm-captcha-box input { flex: 1; min-width: 0; text-align: center; font-weight: 600; letter-spacing: 0.1em; }
 
 .lm-err { margin-top: 0.3rem; font-size: 0.8rem; color: #dc2626; }
-.lm-err-global { text-align: center; margin-bottom: 0.5rem; }
 
 .lm-btn {
   width: 100%; padding: 0.825rem;
