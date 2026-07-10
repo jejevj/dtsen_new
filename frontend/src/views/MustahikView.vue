@@ -52,56 +52,39 @@
       </div>
 
       <!-- Table dengan watermark di background -->
-      <div style="position:relative;background:white;border-radius:14px;border:1px solid #f1f5f9;box-shadow:0 1px 4px rgba(0,0,0,0.04);overflow:hidden;">
+      <div class="table-wrapper">
 
         <!-- ===== WATERMARK TABEL ===== -->
-        <div
-          aria-hidden="true"
-          style="
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
-          "
-        >
-          <div
-            style="
-              position: absolute;
-              top: -40%;
-              left: -40%;
-              width: 180%;
-              height: 180%;
-              display: flex;
-              flex-wrap: wrap;
-              align-content: flex-start;
-              transform: rotate(-35deg);
-              transform-origin: center center;
-            "
-          >
-            <div
-              v-for="i in 80"
-              :key="i"
-              style="
-                display: block;
-                width: 50%;
-                padding: 22px 0;
-                text-align: center;
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 0.12em;
-                text-transform: uppercase;
-                color: rgba(15, 23, 42, 0.07);
-                white-space: nowrap;
-                font-family: Inter, sans-serif;
-                line-height: 1;
-              "
-            >
-              DO NOT COPY &nbsp;&bull;&nbsp; {{ userIdentifier }}
-            </div>
-          </div>
+        <!--
+          Teknik: SVG pattern repeating — paling andal untuk mengisi
+          area tabel secara merata tanpa terpotong, karena SVG
+          dirender sebagai background-image CSS yang tile otomatis.
+        -->
+        <div class="wm-overlay" aria-hidden="true">
+          <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="wm-pattern" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                <text x="10" y="40"
+                  font-family="Inter, sans-serif"
+                  font-size="11"
+                  font-weight="700"
+                  letter-spacing="2"
+                  fill="rgba(15,23,42,0.09)"
+                  text-anchor="start"
+                  text-transform="uppercase"
+                >DO NOT COPY</text>
+                <text x="10" y="70"
+                  font-family="Inter, sans-serif"
+                  font-size="10"
+                  font-weight="600"
+                  letter-spacing="1"
+                  fill="rgba(15,23,42,0.07)"
+                  text-anchor="start"
+                >{{ userIdentifier }}</text>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#wm-pattern)" />
+          </svg>
         </div>
         <!-- ===== END WATERMARK ===== -->
 
@@ -128,8 +111,8 @@
                 </tr>
                 <tr
                   v-for="(row,i) in paginated" :key="row.id"
-                  style="border-bottom:1px solid #f1f5f9;transition:background .15s;"
-                  :style="{ background: hoveredRow===row.id ? '#f0f9ff' : 'transparent' }"
+                  class="tbl-row"
+                  :class="{ 'tbl-row--hover': hoveredRow===row.id }"
                   @mouseenter="hoveredRow=row.id"
                   @mouseleave="hoveredRow=null"
                 >
@@ -182,6 +165,8 @@
         <!-- end z-index:1 -->
 
       </div>
+      <!-- end table-wrapper -->
+
     </div>
   </AppLayout>
 </template>
@@ -195,20 +180,10 @@ import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 
-/**
- * Identitas user untuk watermark tabel.
- * Fallback berlapis: email → tuser_email → notelp → user_id → 'CONFIDENTIAL'
- */
 const userIdentifier = computed(() => {
   const u = authStore.user
   if (!u) return 'CONFIDENTIAL'
-  return (
-    u.email       ||
-    u.tuser_email ||
-    u.notelp      ||
-    u.user_id     ||
-    'CONFIDENTIAL'
-  )
+  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
 const q              = ref('')
@@ -259,3 +234,42 @@ function exportCSV() {
   URL.revokeObjectURL(url)
 }
 </script>
+
+<style scoped>
+/* Container tabel — jangkar watermark */
+.table-wrapper {
+  position: relative;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+
+/* Overlay watermark: isi penuh container */
+.wm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* SVG memenuhi 100% lebar & tinggi container */
+.wm-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Row transparan agar watermark tembus */
+.tbl-row {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s;
+  background: transparent;
+}
+.tbl-row--hover {
+  background: rgba(240, 249, 255, 0.85) !important;
+}
+</style>
