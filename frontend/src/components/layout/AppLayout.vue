@@ -81,7 +81,6 @@
 
         <div class="flex items-center gap-1">
           <div class="w-px h-6 bg-slate-200 mx-1"></div>
-          <!-- User pill -->
           <div
             class="flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-full hover:bg-slate-100 cursor-pointer transition-colors"
             @click="showUserMenu = !showUserMenu"
@@ -117,62 +116,45 @@
         </div>
       </header>
 
-      <!-- Page content: position relative agar watermark absolute di dalamnya -->
-      <main class="flex-1 overflow-y-auto p-5" style="position: relative;">
+      <!-- Page content -->
+      <main class="flex-1 overflow-y-auto p-5 wm-main">
 
-        <!-- ===== WATERMARK BACKGROUND (di belakang konten) ===== -->
-        <div
-          aria-hidden="true"
-          style="
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            overflow: hidden;
-            user-select: none;
-            -webkit-user-select: none;
-          "
-        >
-          <div
-            style="
-              position: absolute;
-              top: -50%;
-              left: -50%;
-              width: 200%;
-              height: 200%;
-              display: flex;
-              flex-wrap: wrap;
-              align-content: flex-start;
-              transform: rotate(-35deg);
-              transform-origin: center center;
-            "
-          >
-            <div
-              v-for="i in 80"
-              :key="i"
-              style="
-                display: block;
-                width: 50%;
-                padding: 32px 0;
-                text-align: center;
-                font-size: 12px;
-                font-weight: 700;
-                letter-spacing: 0.1em;
-                text-transform: uppercase;
-                color: rgba(15, 23, 42, 0.10);
-                white-space: nowrap;
-                overflow: hidden;
-                font-family: Inter, sans-serif;
-                line-height: 1;
-              "
-            >
-              DO NOT COPY &nbsp;&bull;&nbsp; {{ userEmail }}
-            </div>
-          </div>
+        <!-- ===== WATERMARK SVG PATTERN — merata di seluruh area konten ===== -->
+        <div class="wm-overlay" aria-hidden="true">
+          <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern
+                id="app-wm"
+                x="0" y="0"
+                width="320" height="120"
+                patternUnits="userSpaceOnUse"
+                patternTransform="rotate(-35)"
+              >
+                <text x="10" y="40"
+                  font-family="Inter, sans-serif"
+                  font-size="11"
+                  font-weight="700"
+                  letter-spacing="2"
+                  fill="rgba(15,23,42,0.09)"
+                  text-anchor="start"
+                >DO NOT COPY</text>
+                <text x="10" y="68"
+                  font-family="Inter, sans-serif"
+                  font-size="10"
+                  font-weight="600"
+                  letter-spacing="1"
+                  fill="rgba(15,23,42,0.07)"
+                  text-anchor="start"
+                >{{ userIdentifier }}</text>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#app-wm)" />
+          </svg>
         </div>
+        <!-- ===== END WATERMARK ===== -->
 
-        <!-- Konten halaman di atas watermark -->
-        <div style="position: relative; z-index: 1;">
+        <!-- Slot konten halaman di z-index 1 -->
+        <div class="wm-content">
           <slot />
         </div>
       </main>
@@ -229,8 +211,14 @@ const showUserMenu   = ref(false)
 const confirmVisible = ref(false)
 const loggingOut     = ref(false)
 
-const user       = computed(() => authStore.user)
-const userEmail  = computed(() => user.value?.email || user.value?.username || 'CONFIDENTIAL')
+const user = computed(() => authStore.user)
+
+/** Identitas untuk watermark — fallback berlapis */
+const userIdentifier = computed(() => {
+  const u = user.value
+  if (!u) return 'CONFIDENTIAL'
+  return u.email || u.tuser_email || u.notelp || u.username || u.user_id || 'CONFIDENTIAL'
+})
 
 const userDisplayName = computed(() => authStore.userDisplayName || 'Admin')
 const userFirstName   = computed(() => userDisplayName.value.split(' ')[0])
@@ -273,4 +261,34 @@ async function handleLogout() {
 <style scoped>
 .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* Main content area — jangkar SVG watermark */
+.wm-main {
+  position: relative;
+}
+
+/* SVG overlay memenuhi seluruh area .wm-main */
+.wm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Ikut scroll bersama konten agar watermark selalu ada */
+  height: 100%;
+  min-height: 100%;
+}
+.wm-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+/* Konten slot di atas watermark */
+.wm-content {
+  position: relative;
+  z-index: 1;
+}
 </style>
