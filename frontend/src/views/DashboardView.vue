@@ -62,9 +62,9 @@
           <div>
             <h2 style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 4px;">Dashboard</h2>
             <p style="font-size:13px;color:#64748b;margin:0;">
-              Selamat datang, <strong>{{ authStore.user?.name || 'Pengguna' }}</strong>
+              Selamat datang, <strong>{{ authStore.user?.user_fullname || authStore.user?.nama_lengkap || 'Pengguna' }}</strong>
               <span style="margin-left:8px;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;"
-                :style="roleBadgeStyle">{{ authStore.user?.role || 'operator' }}</span>
+                :style="roleBadgeStyle">{{ authStore.user?.user_grup || authStore.user?.jabatan || 'operator' }}</span>
             </p>
             <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">
               Wilayah: <strong style="color:#0f172a;">{{ authStore.user?.wilayah_label || 'Seluruh Indonesia' }}</strong>
@@ -170,7 +170,24 @@ import { DESIL_COLORS, getMockByWilayah, buildSummaryStats } from '@/data/mockMu
 
 const authStore = useAuthStore()
 
-const userEmail = computed(() => authStore.user?.email || authStore.user?.username || 'CONFIDENTIAL')
+/**
+ * Ambil email user dari semua kemungkinan field.
+ * Berdasarkan auth_service.py:
+ *   - tuser  → field: email
+ *   - dtsen  → field: email
+ * Keduanya sama-sama 'email', tapi kita cek semua fallback untuk keamanan.
+ */
+const userEmail = computed(() => {
+  const u = authStore.user
+  if (!u) return 'CONFIDENTIAL'
+  return (
+    u.email        ||
+    u.tuser_email  ||
+    u.user_email   ||
+    u.username     ||
+    'CONFIDENTIAL'
+  )
+})
 
 // ── Data ter-filter berdasarkan wilayah user yang login ──────────────────────
 const filteredData = computed(() => getMockByWilayah(authStore.userWilayah))
@@ -185,12 +202,13 @@ const wilayahGroupLabel = computed(() => {
 })
 
 const roleBadgeStyle = computed(() => {
+  const role = authStore.user?.user_grup || authStore.user?.jabatan || ''
   const map = {
     admin:    { background:'#fef9c3', color:'#b45309' },
     operator: { background:'#dcfce7', color:'#15803d' },
     analis:   { background:'#dbeafe', color:'#1d4ed8' },
   }
-  return map[authStore.user?.role] || map.operator
+  return map[role] || map.operator
 })
 
 const statCards = computed(() => [
