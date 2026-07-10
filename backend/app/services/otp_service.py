@@ -1,21 +1,17 @@
 """
 OTP Service
-- Generate & store OTP di in-memory store (TTL 10 menit)
+- Generate & store OTP di database (t_otp_dtsen) — persistent across restarts
 - Kirim email via Gmail SMTP (config dari ic_options)
 - Log ke t_log_smtp_dtsen
 """
 import random
 import string
 import smtplib
-import threading
 from email.mime.multipart import MIMEMultipart
 from email.mime.text      import MIMEText
 from datetime             import datetime, timedelta
 from flask                import current_app
 from ..extensions         import db
-
-_otp_store: dict = {}
-_lock = threading.Lock()
 
 OTP_TTL_MINUTES = 10
 OTP_LENGTH      = 6
@@ -34,23 +30,55 @@ def generate_otp() -> str:
 
 
 def save_otp(key: str, code: str) -> None:
+    """Simpan atau update OTP ke database."""
     expires = datetime.utcnow() + timedelta(minutes=OTP_TTL_MINUTES)
-    with _lock:
-        _otp_store[key] = {'code': code, 'expires_at': expires}
+    db.session.execute(
+        db.text("""
+            INSERT INTO t_otp_dtsen (otp_key, code, expires_at, used)
+            VALUES (:key, :code, :exp, 0)
+            ON DUPLICATE KEY UPDATE
+                code       = VALUES(code),
+                expires_at = VALUES(expires_at),
+                used       = 0
+        """),
+        {'key': key, 'code': code, 'exp': expires}
+    )
+    db.session.commit()
 
 
 def verify_otp(key: str, code: str) -> bool:
-    with _lock:
-        entry = _otp_store.get(key)
-        if not entry:
-            return False
-        if datetime.utcnow() > entry['expires_at']:
-            del _otp_store[key]
-            return False
-        if entry['code'] != code.strip():
-            return False
-        del _otp_store[key]
-        return True
+    """Verifikasi OTP. Hapus dari DB jika valid."""
+    row = db.session.execute(
+        db.text("""
+            SELECT id, code, expires_at, used
+            FROM t_otp_dtsen
+            WHERE otp_key = :key
+            LIMIT 1
+        """),
+        {'key': key}
+    ).fetchone()
+
+    if not row:
+        return False
+
+    otp_id, stored_code, expires_at, used = row
+
+    if used:
+        return False
+
+    if datetime.utcnow() > expires_at:
+        # Hapus yang expired
+        db.session.execute(db.text("DELETE FROM t_otp_dtsen WHERE id = :id"), {'id': otp_id})
+        db.session.commit()
+        return False
+
+    if stored_code != code.strip():
+        return False
+
+    # Tandai sebagai used dan hapus
+    db.session.execute(db.text("DELETE FROM t_otp_dtsen WHERE id = :id"), {'id': otp_id})
+    db.session.commit()
+    return True
 
 
 def send_otp_email(
@@ -88,17 +116,15 @@ def send_otp_email(
                   <td style="padding:36px 40px;">
                     <p style="margin:0 0 8px;font-size:15px;color:#374151;">Halo, <strong>{user_name or 'Pengguna'}</strong></p>
                     <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6;">
-                      Kami menerima permintaan login ke sistem <strong>DTSEN &mdash; Data Terpadu Sosial Ekonomi Nasional</strong>.
+                      Kami menerima permintaan login ke sistem <strong>DTSEN</strong>.
                       Gunakan kode OTP berikut untuk menyelesaikan verifikasi tahap pertama:
                     </p>
                     <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td align="center" style="padding:16px 0;">
-                          <div style="display:inline-block;background:#f0fdf4;border:2px dashed #01696f;border-radius:12px;padding:18px 40px;">
-                            <span style="font-size:38px;font-weight:800;letter-spacing:10px;color:#01696f;font-family:'Courier New',monospace;">{otp_code}</span>
-                          </div>
-                        </td>
-                      </tr>
+                      <tr><td align="center" style="padding:16px 0;">
+                        <div style="display:inline-block;background:#f0fdf4;border:2px dashed #01696f;border-radius:12px;padding:18px 40px;">
+                          <span style="font-size:38px;font-weight:800;letter-spacing:10px;color:#01696f;font-family:'Courier New',monospace;">{otp_code}</span>
+                        </div>
+                      </td></tr>
                     </table>
                     <p style="margin:20px 0 8px;font-size:13px;color:#9ca3af;text-align:center;">
                       ⏱ Kode berlaku selama <strong>{OTP_TTL_MINUTES} menit</strong>.
