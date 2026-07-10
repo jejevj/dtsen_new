@@ -39,7 +39,6 @@ export const useAuthStore = defineStore('auth', () => {
       const { data } = await authService.login(identifier, password)
       pendingOtpKey.value   = data.otp_key
       pendingUserHint.value = data.user_hint
-      // Simpan phone dari user_hint (sudah dinormalisasi 628xxx di backend)
       const phone = data.user_hint?.phone || ''
       pendingPhone.value = phone
       sessionStorage.setItem('dtsen_otp_key',       data.otp_key)
@@ -61,7 +60,6 @@ export const useAuthStore = defineStore('auth', () => {
       pendingWaHint.value = data.user_hint
       sessionStorage.setItem('dtsen_wa_key',  data.wa_otp_key)
       sessionStorage.setItem('dtsen_wa_hint', JSON.stringify(data.user_hint))
-      // Hapus step email
       pendingOtpKey.value = null; pendingUserHint.value = null
       sessionStorage.removeItem('dtsen_otp_key')
       sessionStorage.removeItem('dtsen_otp_hint')
@@ -110,7 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout() {
     try { await authService.logout() } catch { }
-    finally { _clearState() }
+    finally { clearState() }
   }
 
   function _clearOtpPending() {
@@ -121,13 +119,21 @@ export const useAuthStore = defineStore('auth', () => {
       .forEach(k => sessionStorage.removeItem(k))
   }
 
-  function _clearState() {
+  /**
+   * Reset semua state auth + hapus localStorage.
+   * Di-expose secara publik agar bisa dipanggil dari api.js (forceLogout)
+   * tanpa circular dependency.
+   */
+  function clearState() {
     user.value = null; accessToken.value = null
     refreshToken.value = null; error.value = null
     _clearOtpPending()
     ;['dtsen_access_token','dtsen_refresh_token','dtsen_user']
       .forEach(k => localStorage.removeItem(k))
   }
+
+  // Alias internal agar kode lama yang pakai _clearState masih jalan
+  const _clearState = clearState
 
   return {
     user, accessToken, refreshToken, loading, error,
@@ -136,5 +142,6 @@ export const useAuthStore = defineStore('auth', () => {
     isTuser, isDtsen, userDisplayName,
     login, logout, fetchMe,
     verifyEmailOtp, verifyWaOtp, resendEmailOtp, resendWaOtp,
+    clearState, _clearState,
   }
 })
