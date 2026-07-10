@@ -58,6 +58,26 @@ def _fetch_phone_from_db(user_id: int, user_type: str) -> str:
         current_app.logger.error(f'[AUTH] _fetch_phone_from_db error: {e}')
     return ''
 
+def _fetch_email_from_db(user_id: int, user_type: str) -> str:
+    """Ambil email langsung dari DB sebagai fallback jika payload kosong."""
+    try:
+        if user_type == 'tuser':
+            row = db.session.execute(
+                db.text("SELECT email FROM tuser WHERE iduser = :id LIMIT 1"),
+                {'id': user_id}
+            ).fetchone()
+        else:
+            row = db.session.execute(
+                db.text("SELECT email FROM t_dtsen_akses WHERE dtsen_akses_id = :id LIMIT 1"),
+                {'id': user_id}
+            ).fetchone()
+        if row and row[0] and str(row[0]).strip():
+            return str(row[0]).strip()
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.error(f'[AUTH] _fetch_email_from_db error: {e}')
+    return ''
+
 
 # ── Step 1: Login → kirim OTP Email ───────────────────────────────────────────
 @api_v1_bp.post('/auth/login')
@@ -97,6 +117,8 @@ def login():
             'email_masked': _mask_email(email),
             'phone':        phone,
             'phone_masked': _mask_phone(phone),
+            # Simpan identifier asli untuk diambil kembali saat step 3
+            'identifier':   identifier,
         }
     }), 200
 
@@ -112,8 +134,6 @@ def otp_verify_email():
     if not otp_key or not code:
         return jsonify({'message': 'otp_key dan code wajib diisi.'}), 400
 
-    # soft_delete=True: row tetap ada (used=1) tapi tidak bisa dipakai ulang
-    # sehingga WA OTP yang digenerate sesudahnya tidak terganggu
     if not verify_otp(otp_key, code, soft_delete=True):
         return jsonify({'message': 'Kode OTP email salah atau sudah kadaluarsa.'}), 401
 
@@ -152,7 +172,6 @@ def otp_verify_email():
 def otp_verify_wa():
     from flask import current_app
     data   = request.get_json() or {}
-    # Frontend bisa kirim dengan key 'wa_otp_key' ATAU 'otp_key'
     wa_key = data.get('wa_otp_key') or data.get('otp_key', '')
     code   = data.get('code', '')
 
@@ -161,12 +180,10 @@ def otp_verify_wa():
     if not wa_key or not code:
         return jsonify({'message': 'wa_otp_key dan code wajib diisi.'}), 400
 
-    # Pastikan key adalah WA key, bukan email key
     if not wa_key.startswith('otp_wa_'):
         current_app.logger.warning(f'[AUTH] verify-wa: key bukan WA key: {wa_key!r}')
         return jsonify({'message': 'Key OTP tidak valid untuk verifikasi WhatsApp.'}), 400
 
-    # soft_delete=False: hapus permanen setelah dipakai (step final)
     if not verify_otp(wa_key, code, soft_delete=False):
         return jsonify({'message': 'Kode OTP WhatsApp salah atau sudah kadaluarsa.'}), 401
 
@@ -178,6 +195,16 @@ def otp_verify_wa():
 
     user_data = AuthService.get_current_user(identity)
     user      = user_data.get('user', {})
+
+    # ── Pastikan field 'email' selalu terisi untuk kebutuhan watermark & audit ──
+    # Jika email kosong di payload (user login pakai notelp), ambil dari DB.
+    # Jika masih kosong, gunakan notelp sebagai identitas terakhir.
+    if not user.get('email'):
+        email_from_db = _fetch_email_from_db(user_id, user_type)
+        if email_from_db:
+            user['email'] = email_from_db
+        elif user.get('notelp'):
+            user['email'] = user['notelp']
 
     return jsonify({
         'access_token':  access_token,
@@ -239,6 +266,16 @@ def refresh():
 def me():
     identity = get_jwt_identity()
     result   = AuthService.get_current_user(identity)
+    # Pastikan email juga terisi di endpoint /me
+    user = result.get('user', {})
+    if isinstance(user, dict) and not user.get('email'):
+        user_id   = identity.get('id')
+        user_type = identity.get('type')
+        email_from_db = _fetch_email_from_db(user_id, user_type)
+        if email_from_db:
+            user['email'] = email_from_db
+        elif user.get('notelp'):
+            user['email'] = user['notelp']
     return jsonify(result), result.get('status_code', 200)
 
 @api_v1_bp.post('/auth/logout')

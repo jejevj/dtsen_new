@@ -171,11 +171,9 @@ import { DESIL_COLORS, getMockByWilayah, buildSummaryStats } from '@/data/mockMu
 const authStore = useAuthStore()
 
 /**
- * Ambil email user dari semua kemungkinan field.
- * Berdasarkan auth_service.py:
- *   - tuser  → field: email
- *   - dtsen  → field: email
- * Keduanya sama-sama 'email', tapi kita cek semua fallback untuk keamanan.
+ * Ambil identitas user untuk watermark.
+ * Prioritas: email > notelp > user_id > 'CONFIDENTIAL'
+ * Ini menangani kasus user yang login pakai notelp (email-nya null di DB).
  */
 const userEmail = computed(() => {
   const u = authStore.user
@@ -183,8 +181,8 @@ const userEmail = computed(() => {
   return (
     u.email        ||
     u.tuser_email  ||
-    u.user_email   ||
-    u.username     ||
+    u.notelp       ||
+    u.user_id      ||
     'CONFIDENTIAL'
   )
 })
