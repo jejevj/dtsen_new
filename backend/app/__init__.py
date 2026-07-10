@@ -14,15 +14,15 @@ swagger_config = {
     "headers": [],
     "specs": [
         {
-            "endpoint": "apispec",
-            "route": "/apispec.json",
+            "endpoint": "apispec_1",
+            "route": "/apispec_1.json",
             "rule_filter": lambda rule: True,
             "model_filter": lambda tag: True,
         }
     ],
     "static_url_path": "/flasgger_static",
     "swagger_ui": True,
-    "specs_route": "/apidocs",
+    "specs_route": "/apidocs/",
 }
 
 swagger_template = {
@@ -36,16 +36,16 @@ swagger_template = {
             "url": "https://janggawijaya.com"
         }
     },
-    "basePath": "/api/v1",
+    "host": "",
+    "basePath": "/",
     "securityDefinitions": {
         "Bearer": {
             "type": "apiKey",
             "name": "Authorization",
             "in": "header",
-            "description": "JWT Authorization header. Format: **Bearer &lt;token&gt;**"
+            "description": "JWT Authorization header. Format: Bearer <token>"
         }
     },
-    "security": [{"Bearer": []}],
     "consumes": ["application/json"],
     "produces": ["application/json"]
 }
@@ -62,7 +62,7 @@ def create_app(config_name=None):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    CORS(app, origins=app.config['CORS_ORIGINS'])
+    CORS(app, origins=app.config.get('CORS_ORIGINS', '*'))
 
     # Swagger
     Swagger(app, config=swagger_config, template=swagger_template)
