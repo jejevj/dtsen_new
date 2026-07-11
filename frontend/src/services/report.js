@@ -8,11 +8,14 @@ const PRIVATE = '/report'
 
 const ReportService = {
   // ── Landing page (no auth) ──
-  getHomeSummary:  ()       => api.get(`${PUBLIC}/summary`).then(r => r.data),
-  getByGender:     (_p)     => api.get(`${PUBLIC}/gender`).then(r => r.data),
-  getByBidang:     (_p)     => api.get(`${PUBLIC}/bidang`).then(r => r.data),
-  getTimeseries:   (_p)     => api.get(`${PUBLIC}/timeseries`).then(r => r.data),
-  getMapData:      (level)  => api.get(`${PUBLIC}/map`, { params: { level } }).then(r => r.data),
+  getHomeSummary:  ()                        => api.get(`${PUBLIC}/summary`).then(r => r.data),
+  getByGender:     (_p)                      => api.get(`${PUBLIC}/gender`).then(r => r.data),
+  getByBidang:     (_p)                      => api.get(`${PUBLIC}/bidang`).then(r => r.data),
+  getTimeseries:   (_p)                      => api.get(`${PUBLIC}/timeseries`).then(r => r.data),
+
+  // level=1 → provinsi | level=2&provinsi_kode=XX → kabkota dalam provinsi
+  getMapData:      (level)                   => api.get(`${PUBLIC}/map`, { params: { level } }).then(r => r.data),
+  getMapDataKabkota: (provinsi_kode)         => api.get(`${PUBLIC}/map`, { params: { level: '2', provinsi_kode } }).then(r => r.data),
 
   // ── Dashboard (requires auth) ──
   getSummary:      (params) => api.get(`${PRIVATE}/summary`,   { params }).then(r => r.data),
