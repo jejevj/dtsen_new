@@ -30,14 +30,16 @@ def public_timeseries():
 
 @api_v1_bp.get('/public/report/map')
 def public_map():
-    """Endpoint peta publik.
-    ?level=1            → agregat per provinsi
-    ?level=2            → agregat per kabkota seluruh Indonesia
-    ?level=2&provinsi_kode=32  → kabkota dalam satu provinsi saja
+    """
+    Endpoint peta publik.
+      ?level=1                              -> agregat per provinsi
+      ?level=2&provinsi_kode=32             -> kabkota dalam satu provinsi
+      ?level=3&kabkota_kode=3201            -> kecamatan dalam satu kabkota
     """
     level         = request.args.get('level', '1')
     provinsi_kode = request.args.get('provinsi_kode', None)
-    return jsonify(ReportService.get_map_data(level, provinsi_kode)), 200
+    kabkota_kode  = request.args.get('kabkota_kode',  None)
+    return jsonify(ReportService.get_map_data(level, provinsi_kode, kabkota_kode)), 200
 
 
 # ─────────────────────────────────────────────────────────────────────────────
