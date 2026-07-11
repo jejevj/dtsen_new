@@ -247,9 +247,9 @@
     </section>
 
     <!-- ======================================================
-         TENTANG
+         TENTANG — hidden sementara
     ======================================================= -->
-    <section id="tentang" style="padding:80px 0;background:white;">
+    <section v-show="false" id="tentang" style="padding:80px 0;background:white;">
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
         <div class="tentang-grid">
 

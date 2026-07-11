@@ -1,11 +1,11 @@
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required, verify_jwt_in_request
+from flask_jwt_extended import jwt_required
 from . import api_v1_bp
 from ...services.report_service import ReportService
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PUBLIC endpoints — digunakan di landing page (HomeView), tanpa token
+# PUBLIC endpoints — landing page, tanpa token
 # ─────────────────────────────────────────────────────────────────────────────
 
 @api_v1_bp.get('/public/report/summary')
@@ -30,8 +30,16 @@ def public_timeseries():
 
 @api_v1_bp.get('/public/report/map')
 def public_map():
-    level = request.args.get('level', '1')
-    return jsonify(ReportService.get_map_data(level)), 200
+    """
+    Endpoint peta publik.
+      ?level=1                              -> agregat per provinsi
+      ?level=2&provinsi_kode=32             -> kabkota dalam satu provinsi
+      ?level=3&kabkota_kode=3201            -> kecamatan dalam satu kabkota
+    """
+    level         = request.args.get('level', '1')
+    provinsi_kode = request.args.get('provinsi_kode', None)
+    kabkota_kode  = request.args.get('kabkota_kode',  None)
+    return jsonify(ReportService.get_map_data(level, provinsi_kode, kabkota_kode)), 200
 
 
 # ─────────────────────────────────────────────────────────────────────────────
