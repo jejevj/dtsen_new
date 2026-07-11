@@ -15,42 +15,26 @@
       <span style="font-size:13px;color:#dc2626;font-family:Inter,sans-serif;">Gagal memuat peta. Coba refresh halaman.</span>
     </div>
 
-    <!-- Breadcrumb drill-down -->
+    <!-- Breadcrumb -->
     <div
       v-if="!loading && currentLevel > 1"
       style="position:absolute;top:12px;left:12px;z-index:1001;display:flex;align-items:center;gap:6px;flex-wrap:wrap;"
     >
-      <!-- Tombol kembali ke provinsi (dari level 2 atau 3) -->
-      <button
-        @click="drillUp(1)"
-        style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:99px;background:white;border:1px solid #e2e8f0;font-size:12px;font-weight:600;color:#374151;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.1);"
-      >
-        <i class="pi pi-home" style="font-size:11px;"></i>
-        Provinsi
+      <button @click="drillUp(1)"
+        style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:99px;background:white;border:1px solid #e2e8f0;font-size:12px;font-weight:600;color:#374151;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+        <i class="pi pi-home" style="font-size:11px;"></i> Provinsi
       </button>
-
-      <!-- Label provinsi aktif (level 2 & 3) -->
-      <span style="background:white;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;color:#15803d;border:1px solid #dcfce7;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-        {{ selectedProvinsiNama }}
-      </span>
-
-      <!-- Pemisah + tombol kembali ke kabkota (hanya level 3) -->
+      <span style="background:white;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;color:#15803d;border:1px solid #dcfce7;box-shadow:0 2px 8px rgba(0,0,0,0.08);">{{ selectedProvinsiNama }}</span>
       <template v-if="currentLevel === 3">
         <i class="pi pi-chevron-right" style="font-size:10px;color:#94a3b8;"></i>
-        <button
-          @click="drillUp(2)"
-          style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:99px;background:white;border:1px solid #e2e8f0;font-size:12px;font-weight:600;color:#374151;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.1);"
-        >
-          <i class="pi pi-arrow-left" style="font-size:11px;"></i>
-          Kab/Kota
+        <button @click="drillUp(2)"
+          style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:99px;background:white;border:1px solid #e2e8f0;font-size:12px;font-weight:600;color:#374151;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+          <i class="pi pi-arrow-left" style="font-size:11px;"></i> Kab/Kota
         </button>
-        <span style="background:white;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;color:#d97706;border:1px solid #fef3c7;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
-          {{ selectedKabkotaNama }}
-        </span>
+        <span style="background:white;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;color:#d97706;border:1px solid #fef3c7;box-shadow:0 2px 8px rgba(0,0,0,0.08);">{{ selectedKabkotaNama }}</span>
       </template>
     </div>
 
-    <!-- Map container -->
     <div ref="mapRef" style="width:100%;height:100%;"></div>
 
     <!-- Legend -->
@@ -71,12 +55,10 @@
       </div>
     </div>
 
-    <!-- Tooltip hover -->
+    <!-- Tooltip -->
     <transition name="fade">
-      <div
-        v-if="hovered"
-        style="position:absolute;top:16px;left:50%;transform:translateX(-50%);background:white;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);padding:14px;z-index:1000;min-width:200px;pointer-events:none;"
-      >
+      <div v-if="hovered"
+        style="position:absolute;top:16px;left:50%;transform:translateX(-50%);background:white;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.12);padding:14px;z-index:1000;min-width:200px;pointer-events:none;">
         <p style="font-size:13px;font-weight:700;color:#1e293b;margin:0 0 10px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;">{{ hovered.nama }}</p>
         <div style="display:flex;flex-direction:column;gap:6px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -106,7 +88,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { formatRupiah } from '@/utils/formatter'
-import ReportService   from '@/services/report'
+import ReportService from '@/services/report'
+
+// ── PENTING: Indonesia_villages.geojson (GADM level-4) ───────────────────
+// Struktur property: NAME_1=provinsi, NAME_2=kabupaten, NAME_3=kecamatan, NAME_4=desa, CC_4=kode BPS desa
+// File ini di-import sekali → tree-shaken oleh Vite (lazy import via fetch lokal)
+// Untuk menghindari bundle besar, fetch dari URL public asset
+const LOCAL_VILLAGES_URL = '/src/assets/Indonesia_villages.geojson'
 
 const props = defineProps({
   mapData: { type: Array,  default: () => [] },
@@ -119,7 +107,7 @@ const loading              = ref(true)
 const loadingMsg           = ref('Memuat peta Indonesia...')
 const error                = ref(false)
 const hovered              = ref(null)
-const currentLevel         = ref(1)          // 1=provinsi, 2=kabkota, 3=kecamatan
+const currentLevel         = ref(1)
 const selectedProvinsiKode = ref(null)
 const selectedProvinsiNama = ref('')
 const selectedKabkotaKode  = ref(null)
@@ -127,22 +115,25 @@ const selectedKabkotaNama  = ref('')
 const kabkotaData          = ref([])
 const kecamatanData        = ref([])
 
-let L                 = null
-let leafletMap        = null
-let geojsonLayer      = null     // layer aktif (provinsi / kabkota / kecamatan)
-let provinsiOutline   = null     // outline batas provinsi (level 2 & 3)
-let kabkotaOutline    = null     // outline batas kabkota (level 3)
-let _provinsiGeoCache = null
-let _kabkotaGeoCache  = null
-let _kecGeoCache      = {}       // key: kabkota_kode → FeatureCollection
+let L               = null
+let leafletMap      = null
+let geojsonLayer    = null
+let provinsiOutline = null
+let kabkotaOutline  = null
+
+// GeoJSON cache
+let _provinsiGeoCache  = null
+let _kabkotaGeoCache   = null
+let _villagesFullCache = null          // seluruh features villages (load sekali)
+let _kecGeoCache       = {}            // key: normKab(kabkotaNama) → grouped FeatureCollection
 
 // ── Color scales ─────────────────────────────────────────────────────────
-const mustahikScaleProv = [{min:0,max:30000,color:'#dcfce7'},{min:30000,max:80000,color:'#86efac'},{min:80000,max:150000,color:'#4ade80'},{min:150000,max:300000,color:'#16a34a'},{min:300000,max:Infinity,color:'#14532d'}]
-const mustahikScaleKab  = [{min:0,max:5000,color:'#dcfce7'},{min:5000,max:15000,color:'#86efac'},{min:15000,max:30000,color:'#4ade80'},{min:30000,max:60000,color:'#16a34a'},{min:60000,max:Infinity,color:'#14532d'}]
-const mustahikScaleKec  = [{min:0,max:1000,color:'#dcfce7'},{min:1000,max:3000,color:'#86efac'},{min:3000,max:6000,color:'#4ade80'},{min:6000,max:10000,color:'#16a34a'},{min:10000,max:Infinity,color:'#14532d'}]
-const penyaluranScaleProv = [{min:0,max:100e9,color:'#dbeafe'},{min:100e9,max:300e9,color:'#93c5fd'},{min:300e9,max:600e9,color:'#3b82f6'},{min:600e9,max:1000e9,color:'#1d4ed8'},{min:1000e9,max:Infinity,color:'#1e3a8a'}]
-const penyaluranScaleKab  = [{min:0,max:30e9,color:'#dbeafe'},{min:30e9,max:80e9,color:'#93c5fd'},{min:80e9,max:150e9,color:'#3b82f6'},{min:150e9,max:250e9,color:'#1d4ed8'},{min:250e9,max:Infinity,color:'#1e3a8a'}]
-const penyaluranScaleKec  = [{min:0,max:5e9,color:'#dbeafe'},{min:5e9,max:15e9,color:'#93c5fd'},{min:15e9,max:30e9,color:'#3b82f6'},{min:30e9,max:50e9,color:'#1d4ed8'},{min:50e9,max:Infinity,color:'#1e3a8a'}]
+const mustahikScaleProv  = [{min:0,max:30000,color:'#dcfce7'},{min:30000,max:80000,color:'#86efac'},{min:80000,max:150000,color:'#4ade80'},{min:150000,max:300000,color:'#16a34a'},{min:300000,max:Infinity,color:'#14532d'}]
+const mustahikScaleKab   = [{min:0,max:5000,color:'#dcfce7'},{min:5000,max:15000,color:'#86efac'},{min:15000,max:30000,color:'#4ade80'},{min:30000,max:60000,color:'#16a34a'},{min:60000,max:Infinity,color:'#14532d'}]
+const mustahikScaleKec   = [{min:0,max:1000,color:'#dcfce7'},{min:1000,max:3000,color:'#86efac'},{min:3000,max:6000,color:'#4ade80'},{min:6000,max:10000,color:'#16a34a'},{min:10000,max:Infinity,color:'#14532d'}]
+const penyaluranScaleProv= [{min:0,max:100e9,color:'#dbeafe'},{min:100e9,max:300e9,color:'#93c5fd'},{min:300e9,max:600e9,color:'#3b82f6'},{min:600e9,max:1000e9,color:'#1d4ed8'},{min:1000e9,max:Infinity,color:'#1e3a8a'}]
+const penyaluranScaleKab = [{min:0,max:30e9,color:'#dbeafe'},{min:30e9,max:80e9,color:'#93c5fd'},{min:80e9,max:150e9,color:'#3b82f6'},{min:150e9,max:250e9,color:'#1d4ed8'},{min:250e9,max:Infinity,color:'#1e3a8a'}]
+const penyaluranScaleKec = [{min:0,max:5e9,color:'#dbeafe'},{min:5e9,max:15e9,color:'#93c5fd'},{min:15e9,max:30e9,color:'#3b82f6'},{min:30e9,max:50e9,color:'#1d4ed8'},{min:50e9,max:Infinity,color:'#1e3a8a'}]
 
 const legendsProv = {
   mustahik:   [{color:'#dcfce7',label:'< 30 rb'},{color:'#86efac',label:'30–80 rb'},{color:'#4ade80',label:'80–150 rb'},{color:'#16a34a',label:'150–300 rb'},{color:'#14532d',label:'> 300 rb'}],
@@ -159,33 +150,45 @@ const legendsKec = {
 const currentLegend = ref(legendsProv.mustahik)
 
 function getColor(value, scale) {
-  for (const s of scale) { if (value >= s.min && value < s.max) return s.color }
+  for (const s of scale) if (value >= s.min && value < s.max) return s.color
   return '#f1f5f9'
 }
-function getScaleByLevel(level) {
-  if (level === 3) return props.metric === 'mustahik' ? mustahikScaleKec : penyaluranScaleKec
-  if (level === 2) return props.metric === 'mustahik' ? mustahikScaleKab  : penyaluranScaleKab
+function getScaleByLevel(lv) {
+  if (lv === 3) return props.metric === 'mustahik' ? mustahikScaleKec  : penyaluranScaleKec
+  if (lv === 2) return props.metric === 'mustahik' ? mustahikScaleKab  : penyaluranScaleKab
   return props.metric === 'mustahik' ? mustahikScaleProv : penyaluranScaleProv
 }
-function getLegendByLevel(level) {
-  if (level === 3) return legendsKec[props.metric]
-  if (level === 2) return legendsKab[props.metric]
+function getLegendByLevel(lv) {
+  if (lv === 3) return legendsKec[props.metric]
+  if (lv === 2) return legendsKab[props.metric]
   return legendsProv[props.metric]
 }
+
+// ── Normalisasi string ────────────────────────────────────────────────────
+function normKab(str = '') {
+  return str.toLowerCase()
+    .replace(/^(kabupaten|kota|kab\.) /g, '')
+    .replace(/daerah istimewa /g, '')
+    .replace(/daerah khusus ibukota /g, '')
+    .trim()
+}
+function normProv(str = '') { return str.toLowerCase().trim() }
+function normMapData(str = '') {
+  return str.toLowerCase()
+    .replace(/kabupaten /g, 'kab. ').replace(/daerah istimewa /g, 'di ')
+    .replace(/daerah khusus ibukota /g, 'dki ').replace(/kepulauan /g, 'kep. ')
+    .trim()
+}
+function normKec(str = '') { return str.toLowerCase().trim() }
+function getProvNama(p) { return p.state || p.name || p.NAME_1 || p.PROVINSI || p.Propinsi || '' }
 
 // ── GeoJSON sources ───────────────────────────────────────────────────────
 const GEOJSON_PROVINSI = [
   'https://raw.githubusercontent.com/superpikar/indonesia-geojson/master/indonesia.geojson',
   'https://raw.githubusercontent.com/benkoshy/indonesia/master/indonesia-provinces-simple.geojson',
-  'https://raw.githubusercontent.com/rizafahmi/geojson-indonesia/master/prov.json',
 ]
 const GEOJSON_KABKOTA_ALL = [
   'https://raw.githubusercontent.com/fahadh4ilyas/indonesia-geojson-archive/master/Indonesia_cities.geojson',
-]
-// Level-3: subdistrict GeoJSON (GADM level-3, field NAME_2=kabkota, NAME_3=kecamatan)
-// File besar (~60MB), di-fetch sekali lalu di-cache + filter per kabkota
-const GEOJSON_KECAMATAN_ALL = [
-  'https://raw.githubusercontent.com/fahadh4ilyas/indonesia-geojson-archive/master/Indonesia_subdistrict.geojson',
 ]
 
 const PROV_NAME_TO_KODE = {
@@ -207,10 +210,10 @@ async function fetchGeoJSON(urls) {
   for (const url of list) {
     try {
       const res = await fetch(url)
-      if (!res.ok) { console.warn('[Map] 404:', url); continue }
+      if (!res.ok) continue
       const data = await res.json()
       if (data?.features?.length) return data
-    } catch (e) { console.warn('[Map] fetch error:', url, e) }
+    } catch { /* skip */ }
   }
   return null
 }
@@ -221,6 +224,7 @@ async function getProvinsiGeoJSON() {
   if (geo) _provinsiGeoCache = geo
   return geo
 }
+
 async function getKabkotaGeoJSON() {
   if (_kabkotaGeoCache) return _kabkotaGeoCache
   loadingMsg.value = 'Memuat batas kabupaten/kota...'
@@ -228,42 +232,71 @@ async function getKabkotaGeoJSON() {
   if (geo) _kabkotaGeoCache = geo
   return geo
 }
-// Kecamatan GeoJSON — filter per kabkota, cache per kabkota_kode
-async function getKecamatanGeoJSON(kabkotaNama) {
-  const key = kabkotaNama.toLowerCase()
-  if (_kecGeoCache[key]) return _kecGeoCache[key]
-  loadingMsg.value = 'Memuat batas kecamatan (pertama kali, mohon tunggu...)'
-  // Ambil kabkota geo yang sudah ada (sudah difilter provinsi), gunakan NAME_2 sebagai kunci
-  const fullGeo = await fetchGeoJSON(GEOJSON_KECAMATAN_ALL)
-  if (!fullGeo) return null
-  const normTarget = normKab(kabkotaNama)
-  const filtered = {
-    type: 'FeatureCollection',
-    features: fullGeo.features.filter(f => {
-      const n2 = normKab(f.properties.NAME_2 || '')
-      return n2 === normTarget
-    }),
-  }
-  if (filtered.features.length) _kecGeoCache[key] = filtered
-  return filtered.features.length ? filtered : null
-}
 
-function normKab(str = '') {
-  return str.toLowerCase()
-    .replace(/^(kabupaten|kota|kab\.) /g, '')
-    .replace(/daerah istimewa /g, '')
-    .replace(/daerah khusus ibukota /g, '')
-    .trim()
+/**
+ * Ambil GeoJSON villages lokal, filter per kabkota (NAME_2),
+ * lalu GROUP per kecamatan (NAME_3) — setiap kecamatan = satu MultiPolygon.
+ * Ini diperlukan agar setiap kecamatan tampil sebagai satu region berwarna,
+ * bukan ratusan polygon desa individual.
+ */
+async function getKecamatanGeoJSON(kabkotaNama) {
+  const cacheKey = normKab(kabkotaNama)
+  if (_kecGeoCache[cacheKey]) return _kecGeoCache[cacheKey]
+
+  loadingMsg.value = 'Memuat data kecamatan dari file lokal...'
+
+  // Load villages sekali, simpan di cache
+  if (!_villagesFullCache) {
+    try {
+      loadingMsg.value = 'Membaca Indonesia_villages.geojson (64 MB, mohon tunggu...)'
+      const res = await fetch(LOCAL_VILLAGES_URL)
+      if (!res.ok) throw new Error('fetch failed')
+      _villagesFullCache = await res.json()
+    } catch (e) {
+      console.error('[Map] Gagal load villages GeoJSON:', e)
+      return null
+    }
+  }
+
+  const normTarget = normKab(kabkotaNama)
+
+  // Filter fitur yang NAME_2 cocok dengan kabkota yang diklik
+  const matched = _villagesFullCache.features.filter(f => {
+    const n2 = normKab(f.properties.NAME_2 || '')
+    return n2 === normTarget
+  })
+
+  if (!matched.length) {
+    console.warn('[Map] Tidak ada fitur untuk kabkota:', kabkotaNama, '(norm:', normTarget, ')')
+    return null
+  }
+
+  // Group fitur per NAME_3 (kecamatan), buat satu Feature per kecamatan
+  const byKec = {}
+  for (const f of matched) {
+    const kecNama = f.properties.NAME_3 || 'Unknown'
+    if (!byKec[kecNama]) byKec[kecNama] = []
+    byKec[kecNama].push(f.geometry)
+  }
+
+  // Buat MultiPolygon per kecamatan
+  const features = Object.entries(byKec).map(([kecNama, geoms]) => {
+    const allPolygons = []
+    for (const g of geoms) {
+      if (g.type === 'Polygon')      allPolygons.push(...g.coordinates)
+      if (g.type === 'MultiPolygon') allPolygons.push(...g.coordinates.flat())
+    }
+    return {
+      type: 'Feature',
+      properties: { NAME_3: kecNama, NAME_2: kabkotaNama },
+      geometry: { type: 'MultiPolygon', coordinates: allPolygons.map(p => [p]) },
+    }
+  })
+
+  const result = { type: 'FeatureCollection', features }
+  _kecGeoCache[cacheKey] = result
+  return result
 }
-function normProv(str = '') { return str.toLowerCase().trim() }
-function normMapData(str = '') {
-  return str.toLowerCase()
-    .replace(/kabupaten /g, 'kab. ').replace(/daerah istimewa /g, 'di ')
-    .replace(/daerah khusus ibukota /g, 'dki ').replace(/kepulauan /g, 'kep. ')
-    .trim()
-}
-function normKec(str = '') { return str.toLowerCase().trim() }
-function getProvNama(p) { return p.state || p.name || p.NAME_1 || p.PROVINSI || p.Propinsi || '' }
 
 // ── Render provinsi (level 1) ─────────────────────────────────────────────
 async function renderProvinsiLayer() {
@@ -279,7 +312,7 @@ async function renderProvinsiLayer() {
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
 
   geojsonLayer = L.geoJSON(geojson, {
-    style: (feature) => {
+    style: feature => {
       const raw = getProvNama(feature.properties)
       const val = (lookup[normMapData(raw)] || {})[props.metric] || 0
       return { fillColor: getColor(val, scale), fillOpacity: val > 0 ? 0.85 : 0.3, color: '#ffffff', weight: 1.2, opacity: 1 }
@@ -306,7 +339,7 @@ function renderProvinsiOutline(geojson, activeNama) {
   if (provinsiOutline) { provinsiOutline.remove(); provinsiOutline = null }
   const activeNorm = normProv(activeNama)
   provinsiOutline = L.geoJSON(geojson, {
-    style: (feature) => {
+    style: feature => {
       const isActive = normProv(getProvNama(feature.properties)) === activeNorm
       return isActive
         ? { fillColor: '#fef3c7', fillOpacity: 0.18, color: '#f97316', weight: 3.5, opacity: 1 }
@@ -319,15 +352,13 @@ function renderProvinsiOutline(geojson, activeNama) {
 }
 
 function renderKabkotaOutline(geojson, activeNama, provinsiNama) {
-  // Tampilkan outline semua kabkota dalam provinsi aktif
-  // Kabkota aktif: stroke oranye tua tebal, kabkota lain: stroke abu tipis
   if (kabkotaOutline) { kabkotaOutline.remove(); kabkotaOutline = null }
-  const provNorm    = normProv(provinsiNama)
-  const activeNorm  = normKab(activeNama)
+  const provNorm   = normProv(provinsiNama)
+  const activeNorm = normKab(activeNama)
   kabkotaOutline = L.geoJSON(geojson, {
-    style: (feature) => {
+    style: feature => {
       const n1 = normProv(feature.properties.NAME_1 || '')
-      if (n1 !== provNorm) return { stroke: false, fill: false }   // luar provinsi: tidak tampil
+      if (n1 !== provNorm) return { stroke: false, fill: false }
       const isActive = normKab(feature.properties.NAME_2 || '') === activeNorm
       return isActive
         ? { fillColor: '#fef3c7', fillOpacity: 0.15, color: '#d97706', weight: 3, opacity: 1 }
@@ -364,8 +395,7 @@ async function drillDownKabkota(provinsiKode, provinsiNama, clickedLayer) {
     type: 'FeatureCollection',
     features: fullGeo.features.filter(f => {
       const n1 = normProv(f.properties.NAME_1 || '')
-      if (n1 === targetNorm) return true
-      return PROV_NAME_TO_KODE[n1] === provinsiKode
+      return n1 === targetNorm || PROV_NAME_TO_KODE[n1] === provinsiKode
     }),
   }
   if (!filtered.features.length) { renderFallbackMarkers(kabkotaData.value, 2); loading.value = false; return }
@@ -384,7 +414,7 @@ function renderKabkotaLayer(geojson) {
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
 
   geojsonLayer = L.geoJSON(geojson, {
-    style: (feature) => {
+    style: feature => {
       const raw = feature.properties.NAME_2 || feature.properties.KABKOTA || feature.properties.name || ''
       const val = (lookup[normKab(raw)] || {})[props.metric] || 0
       return { fillColor: getColor(val, scale), fillOpacity: val > 0 ? 0.85 : 0.35, color: '#ffffff', weight: 1, opacity: 1 }
@@ -416,12 +446,17 @@ async function drillDownKecamatan(kabkotaKode, kabkotaNama, clickedLayer) {
     kecamatanData.value = Array.isArray(data) ? data : []
   } catch { kecamatanData.value = [] }
 
+  // Ambil GeoJSON kecamatan dari villages lokal, grouped per NAME_3
   const kecGeo = await getKecamatanGeoJSON(kabkotaNama)
-  if (!kecGeo) { renderFallbackMarkers(kecamatanData.value, 3); loading.value = false; return }
+  if (!kecGeo || !kecGeo.features.length) {
+    console.warn('[Map] GeoJSON kecamatan kosong untuk:', kabkotaNama)
+    renderFallbackMarkers(kecamatanData.value, 3)
+    loading.value = false
+    return
+  }
 
   renderKecamatanLayer(kecGeo)
 
-  // Overlay outline kabkota di dalam provinsi aktif
   const fullKabGeo = await getKabkotaGeoJSON()
   if (fullKabGeo) renderKabkotaOutline(fullKabGeo, kabkotaNama, selectedProvinsiNama.value)
 
@@ -429,6 +464,7 @@ async function drillDownKecamatan(kabkotaKode, kabkotaNama, clickedLayer) {
 }
 
 function renderKecamatanLayer(geojson) {
+  // Lookup data report per nama kecamatan
   const lookup = {}
   kecamatanData.value.forEach(d => { if (d.kecamatan_nama) lookup[normKec(d.kecamatan_nama)] = d })
   const scale = getScaleByLevel(3)
@@ -436,13 +472,14 @@ function renderKecamatanLayer(geojson) {
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
 
   geojsonLayer = L.geoJSON(geojson, {
-    style: (feature) => {
-      const raw = feature.properties.NAME_3 || feature.properties.KECAMATAN || feature.properties.name || ''
+    style: feature => {
+      // NAME_3 = nama kecamatan (hasil grouping di getKecamatanGeoJSON)
+      const raw = feature.properties.NAME_3 || ''
       const val = (lookup[normKec(raw)] || {})[props.metric] || 0
       return { fillColor: getColor(val, scale), fillOpacity: val > 0 ? 0.85 : 0.35, color: '#ffffff', weight: 0.8, opacity: 1 }
     },
     onEachFeature: (feature, layer) => {
-      const raw  = feature.properties.NAME_3 || feature.properties.KECAMATAN || feature.properties.name || 'Unknown'
+      const raw  = feature.properties.NAME_3 || 'Unknown'
       const data = kecamatanData.value.find(d => normKec(d.kecamatan_nama) === normKec(raw)) || {}
       layer.on({
         mouseover(e) { e.target.setStyle({ weight: 2, fillOpacity: 1, color: '#d97706' }); hovered.value = { nama: raw, ...data } },
@@ -455,7 +492,7 @@ function renderKecamatanLayer(geojson) {
   if (provinsiOutline) provinsiOutline.bringToFront()
 }
 
-// ── Fallback circle markers (jika GeoJSON tidak tersedia) ──────────────────
+// ── Fallback circle markers ───────────────────────────────────────────────
 function renderFallbackMarkers(dataset, level) {
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
   const scale = getScaleByLevel(level)
@@ -487,15 +524,13 @@ async function drillUp(toLevel) {
     leafletMap.setView([-2.5, 118], 4)
     await renderProvinsiLayer()
   } else if (toLevel === 2) {
-    // Kembali ke level kabkota tanpa re-fetch GeoJSON
     currentLevel.value = 2
     selectedKabkotaKode.value = null; selectedKabkotaNama.value = ''
     kecamatanData.value = []
     if (kabkotaOutline) { kabkotaOutline.remove(); kabkotaOutline = null }
-    // Re-render kabkota layer dari cache
-    const fullGeo = await getKabkotaGeoJSON()
+    const fullGeo    = await getKabkotaGeoJSON()
     const targetNorm = normProv(selectedProvinsiNama.value)
-    const filtered = fullGeo ? {
+    const filtered   = fullGeo ? {
       type: 'FeatureCollection',
       features: fullGeo.features.filter(f => {
         const n1 = normProv(f.properties.NAME_1 || '')
@@ -527,7 +562,7 @@ async function initMap() {
     await renderProvinsiLayer()
     loading.value = false
   } catch (e) {
-    console.error('Map init error', e)
+    console.error('[Map] Init error:', e)
     loading.value = false; error.value = true
   }
 }
@@ -541,9 +576,9 @@ watch(() => [props.metric, props.mapData], () => {
     if (!layer.feature) return
     const p = layer.feature.properties
     let raw, dataset, key
-    if (lv === 3)      { raw = p.NAME_3 || p.KECAMATAN || p.name || ''; dataset = kecamatanData.value; key = 'kecamatan_nama' }
-    else if (lv === 2) { raw = p.NAME_2 || p.KABKOTA   || p.name || ''; dataset = kabkotaData.value;   key = 'kabkota_nama' }
-    else               { raw = getProvNama(p);                           dataset = props.mapData;        key = 'provinsi_nama' }
+    if (lv === 3)      { raw = p.NAME_3 || ''; dataset = kecamatanData.value; key = 'kecamatan_nama' }
+    else if (lv === 2) { raw = p.NAME_2 || p.KABKOTA || p.name || ''; dataset = kabkotaData.value; key = 'kabkota_nama' }
+    else               { raw = getProvNama(p); dataset = props.mapData; key = 'provinsi_nama' }
     const norm = lv === 3 ? normKec : lv === 2 ? normKab : normMapData
     const data = dataset.find(d => norm(d[key]) === norm(raw)) || {}
     layer.setStyle({ fillColor: getColor(data[props.metric]||0, scale), fillOpacity: data[props.metric] > 0 ? 0.85 : 0.3 })
