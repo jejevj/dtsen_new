@@ -20,21 +20,16 @@
           <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
             <!-- Avatar -->
             <div :style="{ width:'80px', height:'80px', borderRadius:'16px', background:DESIL_COLORS[mustahik.desil].bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, border:'2px solid '+DESIL_COLORS[mustahik.desil].border }">
-              <i :class="mustahik.jenis_kelamin==='m' ? 'pi pi-user' : 'pi pi-user'" :style="{ fontSize:'32px', color:DESIL_COLORS[mustahik.desil].text }"></i>
+              <i class="pi pi-user" :style="{ fontSize:'32px', color:DESIL_COLORS[mustahik.desil].text }"></i>
             </div>
 
             <div style="flex:1;min-width:0;">
-              <!-- Nama + badges -->
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
                 <h2 style="font-size:1.25rem;font-weight:800;color:#1e293b;margin:0;">{{ mustahik.nama }}</h2>
                 <span class="badge" :style="{ background:DESIL_COLORS[mustahik.desil].bg, color:DESIL_COLORS[mustahik.desil].text }">Desil {{ mustahik.desil }} — {{ desilLabel(mustahik.desil) }}</span>
                 <span class="badge" :style="{ background: mustahik.jenis_kelamin==='m'?'#eff6ff':'#fdf2f8', color: mustahik.jenis_kelamin==='m'?'#2563eb':'#db2777' }">{{ mustahik.jenis_kelamin==='m'?'Laki-laki':'Perempuan' }}</span>
               </div>
-
-              <!-- NIK & keterangan khusus -->
               <p style="font-size:13px;color:#64748b;margin:0 0 6px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNIK(mustahik.nik) }}</strong></p>
-
-              <!-- Badge keterangan khusus -->
               <div v-if="keteranganBadges(mustahik.keterangan).length" style="display:flex;gap:6px;flex-wrap:wrap;">
                 <span v-for="k in keteranganBadges(mustahik.keterangan)" :key="k" style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:#fef3c7;color:#b45309;">
                   <i class="pi pi-flag" style="font-size:10px;"></i> {{ k }}
@@ -42,7 +37,6 @@
               </div>
             </div>
 
-            <!-- Total bantuan -->
             <div style="text-align:right;flex-shrink:0;">
               <p style="font-size:11px;color:#94a3b8;margin:0;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Total Bantuan</p>
               <p style="font-size:1.5rem;font-weight:900;color:#15803d;margin:2px 0 0;">{{ formatRupiah(mustahik.nominal) }}</p>
@@ -55,17 +49,20 @@
         <div class="grid-2">
 
           <!-- Data Pribadi -->
-          <div class="detail-card">
-            <p class="section-title"><i class="pi pi-id-card"></i> Data Pribadi</p>
-            <div class="table-watermark-wrap">
-              <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+          <div class="detail-card wm-card">
+            <div class="wm-overlay" aria-hidden="true">
+              <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <pattern id="wm-pribadi" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
-                    <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
+                  <pattern id="wm-pribadi" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                    <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                    <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                   </pattern>
                 </defs>
-                <rect width="100%" height="100%" fill="url(#wm-pribadi)"/>
+                <rect width="100%" height="100%" fill="url(#wm-pribadi)" />
               </svg>
+            </div>
+            <div style="position:relative;z-index:1;">
+              <p class="section-title"><i class="pi pi-id-card"></i> Data Pribadi</p>
               <table class="info-table">
                 <tbody>
                   <tr><td class="td-label">Usia</td><td class="td-value">{{ mustahik.usia }} tahun</td></tr>
@@ -85,17 +82,20 @@
           </div>
 
           <!-- Alamat -->
-          <div class="detail-card">
-            <p class="section-title"><i class="pi pi-map-marker"></i> Alamat Domisili</p>
-            <div class="table-watermark-wrap">
-              <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+          <div class="detail-card wm-card">
+            <div class="wm-overlay" aria-hidden="true">
+              <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <pattern id="wm-alamat" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
-                    <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
+                  <pattern id="wm-alamat" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                    <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                    <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                   </pattern>
                 </defs>
-                <rect width="100%" height="100%" fill="url(#wm-alamat)"/>
+                <rect width="100%" height="100%" fill="url(#wm-alamat)" />
               </svg>
+            </div>
+            <div style="position:relative;z-index:1;">
+              <p class="section-title"><i class="pi pi-map-marker"></i> Alamat Domisili</p>
               <table class="info-table">
                 <tbody>
                   <tr><td class="td-label">Kelurahan</td><td class="td-value">{{ mustahik.kelurahan }}</td></tr>
@@ -111,17 +111,20 @@
         </div>
 
         <!-- ===== PROGRAM SOSIAL (full width) ===== -->
-        <div class="detail-card">
-          <p class="section-title"><i class="pi pi-shield"></i> Program Bantuan Sosial Lain</p>
-          <div class="table-watermark-wrap">
-            <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+        <div class="detail-card wm-card">
+          <div class="wm-overlay" aria-hidden="true">
+            <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <pattern id="wm-program" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
-                  <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
+                <pattern id="wm-program" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                  <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                  <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                 </pattern>
               </defs>
-              <rect width="100%" height="100%" fill="url(#wm-program)"/>
+              <rect width="100%" height="100%" fill="url(#wm-program)" />
             </svg>
+          </div>
+          <div style="position:relative;z-index:1;">
+            <p class="section-title"><i class="pi pi-shield"></i> Program Bantuan Sosial Lain</p>
             <table class="info-table">
               <thead>
                 <tr>
@@ -146,18 +149,21 @@
         </div>
 
         <!-- ===== ANGGOTA KELUARGA ===== -->
-        <div class="detail-card">
-          <p class="section-title"><i class="pi pi-users"></i> Anggota Keluarga</p>
-          <div style="overflow-x:auto;">
-            <div class="table-watermark-wrap">
-              <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                <defs>
-                  <pattern id="wm-keluarga" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
-                    <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#wm-keluarga)"/>
-              </svg>
+        <div class="detail-card wm-card">
+          <div class="wm-overlay" aria-hidden="true">
+            <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="wm-keluarga" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                  <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                  <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-keluarga)" />
+            </svg>
+          </div>
+          <div style="position:relative;z-index:1;">
+            <p class="section-title"><i class="pi pi-users"></i> Anggota Keluarga</p>
+            <div style="overflow-x:auto;">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -192,18 +198,21 @@
         </div>
 
         <!-- ===== RIWAYAT BANTUAN ===== -->
-        <div class="detail-card">
-          <p class="section-title"><i class="pi pi-history"></i> Riwayat Penyaluran Bantuan</p>
-          <div style="overflow-x:auto;">
-            <div class="table-watermark-wrap">
-              <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-                <defs>
-                  <pattern id="wm-riwayat" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
-                    <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#wm-riwayat)"/>
-              </svg>
+        <div class="detail-card wm-card">
+          <div class="wm-overlay" aria-hidden="true">
+            <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="wm-riwayat" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                  <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                  <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-riwayat)" />
+            </svg>
+          </div>
+          <div style="position:relative;z-index:1;">
+            <p class="section-title"><i class="pi pi-history"></i> Riwayat Penyaluran Bantuan</p>
+            <div style="overflow-x:auto;">
               <table class="data-table">
                 <thead>
                   <tr>
@@ -235,12 +244,12 @@
                 </tbody>
               </table>
             </div>
-          </div>
-          <!-- Subtotal -->
-          <div style="display:flex;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
-            <div style="text-align:right;">
-              <p style="font-size:12px;color:#94a3b8;margin:0;">Total Kumulatif Diterima</p>
-              <p style="font-size:1.2rem;font-weight:900;color:#15803d;margin:2px 0 0;">{{ formatRupiah(totalKumulatif(mustahik)) }}</p>
+            <!-- Subtotal -->
+            <div style="display:flex;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
+              <div style="text-align:right;">
+                <p style="font-size:12px;color:#94a3b8;margin:0;">Total Kumulatif Diterima</p>
+                <p style="font-size:1.2rem;font-weight:900;color:#15803d;margin:2px 0 0;">{{ formatRupiah(totalKumulatif(mustahik)) }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -277,9 +286,18 @@ import { useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { MOCK_MUSTAHIK, DESIL_COLORS } from '@/data/mockMustahik'
 import { formatRupiah } from '@/utils/formatter'
+import { useAuthStore } from '@/stores/auth'
 
-const route = useRoute()
+const route     = useRoute()
+const authStore = useAuthStore()
+
 const mustahik = computed(() => MOCK_MUSTAHIK.find(m => m.nik_hashed === route.params.nikHashed))
+
+const userIdentifier = computed(() => {
+  const u = authStore.user
+  if (!u) return 'CONFIDENTIAL'
+  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
+})
 
 function maskNIK(nik) {
   if (!nik) return '-'
@@ -300,9 +318,8 @@ function fakeKodePos(id) {
   return String(base[(id - 1) % base.length] + id)
 }
 
-// ---------- Program Sosial dummy ----------
 function programSosial(m) {
-  const all = [
+  return [
     { nama: 'PKH (Program Keluarga Harapan)', aktif: m.desil <= 2, tahun: '2024' },
     { nama: 'BPJS Kesehatan PBI',             aktif: m.desil <= 3, tahun: '2024' },
     { nama: 'Bantuan Pangan Non Tunai (BPNT)',aktif: m.desil <= 2, tahun: '2024' },
@@ -310,10 +327,8 @@ function programSosial(m) {
     { nama: 'KIP (Kartu Indonesia Pintar)',    aktif: m.jumlah_tanggungan >= 3, tahun: '2024' },
     { nama: 'PIP (Program Indonesia Pintar)',  aktif: m.jumlah_tanggungan >= 4, tahun: '2023' },
   ]
-  return all
 }
 
-// ---------- Anggota keluarga dummy statis per id ----------
 function anggotaKeluarga(m) {
   const pools = [
     [
@@ -355,25 +370,24 @@ function anggotaKeluarga(m) {
 }
 
 function namaAnggota(id, slot) {
-  const laki  = ['Wahyu','Agus','Hendra','Dian','Fajar','Rizki','Adi','Bayu','Irfan','Doni']
+  const laki   = ['Wahyu','Agus','Hendra','Dian','Fajar','Rizki','Adi','Bayu','Irfan','Doni']
   const wanita = ['Sari','Dewi','Ani','Rani','Putri','Indah','Maya','Fitri','Rini','Nisa']
-  const fam   = ['Santoso','Wijaya','Hidayat','Kurniawan','Prasetyo','Wibowo','Saputra','Nugroho','Susanto','Ismail']
-  const isL = (id + slot) % 2 === 0
+  const fam    = ['Santoso','Wijaya','Hidayat','Kurniawan','Prasetyo','Wibowo','Saputra','Nugroho','Susanto','Ismail']
+  const isL  = (id + slot) % 2 === 0
   const first = isL ? laki[(id + slot) % laki.length] : wanita[(id + slot) % wanita.length]
   return first + ' ' + fam[(id * slot) % fam.length]
 }
 
-// ---------- Riwayat bantuan dummy ----------
 function riwayatBantuan(m) {
   const metode = ['Transfer Bank', 'Kantor Pos', 'Transfer Bank']
-  const rows = []
-  const base = Math.round(m.nominal * 0.75)
-  rows.push({ tahun:'2022', periode:'Jan – Des 2022', program:'Zakat Produktif DTSEN', nominal: base,           metode: metode[0], status:'Tersalurkan', tanggal:'15 Des 2022' })
-  rows.push({ tahun:'2023', periode:'Jan – Jun 2023', program:'Zakat Konsumtif DTSEN', nominal: Math.round(base*0.5), metode: metode[1], status:'Tersalurkan', tanggal:'20 Jun 2023' })
-  rows.push({ tahun:'2023', periode:'Jul – Des 2023', program:'Zakat Konsumtif DTSEN', nominal: Math.round(base*0.55),metode: metode[0], status:'Tersalurkan', tanggal:'18 Des 2023' })
-  rows.push({ tahun:'2024', periode:'Jan – Jun 2024', program:'Zakat Produktif DTSEN', nominal: Math.round(m.nominal*0.5), metode: metode[2], status:'Tersalurkan', tanggal:'25 Jun 2024' })
-  rows.push({ tahun:'2024', periode:'Jul – Des 2024', program:'Zakat Produktif DTSEN', nominal: Math.round(m.nominal*0.5), metode: metode[0], status:'Proses',      tanggal:'— (dijadwalkan)' })
-  return rows
+  const base   = Math.round(m.nominal * 0.75)
+  return [
+    { tahun:'2022', periode:'Jan – Des 2022', program:'Zakat Produktif DTSEN', nominal: base,                    metode: metode[0], status:'Tersalurkan', tanggal:'15 Des 2022' },
+    { tahun:'2023', periode:'Jan – Jun 2023', program:'Zakat Konsumtif DTSEN', nominal: Math.round(base*0.5),   metode: metode[1], status:'Tersalurkan', tanggal:'20 Jun 2023' },
+    { tahun:'2023', periode:'Jul – Des 2023', program:'Zakat Konsumtif DTSEN', nominal: Math.round(base*0.55),  metode: metode[0], status:'Tersalurkan', tanggal:'18 Des 2023' },
+    { tahun:'2024', periode:'Jan – Jun 2024', program:'Zakat Produktif DTSEN', nominal: Math.round(m.nominal*0.5), metode: metode[2], status:'Tersalurkan', tanggal:'25 Jun 2024' },
+    { tahun:'2024', periode:'Jul – Des 2024', program:'Zakat Produktif DTSEN', nominal: Math.round(m.nominal*0.5), metode: metode[0], status:'Proses',      tanggal:'— (dijadwalkan)' },
+  ]
 }
 
 function totalKumulatif(m) {
@@ -398,6 +412,30 @@ function totalKumulatif(m) {
   padding:22px;
   box-shadow:0 1px 4px rgba(0,0,0,0.04);
 }
+
+/* Card dengan watermark — butuh position:relative & overflow:hidden */
+.wm-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Overlay watermark: isi penuh card */
+.wm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* SVG memenuhi 100% lebar & tinggi card */
+.wm-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .section-title {
   font-size:13px;
   font-weight:700;
@@ -414,23 +452,6 @@ function totalKumulatif(m) {
   border-radius:99px;
   font-size:11px;
   font-weight:700;
-}
-
-/* ===== WATERMARK WRAPPER ===== */
-.table-watermark-wrap {
-  position: relative;
-}
-.table-watermark-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
-}
-.table-watermark-wrap > table {
-  position: relative;
-  z-index: 1;
 }
 
 /* ===== INFO TABLE (label-value) ===== */
@@ -470,9 +491,7 @@ function totalKumulatif(m) {
   font-size:13px;
   min-width:560px;
 }
-.data-table thead tr {
-  background:#f8fafc;
-}
+.data-table thead tr { background:#f8fafc; }
 .data-table th {
   font-size:11px;
   color:#94a3b8;
@@ -490,13 +509,10 @@ function totalKumulatif(m) {
   vertical-align:middle;
 }
 .data-table tbody tr:last-child td { border-bottom:none; }
-.data-table tbody tr:hover { background:#fafafa; }
+.data-table tbody tr:hover { background:rgba(240,249,255,0.85); }
 
 /* ===== STAT BOX ===== */
-.stat-box {
-  border-radius:10px;
-  padding:16px;
-}
+.stat-box { border-radius:10px; padding:16px; }
 .stat-label {
   font-size:11px;
   color:#64748b;
@@ -505,9 +521,5 @@ function totalKumulatif(m) {
   letter-spacing:.5px;
   margin:0 0 4px;
 }
-.stat-val {
-  font-size:1.25rem;
-  font-weight:900;
-  margin:0;
-}
+.stat-val { font-size:1.25rem; font-weight:900; margin:0; }
 </style>
