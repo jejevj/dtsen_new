@@ -103,14 +103,14 @@ const selectedProvinsiKode = ref(null)
 const selectedProvinsiNama = ref('')
 const kabkotaData          = ref([])
 
-let L            = null
-let leafletMap   = null
-let geojsonLayer = null
+let L                  = null
+let leafletMap         = null
+let geojsonLayer       = null   // layer aktif (provinsi ATAU kabkota)
+let provinsiOutline    = null   // outline batas provinsi — selalu ada di level 2
+let _provinsiGeoCache  = null   // cache GeoJSON provinsi
+let _kabkotaGeoCache   = null   // cache GeoJSON kabkota
 
-// Cache GeoJSON kabkota — lazy load sekali, reuse seterusnya
-let _kabkotaGeoCache = null
-
-// ── Color scales ──────────────────────────────────────────────────────────
+// ── Color scales ─────────────────────────────────────────────────────────
 const mustahikScaleProv   = [{min:0,max:30000,color:'#dcfce7'},{min:30000,max:80000,color:'#86efac'},{min:80000,max:150000,color:'#4ade80'},{min:150000,max:300000,color:'#16a34a'},{min:300000,max:Infinity,color:'#14532d'}]
 const mustahikScaleKab    = [{min:0,max:5000,color:'#dcfce7'},{min:5000,max:15000,color:'#86efac'},{min:15000,max:30000,color:'#4ade80'},{min:30000,max:60000,color:'#16a34a'},{min:60000,max:Infinity,color:'#14532d'}]
 const penyaluranScaleProv = [{min:0,max:100e9,color:'#dbeafe'},{min:100e9,max:300e9,color:'#93c5fd'},{min:300e9,max:600e9,color:'#3b82f6'},{min:600e9,max:1000e9,color:'#1d4ed8'},{min:1000e9,max:Infinity,color:'#1e3a8a'}]
@@ -133,38 +133,28 @@ function getColor(value, scale) {
 }
 
 // ── GeoJSON sources ───────────────────────────────────────────────────────
-// Level-1: provinsi
 const GEOJSON_PROVINSI = [
   'https://raw.githubusercontent.com/superpikar/indonesia-geojson/master/indonesia.geojson',
   'https://raw.githubusercontent.com/benkoshy/indonesia/master/indonesia-provinces-simple.geojson',
   'https://raw.githubusercontent.com/rizafahmi/geojson-indonesia/master/prov.json',
 ]
-
-// Level-2: kabkota — 1 file semua Indonesia, difilter per provinsi saat drill-down
-// URL diverifikasi langsung dari GitHub API (nama file case-sensitive)
+// Level-2 kabkota — 1 file all-Indonesia, field NAME_1 + NAME_2
 const GEOJSON_KABKOTA_ALL = [
-  // fahadh4ilyas/indonesia-geojson-archive — GADM level-2, 2.2MB, field NAME_1+NAME_2
   'https://raw.githubusercontent.com/fahadh4ilyas/indonesia-geojson-archive/master/Indonesia_cities.geojson',
 ]
 
-// Mapping NAME_1 di GeoJSON → kode provinsi BPS
-// fahadh4ilyas sudah rename: "Jakarta Raya"→"DKI Jakarta", "Yogyakarta"→"DI Yogyakarta", dll
 const PROV_NAME_TO_KODE = {
-  'aceh': '11', 'sumatera utara': '12', 'sumatera barat': '13',
-  'riau': '14', 'jambi': '15', 'sumatera selatan': '16',
-  'bengkulu': '17', 'lampung': '18',
-  'kepulauan bangka belitung': '19', 'bangka belitung': '19',
-  'kepulauan riau': '21',
-  'dki jakarta': '31',
-  'jawa barat': '32', 'jawa tengah': '33', 'di yogyakarta': '34',
-  'jawa timur': '35', 'banten': '36',
-  'bali': '51', 'nusa tenggara barat': '52', 'nusa tenggara timur': '53',
-  'kalimantan barat': '61', 'kalimantan tengah': '62',
-  'kalimantan selatan': '63', 'kalimantan timur': '64', 'kalimantan utara': '65',
-  'sulawesi utara': '71', 'sulawesi tengah': '72', 'sulawesi selatan': '73',
-  'sulawesi tenggara': '74', 'gorontalo': '75', 'sulawesi barat': '76',
-  'maluku': '81', 'maluku utara': '82',
-  'papua barat': '91', 'papua': '94',
+  'aceh':'11','sumatera utara':'12','sumatera barat':'13','riau':'14','jambi':'15',
+  'sumatera selatan':'16','bengkulu':'17','lampung':'18',
+  'kepulauan bangka belitung':'19','bangka belitung':'19','kepulauan riau':'21',
+  'dki jakarta':'31','jawa barat':'32','jawa tengah':'33','di yogyakarta':'34',
+  'jawa timur':'35','banten':'36','bali':'51',
+  'nusa tenggara barat':'52','nusa tenggara timur':'53',
+  'kalimantan barat':'61','kalimantan tengah':'62','kalimantan selatan':'63',
+  'kalimantan timur':'64','kalimantan utara':'65',
+  'sulawesi utara':'71','sulawesi tengah':'72','sulawesi selatan':'73',
+  'sulawesi tenggara':'74','gorontalo':'75','sulawesi barat':'76',
+  'maluku':'81','maluku utara':'82','papua barat':'91','papua':'94',
 }
 
 async function fetchGeoJSON(urls) {
@@ -172,12 +162,19 @@ async function fetchGeoJSON(urls) {
   for (const url of list) {
     try {
       const res = await fetch(url)
-      if (!res.ok) { console.warn('[Map] GeoJSON 404:', url); continue }
+      if (!res.ok) { console.warn('[Map] 404:', url); continue }
       const data = await res.json()
       if (data?.features?.length) return data
-    } catch (e) { console.warn('[Map] GeoJSON fetch error:', url, e) }
+    } catch (e) { console.warn('[Map] fetch error:', url, e) }
   }
   return null
+}
+
+async function getProvinsiGeoJSON() {
+  if (_provinsiGeoCache) return _provinsiGeoCache
+  const geo = await fetchGeoJSON(GEOJSON_PROVINSI)
+  if (geo) _provinsiGeoCache = geo
+  return geo
 }
 
 async function getKabkotaGeoJSON() {
@@ -195,23 +192,27 @@ function normKab(str = '') {
     .replace(/daerah khusus ibukota /g, '')
     .trim()
 }
-
 function normProv(str = '') { return str.toLowerCase().trim() }
-
 function normMapData(str = '') {
   return str.toLowerCase()
-    .replace(/kabupaten /g, 'kab. ')
-    .replace(/daerah istimewa /g, 'di ')
-    .replace(/daerah khusus ibukota /g, 'dki ')
-    .replace(/kepulauan /g, 'kep. ')
+    .replace(/kabupaten /g, 'kab. ').replace(/daerah istimewa /g, 'di ')
+    .replace(/daerah khusus ibukota /g, 'dki ').replace(/kepulauan /g, 'kep. ')
     .trim()
 }
 
-// ── Render layer provinsi ─────────────────────────────────────────────────
+// Ambil nama provinsi dari feature properties
+function getProvNama(props) {
+  return props.state || props.name || props.NAME_1 || props.PROVINSI || props.Propinsi || ''
+}
+
+// ── Render layer provinsi (level 1) ───────────────────────────────────────
 async function renderProvinsiLayer() {
   loadingMsg.value = 'Memuat peta Indonesia...'
-  const geojson = await fetchGeoJSON(GEOJSON_PROVINSI)
+  const geojson = await getProvinsiGeoJSON()
   if (!geojson) { error.value = true; loading.value = false; return }
+
+  // Hapus outline provinsi jika ada (kita di level 1, tidak butuh outline terpisah)
+  if (provinsiOutline) { provinsiOutline.remove(); provinsiOutline = null }
 
   const lookup = {}
   props.mapData.forEach(d => { if (d.provinsi_nama) lookup[normMapData(d.provinsi_nama)] = d })
@@ -223,17 +224,13 @@ async function renderProvinsiLayer() {
 
   geojsonLayer = L.geoJSON(geojson, {
     style: (feature) => {
-      const raw  = feature.properties.state || feature.properties.name ||
-                   feature.properties.NAME_1 || feature.properties.PROVINSI ||
-                   feature.properties.Propinsi || ''
+      const raw  = getProvNama(feature.properties)
       const data = lookup[normMapData(raw)] || {}
       const val  = data[props.metric] || 0
       return { fillColor: getColor(val, scale), fillOpacity: val > 0 ? 0.85 : 0.3, color: '#ffffff', weight: 1.2, opacity: 1 }
     },
     onEachFeature: (feature, layer) => {
-      const raw  = feature.properties.state || feature.properties.name ||
-                   feature.properties.NAME_1 || feature.properties.PROVINSI ||
-                   feature.properties.Propinsi || 'Unknown'
+      const raw  = getProvNama(feature.properties) || 'Unknown'
       const data = props.mapData.find(d => normMapData(d.provinsi_nama) === normMapData(raw)) || {}
       layer.on({
         mouseover(e) { e.target.setStyle({ weight: 2.5, fillOpacity: 1, color: '#15803d' }); hovered.value = { nama: raw, ...data } },
@@ -244,7 +241,37 @@ async function renderProvinsiLayer() {
   }).addTo(leafletMap)
 }
 
-// ── Drill down ke kabkota ─────────────────────────────────────────────────
+// ── Render outline batas provinsi (di-overlay saat level 2) ────────────────
+function renderProvinsiOutline(geojson, activeNama) {
+  if (provinsiOutline) { provinsiOutline.remove(); provinsiOutline = null }
+
+  const activeNorm = normProv(activeNama)
+
+  provinsiOutline = L.geoJSON(geojson, {
+    style: (feature) => {
+      const nama = normProv(getProvNama(feature.properties))
+      const isActive = nama === activeNorm
+      return {
+        // Provinsi aktif: outline tebal hijau tanpa fill
+        // Provinsi lain: outline tipis abu sangat transparan
+        fillColor:   isActive ? 'transparent' : '#94a3b8',
+        fillOpacity: isActive ? 0 : 0.05,
+        color:       isActive ? '#15803d' : '#cbd5e1',
+        weight:      isActive ? 2.5 : 0.8,
+        opacity:     isActive ? 1 : 0.6,
+        dashArray:   isActive ? null : '3 4',
+      }
+    },
+    // Provinsi outline tidak interaktif (hanya visual)
+    interactive: false,
+  }).addTo(leafletMap)
+
+  // Pastikan outline di atas tile tapi di bawah kabkota layer
+  if (provinsiOutline) provinsiOutline.bringToFront()
+  if (geojsonLayer)    geojsonLayer.bringToFront()
+}
+
+// ── Drill down ke kabkota ──────────────────────────────────────────────
 async function drillDown(provinsiKode, provinsiNama, clickedLayer) {
   loading.value = true
   hovered.value = null
@@ -252,33 +279,38 @@ async function drillDown(provinsiKode, provinsiNama, clickedLayer) {
   selectedProvinsiKode.value = provinsiKode
   selectedProvinsiNama.value = provinsiNama
 
-  if (clickedLayer) leafletMap.fitBounds(clickedLayer.getBounds(), { padding: [30, 30] })
+  if (clickedLayer) leafletMap.fitBounds(clickedLayer.getBounds(), { padding: [40, 40] })
 
+  // Fetch data kabkota dari API
   try {
     const data = await ReportService.getMapDataKabkota(provinsiKode)
     kabkotaData.value = Array.isArray(data) ? data : []
   } catch (_) { kabkotaData.value = [] }
 
-  // Load & cache 1 file GeoJSON semua kabkota Indonesia
+  // Load GeoJSON kabkota
   const fullGeo = await getKabkotaGeoJSON()
-  if (!fullGeo) { renderKabkotaNoGeo(); loading.value = false; return }
+  if (!fullGeo) { renderKabkotaNoGeo(provinsiNama); loading.value = false; return }
 
-  // Filter fitur hanya milik provinsi ini (cocokkan via NAME_1)
+  // Filter kabkota hanya milik provinsi ini
   const targetNorm = normProv(provinsiNama)
   const filtered = {
     type: 'FeatureCollection',
     features: fullGeo.features.filter(f => {
       const n1 = normProv(f.properties.NAME_1 || '')
       if (n1 === targetNorm) return true
-      // Fallback via kode BPS jika nama tidak cocok persis
       const kode = PROV_NAME_TO_KODE[n1]
       return kode && kode === provinsiKode
     }),
   }
 
-  if (!filtered.features.length) { renderKabkotaNoGeo(); loading.value = false; return }
+  if (!filtered.features.length) { renderKabkotaNoGeo(provinsiNama); loading.value = false; return }
 
   renderKabkotaLayer(filtered)
+
+  // Overlay outline semua provinsi dengan highlight provinsi aktif
+  const provGeo = await getProvinsiGeoJSON()
+  if (provGeo) renderProvinsiOutline(provGeo, provinsiNama)
+
   loading.value = false
 }
 
@@ -307,10 +339,11 @@ function renderKabkotaLayer(geojson) {
       })
     },
   }).addTo(leafletMap)
+  // Outline provinsi harus di atas kabkota layer agar terlihat
+  if (provinsiOutline) provinsiOutline.bringToFront()
 }
 
-// Fallback jika GeoJSON tidak ada: tampilkan circle markers
-function renderKabkotaNoGeo() {
+function renderKabkotaNoGeo(provinsiNama) {
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
   const scale = props.metric === 'mustahik' ? mustahikScaleKab : penyaluranScaleKab
   currentLegend.value = legendsKab[props.metric]
@@ -333,9 +366,10 @@ function renderKabkotaNoGeo() {
   })
   geojsonLayer = markers
   markers.addTo(leafletMap)
+  if (provinsiOutline) provinsiOutline.bringToFront()
 }
 
-// ── Drill up ──────────────────────────────────────────────────────────────
+// ── Drill up ke provinsi ────────────────────────────────────────────────
 async function drillUp() {
   loading.value = true
   hovered.value = null
@@ -344,11 +378,11 @@ async function drillUp() {
   selectedProvinsiNama.value = ''
   kabkotaData.value = []
   leafletMap.setView([-2.5, 118], 4)
-  await renderProvinsiLayer()
+  await renderProvinsiLayer()  // juga hapus provinsiOutline di dalamnya
   loading.value = false
 }
 
-// ── Init map ──────────────────────────────────────────────────────────────
+// ── Init map ────────────────────────────────────────────────────────────
 async function initMap() {
   try {
     L = (await import('leaflet')).default || (await import('leaflet'))
@@ -366,7 +400,7 @@ async function initMap() {
   } catch (e) {
     console.error('Map init error', e)
     loading.value = false
-    error.value   = true
+    error.value = true
   }
 }
 
@@ -382,7 +416,7 @@ watch(() => [props.metric, props.mapData], () => {
     const p   = layer.feature.properties
     const raw = isKab
       ? (p.NAME_2 || p.KABKOTA || p.name || '')
-      : (p.state  || p.name   || p.NAME_1 || p.PROVINSI || p.Propinsi || '')
+      : (getProvNama(p))
     const dataset = isKab ? kabkotaData.value : props.mapData
     const key     = isKab ? 'kabkota_nama' : 'provinsi_nama'
     const norm    = isKab ? normKab : normMapData
