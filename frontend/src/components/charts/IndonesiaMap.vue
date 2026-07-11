@@ -91,11 +91,13 @@ import { formatRupiah } from '@/utils/formatter'
 import ReportService from '@/services/report'
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  GeoJSON level 3 (kecamatan) diambil dari backend API.
-//  Endpoint: GET /api/v1/geo/level3?provinsi=<NAME_1>&kabupaten=<NAME_2>
-//  File Indonesia_villages.geojson harus ada di backend/data/geo/ di server.
+//  GeoJSON level 3 diambil dari backend API.
+//  Base URL diambil dari VITE_API_BASE_URL (sama dengan api.js),
+//  sehingga request selalu ke domain backend (dtsenapi.ourtestcloud.my.id).
+//  Endpoint: GET <VITE_API_BASE_URL>/geo/level3?provinsi=<NAME_1>&kabupaten=<NAME_2>
 // ─────────────────────────────────────────────────────────────────────────────
-const GEO_LEVEL3_API = '/api/v1/geo/level3'
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
+const GEO_LEVEL3_API = `${API_BASE}/geo/level3`
 
 const props = defineProps({
   mapData: { type: Array,  default: () => [] },
@@ -234,9 +236,8 @@ async function getKabkotaGeoJSON() {
 
 /**
  * Fetch GeoJSON kecamatan (level 3) dari backend API.
- * Endpoint: GET /api/v1/geo/level3?provinsi=<provinsiNama>&kabupaten=<kabkotaNama>
- * Backend membaca Indonesia_villages.geojson di server, filter & return hanya
- * fitur untuk kabkota yang dipilih, sudah di-group per kecamatan (NAME_3).
+ * URL: <VITE_API_BASE_URL>/geo/level3?provinsi=...&kabupaten=...
+ * Contoh: https://dtsenapi.ourtestcloud.my.id/api/v1/geo/level3?provinsi=Jambi&kabupaten=Bungo
  */
 async function getKecamatanGeoJSON(kabkotaNama, provinsiNama) {
   const cacheKey = `${normProv(provinsiNama)}__${normKab(kabkotaNama)}`
@@ -264,8 +265,7 @@ async function getKecamatanGeoJSON(kabkotaNama, provinsiNama) {
       return null
     }
 
-    // Backend sudah return per-desa (NAME_3 = kecamatan).
-    // Group per NAME_3 → MultiPolygon agar setiap feature = 1 kecamatan.
+    // Group per NAME_3 → MultiPolygon agar setiap feature = 1 kecamatan
     const byKec = {}
     for (const f of rawGeo.features) {
       const kec = f.properties.NAME_3 || 'Unknown'
@@ -432,7 +432,6 @@ async function drillDownKecamatan(kabkotaKode, kabkotaNama, clickedLayer) {
     kecamatanData.value = Array.isArray(data) ? data : []
   } catch { kecamatanData.value = [] }
 
-  // Fetch GeoJSON kecamatan dari backend (bukan file statis lokal)
   const kecGeo = await getKecamatanGeoJSON(kabkotaNama, selectedProvinsiNama.value)
   if (!kecGeo || !kecGeo.features.length) {
     renderFallbackMarkers(kecamatanData.value, 3)
