@@ -28,17 +28,17 @@
             <!-- badge -->
             <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:99px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);margin-bottom:20px;">
               <i class="pi pi-star-fill" style="font-size:10px;color:#f59e0b;"></i>
-              <span style="font-size:12px;font-weight:600;color:#fcd34d;">Data Tunggal Sosial Ekonomi Nasional</span>
+              <span style="font-size:12px;font-weight:600;color:#fcd34d;"> Data Tunggal Sosial dan Ekonomi Nasional</span>
             </div>
 
             <h1 style="font-size:clamp(2rem,4vw,3.25rem);font-weight:800;color:#fff;line-height:1.15;margin:0 0 20px;letter-spacing:-0.02em;">
               Sistem Informasi<br />
-              <span style="color:#fbbf24;">Zakat &amp; Wakaf</span><br />
+              <span style="color:#fbbf24;">Zakat</span><br />
               Nasional
             </h1>
 
             <p style="font-size:16px;color:#a7f3d0;line-height:1.7;max-width:480px;margin:0 0 32px;">
-              Platform pemantauan penyaluran zakat berbasis data desil kemiskinan Bappenas.
+              Platform pemantauan penyaluran zakat berbasis data desil kemiskinan.
               Transparan, terukur, dan tepat sasaran.
             </p>
 
@@ -258,7 +258,7 @@
             <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 14px;">Mengapa DTSEN?</h2>
             <p style="font-size:15px;color:#64748b;line-height:1.7;margin:0 0 28px;max-width:480px;">
               DTSEN mengintegrasikan data penerima manfaat zakat dari seluruh LAZ terdaftar dengan data
-              desil kemiskinan Bappenas — memastikan penyaluran tepat sasaran.
+              desil kemiskinan — memastikan penyaluran tepat sasaran.
             </p>
             <div style="display:flex;flex-direction:column;gap:16px;">
               <div v-for="feat in features" :key="feat.title" style="display:flex;gap:14px;align-items:flex-start;">
@@ -391,7 +391,7 @@ const bidangColors = [
 const bidangIcons = ['pi pi-heart','pi pi-book','pi pi-briefcase','pi pi-home','pi pi-shield','pi pi-star']
 
 const features = [
-  { icon:'pi pi-shield',     title:'Data Terverifikasi',       desc:'Terintegrasi langsung dengan DTSEN Bappenas dan SIMBA BAZNAS.' },
+  { icon:'pi pi-shield',     title:'Data Terverifikasi',       desc:'Terintegrasi langsung dengan DTSEN.' },
   { icon:'pi pi-map',        title:'Pemetaan Wilayah',         desc:'Sebaran mustahik hingga tingkat kelurahan di seluruh Indonesia.' },
   { icon:'pi pi-chart-line', title:'Analitik Real-time',       desc:'Dashboard interaktif dengan filter multidimensi dan ekspor data.' },
   { icon:'pi pi-users',      title:'Profil Mustahik Lengkap',  desc:'Data sosiodemografi penerima termasuk desil kemiskinan.' },

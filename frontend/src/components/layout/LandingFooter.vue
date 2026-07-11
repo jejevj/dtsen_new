@@ -14,13 +14,12 @@
             </div>
             <div>
               <div style="font-weight:700;font-size:16px;color:white;line-height:1;">DTSEN</div>
-              <div style="font-size:11px;color:#86efac;margin-top:2px;line-height:1;">Zakat &amp; Wakaf Nasional</div>
+              <div style="font-size:11px;color:#86efac;margin-top:2px;line-height:1;">Zakat </div>
             </div>
           </div>
 
           <p style="font-size:13.5px;color:#a7f3d0;line-height:1.7;max-width:280px;margin:0 0 20px;">
-            Platform pemantauan penyaluran zakat berbasis Data Tunggal Sosial Ekonomi Nasional (DTSEN)
-            Bappenas. Transparan, terukur, tepat sasaran.
+            Platform pemantauan penyaluran zakat berbasis Data Tunggal Sosial Ekonomi Nasional (DTSEN). Transparan, terukur, tepat sasaran.
           </p>
 
           <!-- Badges -->

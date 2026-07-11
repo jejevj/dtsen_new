@@ -15,7 +15,7 @@
         <transition name="fade">
           <div v-if="sidebarOpen" class="overflow-hidden whitespace-nowrap">
             <div class="font-bold text-white text-sm tracking-tight leading-none">DTSEN</div>
-            <div class="text-green-400 text-[10px] leading-none mt-0.5">Zakat &amp; Wakaf</div>
+            <div class="text-green-400 text-[10px] leading-none mt-0.5">Zakat</div>
           </div>
         </transition>
       </div>

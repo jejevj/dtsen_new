@@ -20,7 +20,7 @@
         </div>
         <div style="line-height:1;">
           <div style="font-weight:700;font-size:15px;letter-spacing:-0.02em;color:#15803d;">DTSEN</div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Zakat &amp; Wakaf</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Zakat</div>
         </div>
       </router-link>
 
