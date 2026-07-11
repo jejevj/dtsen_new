@@ -57,35 +57,55 @@
           <!-- Data Pribadi -->
           <div class="detail-card">
             <p class="section-title"><i class="pi pi-id-card"></i> Data Pribadi</p>
-            <table class="info-table">
-              <tbody>
-                <tr><td class="td-label">Usia</td><td class="td-value">{{ mustahik.usia }} tahun</td></tr>
-                <tr><td class="td-label">Agama</td><td class="td-value">{{ mustahik.agama }}</td></tr>
-                <tr><td class="td-label">Status Pernikahan</td><td class="td-value">{{ mustahik.status_pernikahan }}</td></tr>
-                <tr><td class="td-label">Pekerjaan</td><td class="td-value">{{ mustahik.pekerjaan }}</td></tr>
-                <tr>
-                  <td class="td-label">Penghasilan/Bln</td>
-                  <td class="td-value" :style="{ color: mustahik.penghasilan===0 ? '#dc2626':'#374151' }">
-                    {{ mustahik.penghasilan===0 ? 'Tidak ada penghasilan' : formatRupiah(mustahik.penghasilan) }}
-                  </td>
-                </tr>
-                <tr><td class="td-label">Jumlah Tanggungan</td><td class="td-value">{{ mustahik.jumlah_tanggungan }} jiwa</td></tr>
-              </tbody>
-            </table>
+            <div class="table-watermark-wrap">
+              <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                <defs>
+                  <pattern id="wm-pribadi" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                    <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#wm-pribadi)"/>
+              </svg>
+              <table class="info-table">
+                <tbody>
+                  <tr><td class="td-label">Usia</td><td class="td-value">{{ mustahik.usia }} tahun</td></tr>
+                  <tr><td class="td-label">Agama</td><td class="td-value">{{ mustahik.agama }}</td></tr>
+                  <tr><td class="td-label">Status Pernikahan</td><td class="td-value">{{ mustahik.status_pernikahan }}</td></tr>
+                  <tr><td class="td-label">Pekerjaan</td><td class="td-value">{{ mustahik.pekerjaan }}</td></tr>
+                  <tr>
+                    <td class="td-label">Penghasilan/Bln</td>
+                    <td class="td-value" :style="{ color: mustahik.penghasilan===0 ? '#dc2626':'#374151' }">
+                      {{ mustahik.penghasilan===0 ? 'Tidak ada penghasilan' : formatRupiah(mustahik.penghasilan) }}
+                    </td>
+                  </tr>
+                  <tr><td class="td-label">Jumlah Tanggungan</td><td class="td-value">{{ mustahik.jumlah_tanggungan }} jiwa</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <!-- Alamat -->
           <div class="detail-card">
             <p class="section-title"><i class="pi pi-map-marker"></i> Alamat Domisili</p>
-            <table class="info-table">
-              <tbody>
-                <tr><td class="td-label">Kelurahan</td><td class="td-value">{{ mustahik.kelurahan }}</td></tr>
-                <tr><td class="td-label">Kecamatan</td><td class="td-value">{{ mustahik.kecamatan }}</td></tr>
-                <tr><td class="td-label">Kab / Kota</td><td class="td-value">{{ mustahik.kab_kota }}</td></tr>
-                <tr><td class="td-label">Provinsi</td><td class="td-value">{{ mustahik.provinsi }}</td></tr>
-                <tr><td class="td-label">Kode Pos</td><td class="td-value">{{ fakeKodePos(mustahik.id) }}</td></tr>
-              </tbody>
-            </table>
+            <div class="table-watermark-wrap">
+              <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                <defs>
+                  <pattern id="wm-alamat" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                    <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#wm-alamat)"/>
+              </svg>
+              <table class="info-table">
+                <tbody>
+                  <tr><td class="td-label">Kelurahan</td><td class="td-value">{{ mustahik.kelurahan }}</td></tr>
+                  <tr><td class="td-label">Kecamatan</td><td class="td-value">{{ mustahik.kecamatan }}</td></tr>
+                  <tr><td class="td-label">Kab / Kota</td><td class="td-value">{{ mustahik.kab_kota }}</td></tr>
+                  <tr><td class="td-label">Provinsi</td><td class="td-value">{{ mustahik.provinsi }}</td></tr>
+                  <tr><td class="td-label">Kode Pos</td><td class="td-value">{{ fakeKodePos(mustahik.id) }}</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
         </div>
@@ -93,61 +113,81 @@
         <!-- ===== PROGRAM SOSIAL (full width) ===== -->
         <div class="detail-card">
           <p class="section-title"><i class="pi pi-shield"></i> Program Bantuan Sosial Lain</p>
-          <table class="info-table">
-            <thead>
-              <tr>
-                <th class="th">Program</th>
-                <th class="th">Status</th>
-                <th class="th">Tahun</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="prog in programSosial(mustahik)" :key="prog.nama">
-                <td class="td-label" style="font-weight:600;color:#374151;">{{ prog.nama }}</td>
-                <td class="td-value">
-                  <span :style="{ padding:'2px 8px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background: prog.aktif?'#dcfce7':'#f1f5f9', color: prog.aktif?'#15803d':'#94a3b8' }">
-                    {{ prog.aktif ? 'Aktif' : 'Tidak' }}
-                  </span>
-                </td>
-                <td class="td-value" style="color:#64748b;">{{ prog.tahun }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="table-watermark-wrap">
+            <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+              <defs>
+                <pattern id="wm-program" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                  <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-program)"/>
+            </svg>
+            <table class="info-table">
+              <thead>
+                <tr>
+                  <th class="th">Program</th>
+                  <th class="th">Status</th>
+                  <th class="th">Tahun</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="prog in programSosial(mustahik)" :key="prog.nama">
+                  <td class="td-label" style="font-weight:600;color:#374151;">{{ prog.nama }}</td>
+                  <td class="td-value">
+                    <span :style="{ padding:'2px 8px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background: prog.aktif?'#dcfce7':'#f1f5f9', color: prog.aktif?'#15803d':'#94a3b8' }">
+                      {{ prog.aktif ? 'Aktif' : 'Tidak' }}
+                    </span>
+                  </td>
+                  <td class="td-value" style="color:#64748b;">{{ prog.tahun }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- ===== ANGGOTA KELUARGA ===== -->
         <div class="detail-card">
           <p class="section-title"><i class="pi pi-users"></i> Anggota Keluarga</p>
           <div style="overflow-x:auto;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>No</th>
-                  <th>Nama</th>
-                  <th>Hubungan</th>
-                  <th>L/P</th>
-                  <th>Usia</th>
-                  <th>Pekerjaan</th>
-                  <th>Pendidikan</th>
-                  <th>Ket.</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(anggota, i) in anggotaKeluarga(mustahik)" :key="i">
-                  <td style="text-align:center;color:#94a3b8;">{{ i+1 }}</td>
-                  <td style="font-weight:600;color:#1e293b;">{{ anggota.nama }}</td>
-                  <td><span style="padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#eff6ff;color:#2563eb;">{{ anggota.hubungan }}</span></td>
-                  <td style="text-align:center;"><span :style="{color: anggota.jk==='L'?'#2563eb':'#db2777', fontWeight:'700'}">{{ anggota.jk }}</span></td>
-                  <td style="text-align:center;">{{ anggota.usia }} th</td>
-                  <td style="color:#64748b;">{{ anggota.pekerjaan }}</td>
-                  <td style="color:#64748b;">{{ anggota.pendidikan }}</td>
-                  <td>
-                    <span v-if="anggota.ket" style="padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#fef3c7;color:#b45309;">{{ anggota.ket }}</span>
-                    <span v-else style="color:#cbd5e1;">—</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="table-watermark-wrap">
+              <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                <defs>
+                  <pattern id="wm-keluarga" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                    <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#wm-keluarga)"/>
+              </svg>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Nama</th>
+                    <th>Hubungan</th>
+                    <th>L/P</th>
+                    <th>Usia</th>
+                    <th>Pekerjaan</th>
+                    <th>Pendidikan</th>
+                    <th>Ket.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(anggota, i) in anggotaKeluarga(mustahik)" :key="i">
+                    <td style="text-align:center;color:#94a3b8;">{{ i+1 }}</td>
+                    <td style="font-weight:600;color:#1e293b;">{{ anggota.nama }}</td>
+                    <td><span style="padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#eff6ff;color:#2563eb;">{{ anggota.hubungan }}</span></td>
+                    <td style="text-align:center;"><span :style="{color: anggota.jk==='L'?'#2563eb':'#db2777', fontWeight:'700'}">{{ anggota.jk }}</span></td>
+                    <td style="text-align:center;">{{ anggota.usia }} th</td>
+                    <td style="color:#64748b;">{{ anggota.pekerjaan }}</td>
+                    <td style="color:#64748b;">{{ anggota.pendidikan }}</td>
+                    <td>
+                      <span v-if="anggota.ket" style="padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#fef3c7;color:#b45309;">{{ anggota.ket }}</span>
+                      <span v-else style="color:#cbd5e1;">—</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -155,36 +195,46 @@
         <div class="detail-card">
           <p class="section-title"><i class="pi pi-history"></i> Riwayat Penyaluran Bantuan</p>
           <div style="overflow-x:auto;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Tahun</th>
-                  <th>Periode</th>
-                  <th>Program</th>
-                  <th>Nominal</th>
-                  <th>Metode</th>
-                  <th>Status</th>
-                  <th>Tanggal Cair</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(riwayat, i) in riwayatBantuan(mustahik)" :key="i">
-                  <td style="font-weight:700;color:#374151;">{{ riwayat.tahun }}</td>
-                  <td style="color:#64748b;">{{ riwayat.periode }}</td>
-                  <td style="font-weight:600;color:#374151;">{{ riwayat.program }}</td>
-                  <td style="font-weight:700;color:#15803d;">{{ formatRupiah(riwayat.nominal) }}</td>
-                  <td style="color:#64748b;">{{ riwayat.metode }}</td>
-                  <td>
-                    <span :style="{
-                      padding:'2px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700',
-                      background: riwayat.status==='Tersalurkan'?'#dcfce7':riwayat.status==='Proses'?'#fef3c7':'#fef2f2',
-                      color: riwayat.status==='Tersalurkan'?'#15803d':riwayat.status==='Proses'?'#b45309':'#dc2626'
-                    }">{{ riwayat.status }}</span>
-                  </td>
-                  <td style="color:#64748b;font-size:12px;">{{ riwayat.tanggal }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="table-watermark-wrap">
+              <svg class="table-watermark-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                <defs>
+                  <pattern id="wm-riwayat" x="0" y="0" width="160" height="60" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                    <text x="0" y="40" font-size="11" fill="rgba(34,197,94,0.07)" font-family="sans-serif" font-weight="bold" letter-spacing="2">DTSEN ZAKAT WAKAF</text>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#wm-riwayat)"/>
+              </svg>
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tahun</th>
+                    <th>Periode</th>
+                    <th>Program</th>
+                    <th>Nominal</th>
+                    <th>Metode</th>
+                    <th>Status</th>
+                    <th>Tanggal Cair</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(riwayat, i) in riwayatBantuan(mustahik)" :key="i">
+                    <td style="font-weight:700;color:#374151;">{{ riwayat.tahun }}</td>
+                    <td style="color:#64748b;">{{ riwayat.periode }}</td>
+                    <td style="font-weight:600;color:#374151;">{{ riwayat.program }}</td>
+                    <td style="font-weight:700;color:#15803d;">{{ formatRupiah(riwayat.nominal) }}</td>
+                    <td style="color:#64748b;">{{ riwayat.metode }}</td>
+                    <td>
+                      <span :style="{
+                        padding:'2px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700',
+                        background: riwayat.status==='Tersalurkan'?'#dcfce7':riwayat.status==='Proses'?'#fef3c7':'#fef2f2',
+                        color: riwayat.status==='Tersalurkan'?'#15803d':riwayat.status==='Proses'?'#b45309':'#dc2626'
+                      }">{{ riwayat.status }}</span>
+                    </td>
+                    <td style="color:#64748b;font-size:12px;">{{ riwayat.tanggal }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
           <!-- Subtotal -->
           <div style="display:flex;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
@@ -364,6 +414,23 @@ function totalKumulatif(m) {
   border-radius:99px;
   font-size:11px;
   font-weight:700;
+}
+
+/* ===== WATERMARK WRAPPER ===== */
+.table-watermark-wrap {
+  position: relative;
+}
+.table-watermark-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+.table-watermark-wrap > table {
+  position: relative;
+  z-index: 1;
 }
 
 /* ===== INFO TABLE (label-value) ===== */
