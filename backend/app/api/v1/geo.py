@@ -4,9 +4,11 @@ from flask import request, jsonify
 from . import api_v1_bp
 
 # Path ke file GeoJSON di server (taruh di backend/data/geo/)
+# __file__ = backend/app/api/v1/geo.py
+# ../../.. = backend/app/api/v1 -> v1 -> api -> app -> backend
 GEO_VILLAGES_PATH = os.path.join(
     os.path.dirname(__file__),
-    '../../../../data/geo/Indonesia_villages.geojson'
+    '../../../data/geo/Indonesia_villages.geojson'
 )
 
 # Cache in-memory agar tidak baca file berulang kali
