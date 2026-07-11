@@ -8,7 +8,8 @@
           <h2 style="font-size:1.4rem;font-weight:800;color:#1e293b;margin:0 0 2px;">Data Mustahik</h2>
           <p style="font-size:12px;color:#94a3b8;margin:0;">Menampilkan desil 1–4 · {{ filtered.length }} data</p>
         </div>
-        <button @click="exportCSV" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:white;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">
+        <!-- Export CSV: hidden sementara -->
+        <button v-show="false" @click="exportCSV" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:white;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">
           <i class="pi pi-download"></i> Export CSV
         </button>
       </div>
@@ -55,11 +56,6 @@
       <div class="table-wrapper">
 
         <!-- ===== WATERMARK TABEL ===== -->
-        <!--
-          Teknik: SVG pattern repeating — paling andal untuk mengisi
-          area tabel secara merata tanpa terpotong, karena SVG
-          dirender sebagai background-image CSS yang tile otomatis.
-        -->
         <div class="wm-overlay" aria-hidden="true">
           <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -236,7 +232,6 @@ function exportCSV() {
 </script>
 
 <style scoped>
-/* Container tabel — jangkar watermark */
 .table-wrapper {
   position: relative;
   background: white;
@@ -246,7 +241,6 @@ function exportCSV() {
   overflow: hidden;
 }
 
-/* Overlay watermark: isi penuh container */
 .wm-overlay {
   position: absolute;
   inset: 0;
@@ -256,14 +250,12 @@ function exportCSV() {
   -webkit-user-select: none;
 }
 
-/* SVG memenuhi 100% lebar & tinggi container */
 .wm-svg {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-/* Row transparan agar watermark tembus */
 .tbl-row {
   border-bottom: 1px solid #f1f5f9;
   transition: background 0.15s;
