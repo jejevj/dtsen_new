@@ -96,7 +96,7 @@ const navItems = [
   { label: 'Statistik', href: '#stats',   icon: 'pi pi-chart-bar' },
   { label: 'Peta',      href: '#map',     icon: 'pi pi-map' },
   { label: 'Program',   href: '#program', icon: 'pi pi-list' },
-  { label: 'Tentang',   href: '#tentang', icon: 'pi pi-info-circle' },
+  // { label: 'Tentang', href: '#tentang', icon: 'pi pi-info-circle' }, // hidden sementara
 ]
 </script>
 
