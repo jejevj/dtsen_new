@@ -90,11 +90,19 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { formatRupiah } from '@/utils/formatter'
 import ReportService from '@/services/report'
 
-// ── PENTING: Indonesia_villages.geojson (GADM level-4) ───────────────────
-// Struktur property: NAME_1=provinsi, NAME_2=kabupaten, NAME_3=kecamatan, NAME_4=desa, CC_4=kode BPS desa
-// File ini di-import sekali → tree-shaken oleh Vite (lazy import via fetch lokal)
-// Untuk menghindari bundle besar, fetch dari URL public asset
-const LOCAL_VILLAGES_URL = '/src/assets/Indonesia_villages.geojson'
+// ─────────────────────────────────────────────────────────────────────────────
+//  FILE GeoJSON harus ada di: frontend/public/geo/Indonesia_villages.geojson
+//  Jalankan di terminal (dari folder frontend/):
+//    mkdir -p public/geo
+//    mv src/assets/Indonesia_villages.geojson public/geo/Indonesia_villages.geojson
+//
+//  Kenapa public/geo/ bukan src/assets/?
+//  File di src/assets/ diproses Vite dan hasilnya di-hash (misal: abc123.geojson)
+//  sehingga tidak bisa di-fetch() dengan path statis.
+//  File di public/ di-serve langsung oleh dev server dan nginx/caddy production
+//  dengan path persis /geo/Indonesia_villages.geojson
+// ─────────────────────────────────────────────────────────────────────────────
+const VILLAGES_URL = '/geo/Indonesia_villages.geojson'
 
 const props = defineProps({
   mapData: { type: Array,  default: () => [] },
@@ -121,11 +129,10 @@ let geojsonLayer    = null
 let provinsiOutline = null
 let kabkotaOutline  = null
 
-// GeoJSON cache
 let _provinsiGeoCache  = null
 let _kabkotaGeoCache   = null
-let _villagesFullCache = null          // seluruh features villages (load sekali)
-let _kecGeoCache       = {}            // key: normKab(kabkotaNama) → grouped FeatureCollection
+let _villagesFullCache = null
+let _kecGeoCache       = {}
 
 // ── Color scales ─────────────────────────────────────────────────────────
 const mustahikScaleProv  = [{min:0,max:30000,color:'#dcfce7'},{min:30000,max:80000,color:'#86efac'},{min:80000,max:150000,color:'#4ade80'},{min:150000,max:300000,color:'#16a34a'},{min:300000,max:Infinity,color:'#14532d'}]
@@ -164,7 +171,7 @@ function getLegendByLevel(lv) {
   return legendsProv[props.metric]
 }
 
-// ── Normalisasi string ────────────────────────────────────────────────────
+// ── Normalisasi ──────────────────────────────────────────────────────────────
 function normKab(str = '') {
   return str.toLowerCase()
     .replace(/^(kabupaten|kota|kab\.) /g, '')
@@ -182,12 +189,12 @@ function normMapData(str = '') {
 function normKec(str = '') { return str.toLowerCase().trim() }
 function getProvNama(p) { return p.state || p.name || p.NAME_1 || p.PROVINSI || p.Propinsi || '' }
 
-// ── GeoJSON sources ───────────────────────────────────────────────────────
+// ── GeoJSON loaders ──────────────────────────────────────────────────────────
 const GEOJSON_PROVINSI = [
   'https://raw.githubusercontent.com/superpikar/indonesia-geojson/master/indonesia.geojson',
   'https://raw.githubusercontent.com/benkoshy/indonesia/master/indonesia-provinces-simple.geojson',
 ]
-const GEOJSON_KABKOTA_ALL = [
+const GEOJSON_KABKOTA = [
   'https://raw.githubusercontent.com/fahadh4ilyas/indonesia-geojson-archive/master/Indonesia_cities.geojson',
 ]
 
@@ -228,29 +235,32 @@ async function getProvinsiGeoJSON() {
 async function getKabkotaGeoJSON() {
   if (_kabkotaGeoCache) return _kabkotaGeoCache
   loadingMsg.value = 'Memuat batas kabupaten/kota...'
-  const geo = await fetchGeoJSON(GEOJSON_KABKOTA_ALL)
+  const geo = await fetchGeoJSON(GEOJSON_KABKOTA)
   if (geo) _kabkotaGeoCache = geo
   return geo
 }
 
 /**
- * Ambil GeoJSON villages lokal, filter per kabkota (NAME_2),
- * lalu GROUP per kecamatan (NAME_3) — setiap kecamatan = satu MultiPolygon.
- * Ini diperlukan agar setiap kecamatan tampil sebagai satu region berwarna,
- * bukan ratusan polygon desa individual.
+ * Load Indonesia_villages.geojson dari public/geo/,
+ * filter per NAME_2 (kabkota), group per NAME_3 (kecamatan) → MultiPolygon.
+ * File HARUS ada di: frontend/public/geo/Indonesia_villages.geojson
+ * Pindahkan manual: mv src/assets/Indonesia_villages.geojson public/geo/
  */
 async function getKecamatanGeoJSON(kabkotaNama) {
   const cacheKey = normKab(kabkotaNama)
   if (_kecGeoCache[cacheKey]) return _kecGeoCache[cacheKey]
 
-  loadingMsg.value = 'Memuat data kecamatan dari file lokal...'
-
-  // Load villages sekali, simpan di cache
   if (!_villagesFullCache) {
+    loadingMsg.value = 'Membaca data desa/kecamatan (pertama kali, mohon tunggu ~10 detik)...'
     try {
-      loadingMsg.value = 'Membaca Indonesia_villages.geojson (64 MB, mohon tunggu...)'
-      const res = await fetch(LOCAL_VILLAGES_URL)
-      if (!res.ok) throw new Error('fetch failed')
+      const res = await fetch(VILLAGES_URL)
+      // Cek content-type — jika HTML berarti file tidak ditemukan
+      const ct = res.headers.get('content-type') || ''
+      if (!res.ok || ct.includes('text/html')) {
+        console.error('[Map] File GeoJSON tidak ditemukan di', VILLAGES_URL,
+          '\nPastikan file sudah dipindah ke frontend/public/geo/Indonesia_villages.geojson')
+        return null
+      }
       _villagesFullCache = await res.json()
     } catch (e) {
       console.error('[Map] Gagal load villages GeoJSON:', e)
@@ -259,37 +269,33 @@ async function getKecamatanGeoJSON(kabkotaNama) {
   }
 
   const normTarget = normKab(kabkotaNama)
-
-  // Filter fitur yang NAME_2 cocok dengan kabkota yang diklik
-  const matched = _villagesFullCache.features.filter(f => {
-    const n2 = normKab(f.properties.NAME_2 || '')
-    return n2 === normTarget
-  })
+  const matched = _villagesFullCache.features.filter(f =>
+    normKab(f.properties.NAME_2 || '') === normTarget
+  )
 
   if (!matched.length) {
-    console.warn('[Map] Tidak ada fitur untuk kabkota:', kabkotaNama, '(norm:', normTarget, ')')
+    console.warn('[Map] Tidak ada data untuk kabkota:', kabkotaNama, '(norm:', normTarget, ')')
     return null
   }
 
-  // Group fitur per NAME_3 (kecamatan), buat satu Feature per kecamatan
+  // Group per NAME_3 (kecamatan) → MultiPolygon
   const byKec = {}
   for (const f of matched) {
-    const kecNama = f.properties.NAME_3 || 'Unknown'
-    if (!byKec[kecNama]) byKec[kecNama] = []
-    byKec[kecNama].push(f.geometry)
+    const kec = f.properties.NAME_3 || 'Unknown'
+    if (!byKec[kec]) byKec[kec] = []
+    byKec[kec].push(f.geometry)
   }
 
-  // Buat MultiPolygon per kecamatan
   const features = Object.entries(byKec).map(([kecNama, geoms]) => {
-    const allPolygons = []
+    const polys = []
     for (const g of geoms) {
-      if (g.type === 'Polygon')      allPolygons.push(...g.coordinates)
-      if (g.type === 'MultiPolygon') allPolygons.push(...g.coordinates.flat())
+      if (g.type === 'Polygon')      polys.push(...g.coordinates)
+      if (g.type === 'MultiPolygon') g.coordinates.forEach(mp => polys.push(...mp))
     }
     return {
       type: 'Feature',
       properties: { NAME_3: kecNama, NAME_2: kabkotaNama },
-      geometry: { type: 'MultiPolygon', coordinates: allPolygons.map(p => [p]) },
+      geometry: { type: 'MultiPolygon', coordinates: polys.map(p => [p]) },
     }
   })
 
@@ -303,14 +309,12 @@ async function renderProvinsiLayer() {
   loadingMsg.value = 'Memuat peta Indonesia...'
   const geojson = await getProvinsiGeoJSON()
   if (!geojson) { error.value = true; loading.value = false; return }
-
   clearOutlines()
   const lookup = {}
   props.mapData.forEach(d => { if (d.provinsi_nama) lookup[normMapData(d.provinsi_nama)] = d })
   const scale = getScaleByLevel(1)
   currentLegend.value = getLegendByLevel(1)
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
-
   geojsonLayer = L.geoJSON(geojson, {
     style: feature => {
       const raw = getProvNama(feature.properties)
@@ -334,7 +338,6 @@ function clearOutlines() {
   if (provinsiOutline) { provinsiOutline.remove(); provinsiOutline = null }
   if (kabkotaOutline)  { kabkotaOutline.remove();  kabkotaOutline  = null }
 }
-
 function renderProvinsiOutline(geojson, activeNama) {
   if (provinsiOutline) { provinsiOutline.remove(); provinsiOutline = null }
   const activeNorm = normProv(activeNama)
@@ -350,7 +353,6 @@ function renderProvinsiOutline(geojson, activeNama) {
   if (geojsonLayer)    geojsonLayer.bringToFront()
   if (provinsiOutline) provinsiOutline.bringToFront()
 }
-
 function renderKabkotaOutline(geojson, activeNama, provinsiNama) {
   if (kabkotaOutline) { kabkotaOutline.remove(); kabkotaOutline = null }
   const provNorm   = normProv(provinsiNama)
@@ -370,26 +372,22 @@ function renderKabkotaOutline(geojson, activeNama, provinsiNama) {
   if (kabkotaOutline) kabkotaOutline.bringToFront()
 }
 
-// ── Drill down ke kabkota (level 2) ──────────────────────────────────────
+// ── Drill down kabkota (level 2) ────────────────────────────────────────
 async function drillDownKabkota(provinsiKode, provinsiNama, clickedLayer) {
   loading.value = true; hovered.value = null
-  currentLevel.value         = 2
+  currentLevel.value = 2
   selectedProvinsiKode.value = provinsiKode
   selectedProvinsiNama.value = provinsiNama
   selectedKabkotaKode.value  = null
   selectedKabkotaNama.value  = ''
   kecamatanData.value        = []
-
   if (clickedLayer) leafletMap.fitBounds(clickedLayer.getBounds(), { padding: [40, 40] })
-
   try {
     const data = await ReportService.getMapDataKabkota(provinsiKode)
     kabkotaData.value = Array.isArray(data) ? data : []
   } catch { kabkotaData.value = [] }
-
   const fullGeo = await getKabkotaGeoJSON()
   if (!fullGeo) { renderFallbackMarkers(kabkotaData.value, 2); loading.value = false; return }
-
   const targetNorm = normProv(provinsiNama)
   const filtered = {
     type: 'FeatureCollection',
@@ -399,7 +397,6 @@ async function drillDownKabkota(provinsiKode, provinsiNama, clickedLayer) {
     }),
   }
   if (!filtered.features.length) { renderFallbackMarkers(kabkotaData.value, 2); loading.value = false; return }
-
   renderKabkotaLayer(filtered)
   const provGeo = await getProvinsiGeoJSON()
   if (provGeo) renderProvinsiOutline(provGeo, provinsiNama)
@@ -412,7 +409,6 @@ function renderKabkotaLayer(geojson) {
   const scale = getScaleByLevel(2)
   currentLegend.value = getLegendByLevel(2)
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
-
   geojsonLayer = L.geoJSON(geojson, {
     style: feature => {
       const raw = feature.properties.NAME_2 || feature.properties.KABKOTA || feature.properties.name || ''
@@ -432,48 +428,37 @@ function renderKabkotaLayer(geojson) {
   if (provinsiOutline) provinsiOutline.bringToFront()
 }
 
-// ── Drill down ke kecamatan (level 3) ─────────────────────────────────────
+// ── Drill down kecamatan (level 3) ──────────────────────────────────────
 async function drillDownKecamatan(kabkotaKode, kabkotaNama, clickedLayer) {
   loading.value = true; hovered.value = null
   currentLevel.value        = 3
   selectedKabkotaKode.value = kabkotaKode
   selectedKabkotaNama.value = kabkotaNama
-
   if (clickedLayer) leafletMap.fitBounds(clickedLayer.getBounds(), { padding: [40, 40] })
-
   try {
     const data = await ReportService.getMapDataKecamatan(kabkotaKode)
     kecamatanData.value = Array.isArray(data) ? data : []
   } catch { kecamatanData.value = [] }
-
-  // Ambil GeoJSON kecamatan dari villages lokal, grouped per NAME_3
   const kecGeo = await getKecamatanGeoJSON(kabkotaNama)
   if (!kecGeo || !kecGeo.features.length) {
-    console.warn('[Map] GeoJSON kecamatan kosong untuk:', kabkotaNama)
     renderFallbackMarkers(kecamatanData.value, 3)
     loading.value = false
     return
   }
-
   renderKecamatanLayer(kecGeo)
-
   const fullKabGeo = await getKabkotaGeoJSON()
   if (fullKabGeo) renderKabkotaOutline(fullKabGeo, kabkotaNama, selectedProvinsiNama.value)
-
   loading.value = false
 }
 
 function renderKecamatanLayer(geojson) {
-  // Lookup data report per nama kecamatan
   const lookup = {}
   kecamatanData.value.forEach(d => { if (d.kecamatan_nama) lookup[normKec(d.kecamatan_nama)] = d })
   const scale = getScaleByLevel(3)
   currentLegend.value = getLegendByLevel(3)
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
-
   geojsonLayer = L.geoJSON(geojson, {
     style: feature => {
-      // NAME_3 = nama kecamatan (hasil grouping di getKecamatanGeoJSON)
       const raw = feature.properties.NAME_3 || ''
       const val = (lookup[normKec(raw)] || {})[props.metric] || 0
       return { fillColor: getColor(val, scale), fillOpacity: val > 0 ? 0.85 : 0.35, color: '#ffffff', weight: 0.8, opacity: 1 }
@@ -492,7 +477,7 @@ function renderKecamatanLayer(geojson) {
   if (provinsiOutline) provinsiOutline.bringToFront()
 }
 
-// ── Fallback circle markers ───────────────────────────────────────────────
+// ── Fallback markers ───────────────────────────────────────────────────────────
 function renderFallbackMarkers(dataset, level) {
   if (geojsonLayer) { geojsonLayer.remove(); geojsonLayer = null }
   const scale = getScaleByLevel(level)
@@ -505,8 +490,7 @@ function renderFallbackMarkers(dataset, level) {
       [center.lat + 0.4 * Math.sin(angle), center.lng + 0.8 * Math.cos(angle)],
       { radius: Math.max(8, Math.min(22, (d.mustahik||3000)/2000)), fillColor: getColor(d[props.metric]||0, scale), fillOpacity: 0.85, color: '#ffffff', weight: 1.5 }
     )
-    const nama = d.kecamatan_nama || d.kabkota_nama || ''
-    circle.on({ mouseover() { hovered.value = { nama, ...d } }, mouseout() { hovered.value = null } })
+    circle.on({ mouseover() { hovered.value = { nama: d.kecamatan_nama||d.kabkota_nama||'', ...d } }, mouseout() { hovered.value = null } })
     markers.addLayer(circle)
   })
   geojsonLayer = markers
@@ -546,7 +530,7 @@ async function drillUp(toLevel) {
   loading.value = false
 }
 
-// ── Init map ──────────────────────────────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────────────────────
 async function initMap() {
   try {
     L = (await import('leaflet')).default || (await import('leaflet'))
