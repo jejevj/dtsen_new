@@ -247,6 +247,28 @@ def _build_table_response(payload, label, provinsi):
 
 
 # ─────────────────────────────────────────────
+# Helper: decode cursor DB lokal (format "db:page_N")
+# ─────────────────────────────────────────────
+
+def _parse_db_cursor(cursor: str):
+    """
+    Decode cursor page-based untuk DB lokal.
+    Format: "db:page_N" → return int N (1-based page number).
+    Return None jika bukan cursor DB.
+    """
+    if cursor and cursor.startswith("db:page_"):
+        try:
+            return int(cursor[len("db:page_"):])
+        except ValueError:
+            pass
+    return None
+
+
+def _build_db_cursor(page: int) -> str:
+    return f"db:page_{page}"
+
+
+# ─────────────────────────────────────────────
 # Helper: simpan hasil ZAWA ke DB (cache on-demand)
 # ─────────────────────────────────────────────
 
@@ -724,8 +746,9 @@ def baseline_keluarga():
     cursor = request.args.get('cursor') or None
     search = request.args.get('search', '').strip()
 
+    # ── Search by NKK (16 digit)
     if search and _is_nkk(search):
-        # ── 1. Cek DB lokal dulu
+        # 1. Cek DB lokal dulu
         db_row = ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=search.strip()).first()
         if db_row:
             logger.info(f"[Baseline] keluarga NKK={search} ditemukan di DB lokal")
@@ -734,7 +757,7 @@ def baseline_keluarga():
                 {"searchMode": "db_cache", "source": "local_db"}
             )
 
-        # ── 2. Fallback ke ZAWA API
+        # 2. Fallback ke ZAWA API
         try:
             nkk_int = int(search.strip())
         except ValueError:
@@ -762,7 +785,73 @@ def baseline_keluarga():
 
         return _build_table_response(payload, "Keluarga", "nasional")
 
-    # ── List mode
+    # ── List mode: utamakan DB lokal, fallback ke ZAWA jika DB kosong
+    #
+    # Cek apakah ada data di DB lokal (hanya sekali saat pertama load)
+    db_total = ZawaKeluarga.query.count()
+
+    if db_total > 0:
+        # ── Serve dari DB lokal dengan page-based pagination
+        # Decode page dari cursor format "db:page_N", default page 1
+        db_page = _parse_db_cursor(cursor) if cursor else 1
+        if db_page is None:
+            # cursor bukan format DB (misal sisa cursor ZAWA lama), reset ke page 1
+            db_page = 1
+
+        offset = (db_page - 1) * ZAWA_LIMIT
+
+        # Build query dengan optional text search
+        q_obj = ZawaKeluarga.query
+        if search:
+            q_lower = f"%{search.lower()}%"
+            q_obj = q_obj.filter(
+                db.or_(
+                    ZawaKeluarga.nomor_kartu_keluarga.ilike(q_lower),
+                    ZawaKeluarga.nama_anggota_keluarga.ilike(q_lower),
+                    ZawaKeluarga.alamat.ilike(q_lower),
+                    ZawaKeluarga.kelurahan_desa.ilike(q_lower),
+                    ZawaKeluarga.kecamatan.ilike(q_lower),
+                    ZawaKeluarga.kabupaten_kota.ilike(q_lower),
+                    ZawaKeluarga.provinsi.ilike(q_lower),
+                )
+            )
+
+        filtered_total = q_obj.count()
+        total_pages    = max(1, -(-filtered_total // ZAWA_LIMIT))  # ceiling division
+        db_rows        = q_obj.order_by(ZawaKeluarga.id).offset(offset).limit(ZAWA_LIMIT).all()
+        items          = [r.to_dict() for r in db_rows]
+
+        has_next = db_page < total_pages
+        has_prev = db_page > 1
+        next_cur = _build_db_cursor(db_page + 1) if has_next else None
+        prev_cur = _build_db_cursor(db_page - 1) if has_prev else None  # noqa: F841 (reserved for future use)
+
+        logger.info(
+            f"[Baseline] keluarga dari DB lokal: page={db_page}/{total_pages} "
+            f"rows={len(items)} total={filtered_total} search={search!r}"
+        )
+
+        columns = list(items[0].keys()) if items else []
+        return jsonify({
+            "data":    items,
+            "columns": columns,
+            "meta": {
+                "provinsi":        "nasional",
+                "label":           "Keluarga",
+                "totalItems":      filtered_total,
+                "totalPages":      total_pages,
+                "currentPage":     db_page,
+                "hasNextPage":     has_next,
+                "hasPreviousPage": has_prev,
+                "nextCursor":      next_cur,
+                "limit":           ZAWA_LIMIT,
+                "searchMode":      "db_local",
+                "source":          "local_db",
+            }
+        }), 200
+
+    # ── DB kosong → fallback ke ZAWA API
+    logger.info("[Baseline] keluarga DB kosong, fallback ke ZAWA API")
     params = {"cursor": cursor} if cursor else {}
     payload, err = _fetch_zawa_page("zawa/keluarga", params)
     if err:
@@ -775,7 +864,7 @@ def baseline_keluarga():
             if q in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
-    # Simpan ke DB (best-effort)
+    # Simpan ke DB (best-effort) agar request berikutnya dari DB
     if payload["items"]:
         try:
             _cache_keluarga_to_db(payload["items"])
