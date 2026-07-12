@@ -50,6 +50,20 @@ signal.signal(signal.SIGTERM, _handle_signal)
 signal.signal(signal.SIGINT,  _handle_signal)
 
 
+def _insert_item(session, obj, label: str, logger) -> bool:
+    """Insert satu ORM object dengan per-row error handling.
+    Kembalikan True jika berhasil, False jika di-skip.
+    """
+    try:
+        session.add(obj)
+        session.flush()   # detect error segera, sebelum commit batch
+        return True
+    except Exception as exc:
+        session.rollback()
+        logger.warning(f"[SKIP] {label}: {exc}")
+        return False
+
+
 def run_sync_keluarga(app):
     job_id = "worker_keluarga"
     logger.info("=== WORKER START: sync keluarga ===")
@@ -89,9 +103,14 @@ def run_sync_keluarga(app):
                 batch_saved = 0
                 for item in items:
                     nkk = str(item.get("nomor_kartu_keluarga") or "")
-                    if nkk and not ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=nkk).first():
-                        db.session.add(ZawaKeluarga.from_api(item))
+                    if not nkk:
+                        continue
+                    if ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=nkk).first():
+                        continue
+                    obj = ZawaKeluarga.from_api(item)
+                    if _insert_item(db.session, obj, f"NKK={nkk}", logger):
                         batch_saved += 1
+
                 db.session.commit()
 
                 batch_fetched  = len(items)
@@ -110,7 +129,7 @@ def run_sync_keluarga(app):
 
                 page += 1
                 _save_page(job_id, page)
-                time.sleep(0.05)  # gentlemen's pause
+                time.sleep(0.05)
 
             status = "stopped" if _stop else "success"
             sync_log.status        = status
@@ -173,9 +192,14 @@ def run_sync_anggota(app, provinsi: str):
                 batch_saved = 0
                 for item in items:
                     nik = str(item.get("nomor_induk_kependudukan") or "")
-                    if nik and not ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first():
-                        db.session.add(ZawaAnggota.from_api(item, provinsi))
+                    if not nik:
+                        continue
+                    if ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first():
+                        continue
+                    obj = ZawaAnggota.from_api(item, provinsi)
+                    if _insert_item(db.session, obj, f"NIK={nik}", logger):
                         batch_saved += 1
+
                 db.session.commit()
 
                 batch_fetched  = len(items)
