@@ -69,7 +69,7 @@ def _zawa_headers() -> dict:
 
 
 def _is_numeric_id(s: str) -> bool:
-    """True jika string hanya angka dan panjang >= 10 (NIK/NKK)."""
+    """True jika string hanya digit dan panjang >= 10 (NIK/NKK)."""
     return bool(re.fullmatch(r'\d{10,}', s.strip()))
 
 
@@ -96,7 +96,6 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
     except requests.exceptions.Timeout:
         return None, "Timeout saat menghubungi ZAWA. Coba lagi beberapa saat."
     except requests.exceptions.HTTPError as e:
-        logger.error(f"[Baseline] HTTP error path={zawa_path}: {e}")
         return None, f"ZAWA HTTP error: {e}"
     except Exception as e:
         logger.error(f"[Baseline] error path={zawa_path}: {e}", exc_info=True)
@@ -123,38 +122,48 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
     return payload, None
 
 
-def _fetch_by_id(zawa_path: str, param_name: str, id_value: int, cache_prefix: str):
+def _fetch_by_id(zawa_path: str, param_name: str, id_str: str, cache_prefix: str):
     """
-    Generic fetch untuk endpoint by-nik / keluarga-by-nik.
-    Response bisa berupa: list langsung, atau dict { items/data: [...] }
+    Hit endpoint by-nik dengan ID dikirim sebagai STRING
+    (menghindari float/int overflow pada angka 16 digit).
     """
-    cache_key = f"{cache_prefix}:{id_value}"
+    cache_key = f"{cache_prefix}:{id_str}"
     now = time.time()
     cached = _CACHE.get(cache_key)
     if cached and (now - cached["ts"]) < CACHE_TTL:
         return cached["payload"], None
 
     url = f"{ZAWA_BASE}/{zawa_path}"
-    logger.info(f"[Baseline] fetch {zawa_path} {param_name}={id_value}")
+    # Kirim sebagai string — requests akan encode jadi query param tanpa konversi numerik
+    params = {param_name: id_str}
+    logger.info(f"[Baseline] fetch {zawa_path} {param_name}={id_str}")
     try:
-        resp = requests.get(url, params={param_name: id_value},
-                            timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
+        resp = requests.get(url, params=params, timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
+        logger.info(f"[Baseline] by-id status={resp.status_code} path={zawa_path}")
         resp.raise_for_status()
         raw = resp.json()
     except requests.exceptions.Timeout:
         return None, "Timeout saat menghubungi ZAWA."
     except requests.exceptions.HTTPError as e:
-        return None, f"ZAWA HTTP error: {e}"
+        status = e.response.status_code if e.response is not None else 0
+        body   = e.response.text[:200] if e.response is not None else ""
+        logger.error(f"[Baseline] by-id HTTP {status} path={zawa_path} body={body}")
+        return None, f"ZAWA HTTP error {status}: {body}"
     except Exception as e:
+        logger.error(f"[Baseline] by-id error path={zawa_path}: {e}", exc_info=True)
         return None, f"Error: {e}"
 
-    data_obj = raw.get("data", {})
+    # Normalise berbagai bentuk response ZAWA
+    data_obj = raw.get("data")
     if isinstance(data_obj, list):
         items = data_obj
     elif isinstance(data_obj, dict):
         items = data_obj.get("items") or data_obj.get("data") or []
-        # jika tidak ada nested, cek apakah data_obj sendiri adalah 1 record
-        if not items and data_obj:
+        if not items and any(k not in ("items", "data", "limit", "currentPage",
+                                       "totalItems", "totalPages", "hasNextPage",
+                                       "hasPreviousPage", "nextCursor")
+                             for k in data_obj):
+            # data_obj sendiri adalah 1 record
             items = [data_obj]
     else:
         items = []
@@ -167,7 +176,7 @@ def _fetch_by_id(zawa_path: str, param_name: str, id_value: int, cache_prefix: s
         "hasNextPage":     False,
         "hasPreviousPage": False,
         "nextCursor":      None,
-        "limit":           len(items),
+        "limit":           max(len(items), 1),
         "search_mode":     "by_id",
     }
     _CACHE[cache_key] = {"payload": payload, "ts": now}
@@ -252,11 +261,11 @@ def baseline_anggota():
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
 
-    # Jika search berupa NIK (angka >=10 digit) → hit anggota-by-nik
+    # NIK (angka >=10 digit) → hit anggota-by-nik langsung
     if search and _is_numeric_id(search):
         payload, err = _fetch_by_id(
             "zawa/anggota-by-nik", "nomor_induk_kependudukan",
-            int(search), "anggota-by-nik"
+            search.strip(), "anggota-by-nik"
         )
         if err:
             return jsonify({"error": err}), 502
@@ -287,11 +296,11 @@ def baseline_keluarga():
     cursor = request.args.get('cursor') or None
     search = request.args.get('search', '').strip()
 
-    # Jika search berupa NKK (angka >=10 digit) → hit keluarga-by-nik
+    # NKK (angka >=10 digit) → hit keluarga-by-nik langsung
     if search and _is_numeric_id(search):
         payload, err = _fetch_by_id(
             "zawa/keluarga-by-nik", "nomor_kartu_keluarga",
-            int(search), "keluarga-by-nkk"
+            search.strip(), "keluarga-by-nkk"
         )
         if err:
             return jsonify({"error": err}), 502
