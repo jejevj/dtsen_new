@@ -8,19 +8,27 @@ from app.extensions import db
 from app.models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 import requests
 
-# ─── Konstanta ──────────────────────────────────────────────────────────────────
+# ─── Konstanta ────────────────────────────────────────────────────────────────────────
 ZAWA_BASE_URL  = "https://spl-satudata.kemenag.go.id/core/api/zawa"
 ZAWA_API_KEY   = os.getenv("ZAWA_API_KEY", "prod-53a81004-085d-426b-a5a0-c6ef6cdf18e1")
 ZAWA_PAGE_SIZE = 100
 
+# Dibaca ulang di dalam fungsi agar perubahan .env + docker restart langsung efektif
+def _get_max_keluarga() -> int:
+    return int(os.getenv("MAX_KELUARGA_TOTAL", "5000000"))
+
+def _get_max_anggota() -> int:
+    return int(os.getenv("MAX_ANGGOTA_PER_PROVINSI", "500000"))
+
+# Expose sebagai konstanta untuk kompatibilitas sync_worker.py
 MAX_ANGGOTA_PER_PROVINSI = int(os.getenv("MAX_ANGGOTA_PER_PROVINSI", "500000"))
 MAX_KELUARGA_TOTAL       = int(os.getenv("MAX_KELUARGA_TOTAL", "5000000"))
 
 RETRY_MAX   = 3
 RETRY_DELAY = 5
 
-# ─── State tracker ──────────────────────────────────────────────────────────────
-_running_jobs: dict[str, bool] = {}
+# ─── State tracker ────────────────────────────────────────────────────────────────────
+running_jobs: dict[str, bool] = {}
 _jobs_lock = threading.Lock()
 
 
@@ -95,11 +103,14 @@ def _clear_page(job_id: str):
         os.remove(path)
 
 
-# ─── Core sync functions ─────────────────────────────────────────────────────────
+# ─── Core sync functions ───────────────────────────────────────────────────────────────────
 def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
     job_id = f"anggota_{provinsi}_{sync_log_id}"
     logger = get_sync_logger(job_id)
     logger.info(f"=== MULAI sync anggota provinsi={provinsi} ===")
+
+    max_saved = _get_max_anggota()  # baca env saat sync dimulai
+    logger.info(f"Batas MAX_ANGGOTA_PER_PROVINSI={max_saved}")
 
     total_saved   = 0
     total_fetched = 0
@@ -114,8 +125,9 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
 
         try:
             while True:
-                if MAX_ANGGOTA_PER_PROVINSI > 0 and total_fetched >= MAX_ANGGOTA_PER_PROVINSI:
-                    logger.info(f"Batas {MAX_ANGGOTA_PER_PROVINSI} baris tercapai.")
+                # Batas dihitung dari total_saved (data tersimpan ke DB)
+                if max_saved > 0 and total_saved >= max_saved:
+                    logger.info(f"Batas {max_saved} rows tersimpan tercapai. Berhenti.")
                     break
 
                 params = {"provinsi": provinsi, "limit": ZAWA_PAGE_SIZE, "page": page}
@@ -145,7 +157,7 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
                 logger.info(
                     f"Page {page}/{page_data.get('totalPages','?')} OK | "
                     f"+{batch_fetched} fetched +{batch_saved} saved | "
-                    f"total={total_fetched}"
+                    f"total_fetched={total_fetched} total_saved={total_saved}/{max_saved}"
                 )
 
                 if not page_data.get("hasNextPage"):
@@ -175,13 +187,16 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
 
         finally:
             with _jobs_lock:
-                _running_jobs.pop(job_id, None)
+                running_jobs.pop(job_id, None)
 
 
 def _sync_keluarga(app, sync_log_id: int):
     job_id = f"keluarga_{sync_log_id}"
     logger = get_sync_logger(job_id)
     logger.info("=== MULAI sync keluarga ===")
+
+    max_saved = _get_max_keluarga()  # baca env saat sync dimulai
+    logger.info(f"Batas MAX_KELUARGA_TOTAL={max_saved}")
 
     total_saved   = 0
     total_fetched = 0
@@ -196,8 +211,9 @@ def _sync_keluarga(app, sync_log_id: int):
 
         try:
             while True:
-                if MAX_KELUARGA_TOTAL > 0 and total_fetched >= MAX_KELUARGA_TOTAL:
-                    logger.info(f"Batas {MAX_KELUARGA_TOTAL} baris tercapai.")
+                # Batas dihitung dari total_saved (data tersimpan ke DB)
+                if max_saved > 0 and total_saved >= max_saved:
+                    logger.info(f"Batas {max_saved} rows tersimpan tercapai. Berhenti.")
                     break
 
                 params = {"limit": ZAWA_PAGE_SIZE, "page": page}
@@ -227,7 +243,7 @@ def _sync_keluarga(app, sync_log_id: int):
                 logger.info(
                     f"Page {page}/{page_data.get('totalPages','?')} OK | "
                     f"+{batch_fetched} fetched +{batch_saved} saved | "
-                    f"total={total_fetched}"
+                    f"total_fetched={total_fetched} total_saved={total_saved}/{max_saved}"
                 )
 
                 if not page_data.get("hasNextPage"):
@@ -257,17 +273,17 @@ def _sync_keluarga(app, sync_log_id: int):
 
         finally:
             with _jobs_lock:
-                _running_jobs.pop(job_id, None)
+                running_jobs.pop(job_id, None)
 
 
-# ─── Public API ──────────────────────────────────────────────────────────────────
+# ─── Public API ────────────────────────────────────────────────────────────────────────
 def start_sync_anggota(app, provinsi: str) -> dict:
     job_key = f"anggota_{provinsi}"
 
     with _jobs_lock:
-        if _running_jobs.get(job_key):
+        if running_jobs.get(job_key):
             return {"status": "already_running", "job_key": job_key}
-        _running_jobs[job_key] = True
+        running_jobs[job_key] = True
 
     with app.app_context():
         log = ZawaSyncLog(sync_type=f"anggota_{provinsi}", status="pending")
@@ -295,9 +311,9 @@ def start_sync_keluarga(app) -> dict:
     job_key = "keluarga"
 
     with _jobs_lock:
-        if _running_jobs.get(job_key):
+        if running_jobs.get(job_key):
             return {"status": "already_running", "job_key": job_key}
-        _running_jobs[job_key] = True
+        running_jobs[job_key] = True
 
     with app.app_context():
         log = ZawaSyncLog(sync_type="keluarga", status="pending")
@@ -323,4 +339,4 @@ def start_sync_keluarga(app) -> dict:
 
 def get_running_jobs() -> list:
     with _jobs_lock:
-        return list(_running_jobs.keys())
+        return list(running_jobs.keys())
