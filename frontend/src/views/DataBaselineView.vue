@@ -44,7 +44,7 @@
               />
             </div>
 
-            <!-- Kabkota (muncul jika skala 1=nasional atau 2=provinsi) -->
+            <!-- Kabkota (muncul jika provinsi sudah dipilih) -->
             <div v-if="showKabkota" class="flex flex-col gap-1 min-w-[220px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kabupaten / Kota</label>
               <Select
@@ -58,7 +58,7 @@
               />
             </div>
 
-            <!-- Kecamatan (muncul jika kabkota dipilih atau skala 3) -->
+            <!-- Kecamatan (muncul jika kabkota dipilih) -->
             <div v-if="showKecamatan" class="flex flex-col gap-1 min-w-[220px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kecamatan</label>
               <Select
@@ -144,14 +144,14 @@ import Button        from 'primevue/button'
 import InputText     from 'primevue/inputtext'
 import Select        from 'primevue/select'
 import {
-  fetchWilayahDropdown,
+  fetchBaselineProvinsi,
   fetchKabkota,
   fetchKecamatan,
   fetchBaselineAnggota,
   fetchBaselineKeluarga,
 } from '@/services/baselineService'
 
-// ── Tabs ──────────────────────────────────────────────────────
+// ── Tabs ─────────────────────────────────────────────────
 const tabs = [
   { key: 'anggota',  label: 'Anggota',  icon: 'pi pi-users' },
   { key: 'keluarga', label: 'Keluarga', icon: 'pi pi-home' },
@@ -166,55 +166,44 @@ function switchTab(key) {
   }
 }
 
-// ── Wilayah dropdown state ────────────────────────────────────
+// ── Wilayah dropdown state ──────────────────────────────
 const wilayahLoading   = ref(false)
 const kabkotaLoading   = ref(false)
 const kecamatanLoading = ref(false)
 
-const skala           = ref(0)   // 1=nasional, 2=provinsi, 3=kabkota
-const provinsiOptions = ref([])  // [{ kode, label }]
-const kabkotaOptions  = ref([])  // [{ kode, nama, provinsi_kode }]
-const kecamatanOptions = ref([]) // [{ kode, nama, kabkota_kode }]
+const provinsiOptions  = ref([])  // [{ kode, label, slug }] dari /baseline/provinsi
+const kabkotaOptions   = ref([])  // [{ kode, nama }]
+const kecamatanOptions = ref([])  // [{ kode, nama }]
 
-// Kapan dropdown kabkota & kecamatan muncul
-const showKabkota   = computed(() => anggota.provinsi)
-const showKecamatan = computed(() => anggota.kabkota || skala.value === 3)
+const showKabkota   = computed(() => !!anggota.provinsi)
+const showKecamatan = computed(() => !!anggota.kabkota)
 
-// ── Load wilayah saat mount ────────────────────────────────────
+// ── Load provinsi saat mount — pakai /baseline/provinsi ────────
 async function loadWilayah() {
   wilayahLoading.value = true
   try {
-    const res = await fetchWilayahDropdown()
-    skala.value = res.skala ?? 0
+    // fetchBaselineProvinsi() → GET /baseline/provinsi
+    // Return: [{ kode, label, slug }] sesuai akses user
+    const list = await fetchBaselineProvinsi()
+    provinsiOptions.value = list
 
-    // Normalisasi provinsi options: backend bisa kirim {kode, nama} atau {kode, label}
-    provinsiOptions.value = (res.provinsi ?? []).map(p => ({
-      kode:  p.kode,
-      label: p.nama ?? p.label,
-    }))
-
-    // Skala 3 (kabkota): langsung isi kabkota & kecamatan dari response awal
-    if (skala.value === 3) {
-      kabkotaOptions.value  = res.kabkota  ?? []
-      kecamatanOptions.value = res.kecamatan ?? []
-      // Auto-set provinsi & kabkota jika hanya 1 pilihan
-      if (provinsiOptions.value.length === 1)
-        anggota.provinsi = provinsiOptions.value[0].kode
-      if (kabkotaOptions.value.length === 1)
-        anggota.kabkota = kabkotaOptions.value[0].kode
+    // Auto-select jika hanya 1 pilihan
+    if (list.length === 1) {
+      anggota.provinsi = list[0].kode
+      onProvinsiChange()
     }
   } catch (e) {
-    console.error('[Wilayah] gagal load dropdown:', e)
+    console.error('[Wilayah] gagal load provinsi:', e)
   } finally {
     wilayahLoading.value = false
   }
 }
 
-// ── Saat provinsi dipilih → load kabkota ──────────────────────
+// ── Saat provinsi dipilih → load kabkota ────────────────────
 async function onProvinsiChange() {
   anggota.kabkota    = ''
   anggota.kecamatan  = ''
-  kabkotaOptions.value  = []
+  kabkotaOptions.value   = []
   kecamatanOptions.value = []
 
   if (!anggota.provinsi) return
@@ -229,7 +218,7 @@ async function onProvinsiChange() {
   }
 }
 
-// ── Saat kabkota dipilih → load kecamatan ─────────────────────
+// ── Saat kabkota dipilih → load kecamatan ─────────────────
 async function onKabkotaChange() {
   anggota.kecamatan = ''
   kecamatanOptions.value = []
@@ -246,7 +235,7 @@ async function onKabkotaChange() {
   }
 }
 
-// ── Table state factory ────────────────────────────────────────
+// ── Table state factory ──────────────────────────────────
 function makeTableState() {
   return reactive({
     loading: false, error: '',
@@ -266,7 +255,7 @@ function makeTableState() {
 const anggota  = makeTableState()
 const keluarga = makeTableState()
 
-// ── Anggota ───────────────────────────────────────────────────
+// ── Anggota ───────────────────────────────────────────
 async function loadAnggota(cursor = null) {
   if (!anggota.provinsi) return
   anggota.loading = true; anggota.error = ''
@@ -276,7 +265,6 @@ async function loadAnggota(cursor = null) {
       cursor:   cursor || undefined,
       search:   anggota.search.trim() || undefined,
     }
-    // Kirim filter kabkota & kecamatan ke backend jika dipilih
     if (anggota.kabkota)   params.kabkota_kode   = anggota.kabkota
     if (anggota.kecamatan) params.kecamatan_kode = anggota.kecamatan
 
@@ -310,7 +298,7 @@ function resetAnggota() {
   })
 }
 
-// ── Keluarga ──────────────────────────────────────────────────
+// ── Keluarga ─────────────────────────────────────────
 async function loadKeluarga(cursor = null) {
   keluarga.loading = true; keluarga.error = ''
   try {
