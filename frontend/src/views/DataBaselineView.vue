@@ -37,7 +37,7 @@
               v-model="search"
               placeholder="Nama / NIK…"
               class="text-sm w-full"
-              @keyup.enter="load"
+              @keyup.enter="() => load(1)"
             />
           </div>
 
@@ -49,7 +49,7 @@
               size="small"
               :disabled="!selectedProvinsi"
               :loading="tableLoading"
-              @click="load"
+              @click="() => load(1)"
             />
             <Button
               label="Reset"
@@ -149,12 +149,12 @@
             <Button
               icon="pi pi-angle-left" text rounded size="small"
               :disabled="meta.page <= 1"
-              @click="changePage(meta.page - 1)"
+              @click="() => changePage(meta.page - 1)"
             />
             <Button
               icon="pi pi-angle-right" text rounded size="small"
               :disabled="meta.page >= meta.pages"
-              @click="changePage(meta.page + 1)"
+              @click="() => changePage(meta.page + 1)"
             />
           </div>
         </div>
@@ -206,7 +206,7 @@ async function load(page = 1) {
   try {
     const res = await fetchBaselineData({
       provinsi: selectedProvinsi.value,
-      page,
+      page: Number(page),
       per_page: meta.per_page,
       search: search.value.trim() || undefined,
     })
@@ -230,7 +230,6 @@ function reset() {
   Object.assign(meta, { page: 1, per_page: 20, total: 0, pages: 1, label: '', provinsi: '' })
 }
 
-// Label kolom: ganti underscore → spasi, capitalize tiap kata
 function formatColLabel(key) {
   return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
