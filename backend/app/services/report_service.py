@@ -75,9 +75,8 @@ _KABKOTA_PLACEHOLDER = [
     {'provinsi_kode': '36', 'kabkota_kode': '3674', 'kabkota_nama': 'Kota Tangerang Sel.','mustahik': 22000, 'penyaluran': 72000000000,  'laz_count': 2},
 ]
 
-# Placeholder kecamatan — beberapa kecamatan per kabkota
+# Placeholder kecamatan
 _KECAMATAN_PLACEHOLDER = [
-    # Kota Bandung (3273)
     {'kabkota_kode': '3273', 'kecamatan_kode': '3273010', 'kecamatan_nama': 'Sukasari',        'mustahik': 3200, 'penyaluran': 8500000000,  'laz_count': 1},
     {'kabkota_kode': '3273', 'kecamatan_kode': '3273020', 'kecamatan_nama': 'Coblong',          'mustahik': 4100, 'penyaluran': 11200000000, 'laz_count': 1},
     {'kabkota_kode': '3273', 'kecamatan_kode': '3273030', 'kecamatan_nama': 'Cidadap',          'mustahik': 2800, 'penyaluran': 7400000000,  'laz_count': 1},
@@ -86,7 +85,6 @@ _KECAMATAN_PLACEHOLDER = [
     {'kabkota_kode': '3273', 'kecamatan_kode': '3273060', 'kecamatan_nama': 'Bandung Wetan',    'mustahik': 1500, 'penyaluran': 4200000000,  'laz_count': 1},
     {'kabkota_kode': '3273', 'kecamatan_kode': '3273070', 'kecamatan_nama': 'Sumur Bandung',    'mustahik': 2100, 'penyaluran': 5700000000,  'laz_count': 1},
     {'kabkota_kode': '3273', 'kecamatan_kode': '3273080', 'kecamatan_nama': 'Cibeunying Kidul', 'mustahik': 3900, 'penyaluran': 10500000000, 'laz_count': 1},
-    # Kota Bekasi (3275)
     {'kabkota_kode': '3275', 'kecamatan_kode': '3275010', 'kecamatan_nama': 'Bekasi Utara',     'mustahik': 5200, 'penyaluran': 14000000000, 'laz_count': 1},
     {'kabkota_kode': '3275', 'kecamatan_kode': '3275020', 'kecamatan_nama': 'Bekasi Selatan',   'mustahik': 4800, 'penyaluran': 12800000000, 'laz_count': 1},
     {'kabkota_kode': '3275', 'kecamatan_kode': '3275030', 'kecamatan_nama': 'Bekasi Barat',     'mustahik': 4200, 'penyaluran': 11200000000, 'laz_count': 1},
@@ -95,21 +93,18 @@ _KECAMATAN_PLACEHOLDER = [
     {'kabkota_kode': '3275', 'kecamatan_kode': '3275060', 'kecamatan_nama': 'Jatiasih',         'mustahik': 5100, 'penyaluran': 13600000000, 'laz_count': 1},
     {'kabkota_kode': '3275', 'kecamatan_kode': '3275070', 'kecamatan_nama': 'Pondok Gede',      'mustahik': 6200, 'penyaluran': 16500000000, 'laz_count': 1},
     {'kabkota_kode': '3275', 'kecamatan_kode': '3275080', 'kecamatan_nama': 'Mustika Jaya',     'mustahik': 5800, 'penyaluran': 15400000000, 'laz_count': 1},
-    # Kota Surabaya (3578)
     {'kabkota_kode': '3578', 'kecamatan_kode': '3578010', 'kecamatan_nama': 'Tegalsari',        'mustahik': 3800, 'penyaluran': 12200000000, 'laz_count': 1},
     {'kabkota_kode': '3578', 'kecamatan_kode': '3578020', 'kecamatan_nama': 'Simokerto',        'mustahik': 4200, 'penyaluran': 13500000000, 'laz_count': 1},
     {'kabkota_kode': '3578', 'kecamatan_kode': '3578030', 'kecamatan_nama': 'Genteng',          'mustahik': 2900, 'penyaluran': 9800000000,  'laz_count': 1},
     {'kabkota_kode': '3578', 'kecamatan_kode': '3578040', 'kecamatan_nama': 'Bubutan',          'mustahik': 5100, 'penyaluran': 16400000000, 'laz_count': 1},
     {'kabkota_kode': '3578', 'kecamatan_kode': '3578050', 'kecamatan_nama': 'Wonokromo',        'mustahik': 6200, 'penyaluran': 19800000000, 'laz_count': 1},
     {'kabkota_kode': '3578', 'kecamatan_kode': '3578060', 'kecamatan_nama': 'Sawahan',          'mustahik': 5700, 'penyaluran': 18200000000, 'laz_count': 1},
-    # Jakarta Selatan (3174)
     {'kabkota_kode': '3174', 'kecamatan_kode': '3174010', 'kecamatan_nama': 'Tebet',            'mustahik': 2800, 'penyaluran': 25000000000, 'laz_count': 1},
     {'kabkota_kode': '3174', 'kecamatan_kode': '3174020', 'kecamatan_nama': 'Setiabudi',        'mustahik': 2100, 'penyaluran': 19500000000, 'laz_count': 1},
     {'kabkota_kode': '3174', 'kecamatan_kode': '3174030', 'kecamatan_nama': 'Mampang Prapatan', 'mustahik': 2400, 'penyaluran': 21000000000, 'laz_count': 1},
     {'kabkota_kode': '3174', 'kecamatan_kode': '3174040', 'kecamatan_nama': 'Pasar Minggu',     'mustahik': 3100, 'penyaluran': 28000000000, 'laz_count': 1},
     {'kabkota_kode': '3174', 'kecamatan_kode': '3174050', 'kecamatan_nama': 'Kebayoran Lama',   'mustahik': 3600, 'penyaluran': 32000000000, 'laz_count': 1},
     {'kabkota_kode': '3174', 'kecamatan_kode': '3174060', 'kecamatan_nama': 'Kebayoran Baru',   'mustahik': 1800, 'penyaluran': 16500000000, 'laz_count': 1},
-    # Kota Makassar (7371)
     {'kabkota_kode': '7371', 'kecamatan_kode': '7371010', 'kecamatan_nama': 'Mariso',           'mustahik': 3200, 'penyaluran': 8400000000,  'laz_count': 1},
     {'kabkota_kode': '7371', 'kecamatan_kode': '7371020', 'kecamatan_nama': 'Mamajang',         'mustahik': 2800, 'penyaluran': 7200000000,  'laz_count': 1},
     {'kabkota_kode': '7371', 'kecamatan_kode': '7371030', 'kecamatan_nama': 'Tamalate',         'mustahik': 4500, 'penyaluran': 11800000000, 'laz_count': 1},
@@ -117,23 +112,45 @@ _KECAMATAN_PLACEHOLDER = [
     {'kabkota_kode': '7371', 'kecamatan_kode': '7371050', 'kecamatan_nama': 'Makassar',         'mustahik': 3400, 'penyaluran': 9000000000,  'laz_count': 1},
 ]
 
+# Placeholder bidang program BAZNAS & LAZ
+_BIDANG_PLACEHOLDER = [
+    {'bidang_kode': 'SOSIAL',   'bidang_label': 'Zakat Sosial',           'total_penyaluran': 1_850_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'EKONOMI',  'bidang_label': 'Pemberdayaan Ekonomi',   'total_penyaluran': 1_240_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'PENDIDIK', 'bidang_label': 'Pendidikan',             'total_penyaluran':   980_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'KESEHATAN','bidang_label': 'Kesehatan',              'total_penyaluran':   760_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'DAKWAH',   'bidang_label': 'Dakwah & Advokasi',      'total_penyaluran':   420_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'KEMANUSIA','bidang_label': 'Kemanusiaan & Bencana',  'total_penyaluran':   310_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+]
+
 
 class ReportService:
     @staticmethod
     def get_summary(params: dict) -> dict:
-        return {'penerima_manfaat': 0, 'penyaluran': 0}
+        total = sum(p['penyaluran'] for p in _PROVINSI_PLACEHOLDER)
+        mustahik = sum(p['mustahik'] for p in _PROVINSI_PLACEHOLDER)
+        return {'penerima_manfaat': mustahik, 'penyaluran': total}
 
     @staticmethod
     def get_by_gender(params: dict) -> dict:
-        return {'male_count': 0, 'female_count': 0, 'total': 0}
+        total_mustahik = sum(p['mustahik'] for p in _PROVINSI_PLACEHOLDER)
+        male   = int(total_mustahik * 0.485)
+        female = total_mustahik - male
+        return {'male_count': male, 'female_count': female, 'total': total_mustahik}
 
     @staticmethod
     def get_by_bidang(params: dict) -> list:
-        return []
+        return _BIDANG_PLACEHOLDER
 
     @staticmethod
     def get_timeseries(params: dict) -> list:
-        return []
+        return [
+            {'tahun': 2020, 'Bantuan_Langsung': 2_100_000_000_000, 'Bantuan_Tidak_Langsung':  820_000_000_000},
+            {'tahun': 2021, 'Bantuan_Langsung': 2_450_000_000_000, 'Bantuan_Tidak_Langsung':  950_000_000_000},
+            {'tahun': 2022, 'Bantuan_Langsung': 2_890_000_000_000, 'Bantuan_Tidak_Langsung': 1_100_000_000_000},
+            {'tahun': 2023, 'Bantuan_Langsung': 3_310_000_000_000, 'Bantuan_Tidak_Langsung': 1_250_000_000_000},
+            {'tahun': 2024, 'Bantuan_Langsung': 3_820_000_000_000, 'Bantuan_Tidak_Langsung': 1_480_000_000_000},
+            {'tahun': 2025, 'Bantuan_Langsung': 4_100_000_000_000, 'Bantuan_Tidak_Langsung': 1_660_000_000_000},
+        ]
 
     @staticmethod
     def get_desil_summary(params: dict) -> dict:
@@ -145,7 +162,19 @@ class ReportService:
 
     @staticmethod
     def get_home_summary() -> dict:
-        return {'total_penyaluran': 0, 'nasional': 0, 'provinsi': 0, 'kabkota': 0}
+        total_penyaluran = sum(p['penyaluran'] for p in _PROVINSI_PLACEHOLDER)
+        penerima_manfaat = sum(p['mustahik']   for p in _PROVINSI_PLACEHOLDER)
+        # hitungan LAZ dari jumlah unik laz_count per kategori (placeholder)
+        nasional = 34   # BAZNAS Nasional + LAZ Nasional
+        provinsi = 136  # BAZNAS Provinsi + LAZ Provinsi
+        kabkota  = 514  # BAZNAS Kab/Kota + LAZ Kab/Kota
+        return {
+            'total_penyaluran': total_penyaluran,
+            'penerima_manfaat': penerima_manfaat,
+            'nasional': nasional,
+            'provinsi': provinsi,
+            'kabkota':  kabkota,
+        }
 
     @staticmethod
     def get_map_data(level: str, provinsi_kode: str = None, kabkota_kode: str = None) -> list:
