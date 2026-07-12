@@ -38,6 +38,12 @@ class TDtsenAkses(db.Model):
     created_at             = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
     updated_at             = db.Column(db.DateTime, nullable=True)
 
+    # Relasi ke wilayah dan dokumen
+    wilayah   = db.relationship('TDtsenWilayah',  backref='akses', lazy='dynamic',
+                                foreign_keys='TDtsenWilayah.dtsen_akses_id')
+    dokumen   = db.relationship('TDtsenDokumen',  backref='akses', lazy='dynamic',
+                                foreign_keys='TDtsenDokumen.dtsen_akses_id')
+
     @property
     def user_type(self):
         """Selalu 'dtsen' — dipakai auth service untuk membedakan tipe user."""
