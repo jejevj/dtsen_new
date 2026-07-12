@@ -16,8 +16,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Buat folder logs agar tersedia sejak image build
+RUN mkdir -p /app/logs/sync
+
+# Copy dan set permission entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Expose internal port
 EXPOSE 5000
 
-# Run with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "wsgi:app"]
+# Gunakan entrypoint untuk auto-start sync worker + gunicorn
+CMD ["/entrypoint.sh"]
