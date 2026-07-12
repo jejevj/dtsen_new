@@ -86,12 +86,10 @@ def _normalize_kode(raw: str) -> tuple[str, str]:
     Format lain dikembalikan apa adanya di keduanya.
     """
     s = raw.strip()
-    # Sudah ada titik → plainnya tinggal hapus titik
     if '.' in s:
         plain  = s.replace('.', '')
         dotted = s
         return dotted, plain
-    # Tanpa titik — deteksi panjang
     digits = re.sub(r'\D', '', s)
     if len(digits) == 4:
         dotted = f"{digits[:2]}.{digits[2:]}"
@@ -156,18 +154,21 @@ def _laz_skala(dtsen: TDtsenAkses | None) -> int | None:
 
 def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
     """
-    Return None  → akses penuh semua provinsi (tuser / LAZ skala Nasional).
-    Return []    → tidak ada akses (akun tidak ditemukan).
+    Return None   → akses penuh semua provinsi (hanya tuser/admin).
+    Return []     → tidak ada akses (akun tidak ditemukan).
     Return [...]  → hanya provinsi yang tercatat di t_dtsen_wilayah.
+
+    Semua skala LAZ (1/2/3) dibatasi oleh provinsi di t_dtsen_wilayah.
+    Perbedaan skala hanya berlaku pada level kabkota & kecamatan:
+      - Skala 1 (Nasional) : kabkota & kecamatan bebas semua
+      - Skala 2 (Provinsi) : kecamatan bebas semua, kabkota sesuai t_dtsen_wilayah
+      - Skala 3 (Kab/Kota) : kabkota & kecamatan sesuai t_dtsen_wilayah
     """
     if _is_tuser(identity):
         return None
     dtsen = _get_dtsen_akses(identity)
     if dtsen is None:
         return []
-    # FIX: LAZ skala 1 (Nasional) → akses penuh semua provinsi, sama seperti tuser
-    if _laz_skala(dtsen) == 1:
-        return None
     rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
     allowed = []
     for row in rows:
@@ -178,22 +179,32 @@ def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
     return allowed
 
 def _get_allowed_kabkota(identity: dict) -> list[str] | None:
+    """
+    Return None   → kabkota bebas semua (tuser atau LAZ skala 1 Nasional).
+    Return [...]  → hanya kabkota yang tercatat di t_dtsen_wilayah.
+    """
     if _is_tuser(identity):
         return None
     dtsen = _get_dtsen_akses(identity)
     if dtsen is None:
         return []
+    # Skala 1 (Nasional): provinsi dibatasi, tapi kabkota bebas semua
     if _laz_skala(dtsen) == 1:
         return None
     rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
     return list({r.kabkota_kode for r in rows if r.kabkota_kode})
 
 def _get_allowed_kecamatan(identity: dict) -> list[str] | None:
+    """
+    Return None   → kecamatan bebas semua (tuser atau LAZ skala 1/2).
+    Return [...]  → hanya kecamatan yang tercatat di t_dtsen_wilayah.
+    """
     if _is_tuser(identity):
         return None
     dtsen = _get_dtsen_akses(identity)
     if dtsen is None:
         return []
+    # Skala 1 (Nasional) & 2 (Provinsi): kecamatan bebas semua
     if _laz_skala(dtsen) in (1, 2):
         return None
     rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
@@ -693,13 +704,11 @@ def baseline_anggota():
         return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
 
     # ── Normalisasi kode kabkota / kecamatan ─────────────────
-    # Bisa masuk "1106" atau "11.06" — keduanya valid
     kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
         kabkota_dotted, kabkota_plain = _normalize_kode(kabkota_filter)
         allowed_kabkota = _get_allowed_kabkota(identity)
         if allowed_kabkota is not None:
-            # cek apakah salah satu format ada di allowed list
             if kabkota_dotted not in allowed_kabkota and kabkota_plain not in allowed_kabkota:
                 return jsonify({"error": "Akses ditolak. Kabupaten/Kota ini tidak termasuk wilayah Anda."}), 403
 
@@ -734,7 +743,6 @@ def baseline_anggota():
     if not cursor:
         q = ZawaAnggota.query.filter_by(provinsi_slug=provinsi)
         if kabkota_dotted:
-            # match "11.06" ATAU "1106" — backward compatible
             q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))
         if kecamatan_dotted:
             q = q.filter(_kode_filter(ZawaAnggota.kode_kecamatan_ktp, kecamatan_filter))
@@ -745,11 +753,10 @@ def baseline_anggota():
                                {"searchMode": "db_cache", "source": "local_db",
                                 "totalItems": len(items), "limit": ZAWA_LIMIT})
 
-    # ── Fallback ke ZAWA — teruskan filter kabkota/kecamatan ─
+    # ── Fallback ke ZAWA ─────────────────────────────────────
     params: dict = {}
     if cursor:
         params["cursor"] = cursor
-    # ZAWA menerima kode dengan titik (format BPS resmi)
     if kabkota_dotted:
         params["kode_kabupaten_kota"] = kabkota_dotted
     if kecamatan_dotted:
