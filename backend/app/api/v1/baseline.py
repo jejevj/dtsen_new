@@ -49,11 +49,10 @@ PROVINSI_MAP = {
 }
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
-ZAWA_TIMEOUT = 30  # naikkan dari 15 ke 30 detik
+ZAWA_TIMEOUT = 30
 
-# Simple in-memory cache: { slug: { "data": [...], "ts": float } }
 _CACHE: dict = {}
-CACHE_TTL = 600  # 10 menit
+CACHE_TTL = 600
 
 
 def _safe_int(val, default, min_val=1, max_val=None):
@@ -68,53 +67,102 @@ def _safe_int(val, default, min_val=1, max_val=None):
 
 
 def _fetch_zawa(slug: str):
-    """
-    Fetch data ZAWA untuk satu slug. Hasil di-cache 10 menit.
-    Return (rows: list, error: str|None)
-    """
     now = time.time()
     cached = _CACHE.get(slug)
     if cached and (now - cached["ts"]) < CACHE_TTL:
-        logger.info(f"[Baseline] cache hit untuk slug={slug}")
+        logger.info(f"[Baseline] cache hit slug={slug}")
         return cached["data"], None
 
     url = f"{ZAWA_BASE}/zawa/{slug}"
     logger.info(f"[Baseline] fetch ZAWA url={url}")
     try:
-        resp = requests.get(
-            url,
-            timeout=ZAWA_TIMEOUT,
-            headers={"Accept": "application/json"},
-            verify=True,
-        )
+        resp = requests.get(url, timeout=ZAWA_TIMEOUT, headers={"Accept": "application/json"})
         logger.info(f"[Baseline] ZAWA response status={resp.status_code} slug={slug}")
         resp.raise_for_status()
         raw = resp.json()
     except requests.exceptions.SSLError as e:
         logger.error(f"[Baseline] SSL error slug={slug}: {e}")
-        return None, f"SSL error saat menghubungi sumber data ZAWA: {e}"
+        return None, f"SSL error: {e}"
     except requests.exceptions.ConnectionError as e:
         logger.error(f"[Baseline] Connection error slug={slug}: {e}")
-        return None, f"Tidak dapat terhubung ke sumber data ZAWA: {e}"
+        return None, f"Tidak dapat terhubung ke ZAWA: {e}"
     except requests.exceptions.Timeout:
         logger.error(f"[Baseline] Timeout slug={slug}")
-        return None, "Timeout saat menghubungi sumber data ZAWA (>30 detik)."
+        return None, "Timeout (>30 detik) saat menghubungi ZAWA."
     except requests.exceptions.HTTPError as e:
         logger.error(f"[Baseline] HTTP error slug={slug}: {e}")
-        return None, f"Sumber data ZAWA mengembalikan error HTTP: {e}"
+        return None, f"ZAWA HTTP error: {e}"
     except Exception as e:
         logger.error(f"[Baseline] Unexpected error slug={slug}: {e}", exc_info=True)
-        return None, f"Gagal mengambil data dari ZAWA: {e}"
+        return None, f"Error tidak terduga: {e}"
 
     rows = raw.get('data') or []
     if not isinstance(rows, list):
         rows = []
 
     _CACHE[slug] = {"data": rows, "ts": now}
-    logger.info(f"[Baseline] cached {len(rows)} rows untuk slug={slug}")
+    logger.info(f"[Baseline] cached {len(rows)} rows slug={slug}")
     return rows, None
 
 
+# ── Diagnostik ────────────────────────────────────────────────────────────────
+@api_v1_bp.get('/baseline/ping')
+@jwt_required()
+def baseline_ping():
+    """
+    Test koneksi dari server ke ZAWA.
+    Gunakan untuk diagnosa apakah server produksi bisa reach spl-satudata.kemenag.go.id
+    """
+    import socket
+    results = {}
+
+    # 1. DNS resolve
+    host = "spl-satudata.kemenag.go.id"
+    try:
+        ip = socket.gethostbyname(host)
+        results["dns"] = {"ok": True, "ip": ip}
+    except Exception as e:
+        results["dns"] = {"ok": False, "error": str(e)}
+
+    # 2. TCP connect port 443
+    try:
+        s = socket.create_connection((host, 443), timeout=5)
+        s.close()
+        results["tcp_443"] = {"ok": True}
+    except Exception as e:
+        results["tcp_443"] = {"ok": False, "error": str(e)}
+
+    # 3. HTTP GET ke endpoint ZAWA (slug aceh = anggota)
+    test_url = f"{ZAWA_BASE}/zawa/anggota"
+    t0 = time.time()
+    try:
+        resp = requests.get(test_url, timeout=15, headers={"Accept": "application/json"})
+        elapsed = round(time.time() - t0, 2)
+        try:
+            body_sample = resp.text[:200]
+        except Exception:
+            body_sample = "(tidak bisa baca body)"
+        results["http_get"] = {
+            "ok":      resp.status_code < 400,
+            "status":  resp.status_code,
+            "elapsed": f"{elapsed}s",
+            "sample":  body_sample,
+        }
+    except requests.exceptions.SSLError as e:
+        results["http_get"] = {"ok": False, "error": f"SSLError: {e}"}
+    except requests.exceptions.ConnectionError as e:
+        results["http_get"] = {"ok": False, "error": f"ConnectionError: {e}"}
+    except requests.exceptions.Timeout:
+        results["http_get"] = {"ok": False, "error": "Timeout >15s"}
+    except Exception as e:
+        results["http_get"] = {"ok": False, "error": str(e)}
+
+    overall_ok = all(v.get("ok") for v in results.values())
+    logger.info(f"[Baseline] ping results: {results}")
+    return jsonify({"ok": overall_ok, "checks": results, "target": host}), 200 if overall_ok else 502
+
+
+# ── Provinsi list ─────────────────────────────────────────────────────────────
 @api_v1_bp.get('/baseline/provinsi')
 @jwt_required()
 def baseline_provinsi_list():
@@ -125,6 +173,7 @@ def baseline_provinsi_list():
     return jsonify({"data": items}), 200
 
 
+# ── Data baseline ─────────────────────────────────────────────────────────────
 @api_v1_bp.get('/baseline')
 @jwt_required()
 def baseline_data():
@@ -172,7 +221,6 @@ def baseline_data():
 @api_v1_bp.delete('/baseline/cache')
 @jwt_required()
 def baseline_clear_cache():
-    """Endpoint untuk flush cache ZAWA secara manual (admin)."""
     _CACHE.clear()
     logger.info("[Baseline] cache di-flush manual")
     return jsonify({"message": "Cache berhasil dikosongkan."}), 200
