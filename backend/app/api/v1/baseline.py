@@ -376,6 +376,11 @@ def _build_db_cursor(page: int) -> str:
 # ─── DB cache helpers ─────────────────────────────────────────
 
 def _cache_anggota_to_db(items: list, provinsi_slug: str):
+    """
+    Simpan anggota ke DB. provinsi_slug dipakai sebagai default,
+    tapi jika item memiliki kode_provinsi_ktp yang valid, slug diturunkan
+    dari BPS kode agar data tidak salah label provinsi.
+    """
     if not items:
         return 0
     saved = 0
@@ -383,9 +388,20 @@ def _cache_anggota_to_db(items: list, provinsi_slug: str):
         nik = str(row.get("nomor_induk_kependudukan", "") or "").strip()
         if not nik:
             continue
-        if ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first():
+
+        # Tentukan provinsi_slug yang benar dari kode_provinsi_ktp jika tersedia
+        kode_prov_ktp = str(row.get("kode_provinsi_ktp") or "").strip().zfill(2)
+        correct_slug  = _BPS_TO_SLUG.get(kode_prov_ktp) or provinsi_slug
+
+        existing = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first()
+        if existing:
+            # Perbaiki provinsi_slug jika selama ini salah
+            if existing.provinsi_slug != correct_slug and correct_slug:
+                existing.provinsi_slug = correct_slug
+                db.session.add(existing)
             continue
-        db.session.add(ZawaAnggota.from_api(row, provinsi_slug))
+
+        db.session.add(ZawaAnggota.from_api(row, correct_slug))
         saved += 1
     db.session.commit()
     return saved
@@ -633,6 +649,36 @@ def baseline_provinsi_list():
     return jsonify({"data": items, "scope": _get_wilayah_scope(identity)}), 200
 
 
+def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
+                             kabkota_filter, kecamatan_filter, search: str):
+    """
+    Bangun query ZawaAnggota dengan filter provinsi ganda:
+      - provinsi_slug = slug   (data yang disync dengan label benar)
+      - ATAU kode_provinsi_ktp = bps_kode  (data yang mungkin tersync dengan slug salah
+                                             tapi kode KTP-nya benar)
+    Ini menangani kasus data lama yang terlanjur disimpan dengan provinsi_slug
+    yang salah karena ZAWA endpoint Aceh mengembalikan data lintas provinsi.
+    """
+    prov_filter = db.or_(
+        ZawaAnggota.provinsi_slug == provinsi_slug,
+        ZawaAnggota.kode_provinsi_ktp == bps_kode,
+        ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),  # "11" dan "11" (tanpa leading zero jika kode < 10)
+    )
+    q = ZawaAnggota.query.filter(prov_filter)
+
+    if kabkota_filter:
+        q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))
+    if kecamatan_filter:
+        q = q.filter(_kode_filter(ZawaAnggota.kode_kecamatan_ktp, kecamatan_filter))
+    if search:
+        q_lower = f"%{search.lower()}%"
+        q = q.filter(db.or_(
+            ZawaAnggota.nama.ilike(q_lower),
+            ZawaAnggota.nomor_induk_kependudukan.ilike(q_lower),
+        ))
+    return q
+
+
 @api_v1_bp.get('/baseline/anggota')
 @jwt_required()
 def baseline_anggota():
@@ -654,6 +700,8 @@ def baseline_anggota():
 
     if allowed is not None and provinsi not in allowed:
         return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
+
+    bps_kode = info["bps"]  # misal "11" untuk Aceh, "31" untuk DKI
 
     kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
@@ -690,7 +738,7 @@ def baseline_anggota():
                 logger.warning(f"[Baseline] gagal cache anggota NIK={search}: {e}")
         return _build_table_response(payload, info["label"], provinsi)
 
-    # ── DB cache dengan pagination proper ────────────────────────
+    # ── DB cache dengan pagination proper ─────────────────────
     db_page = None
     if not cursor:
         db_page = 1
@@ -698,17 +746,13 @@ def baseline_anggota():
         db_page = _parse_db_cursor(cursor)
 
     if db_page is not None:
-        q = ZawaAnggota.query.filter_by(provinsi_slug=provinsi)
-        if kabkota_dotted:
-            q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))
-        if kecamatan_dotted:
-            q = q.filter(_kode_filter(ZawaAnggota.kode_kecamatan_ktp, kecamatan_filter))
-        if search:
-            q_lower = f"%{search.lower()}%"
-            q = q.filter(db.or_(
-                ZawaAnggota.nama.ilike(q_lower),
-                ZawaAnggota.nomor_induk_kependudukan.ilike(q_lower),
-            ))
+        q = _build_anggota_db_query(
+            provinsi_slug=provinsi,
+            bps_kode=bps_kode,
+            kabkota_filter=kabkota_filter,
+            kecamatan_filter=kecamatan_filter,
+            search=search,
+        )
 
         total_count = q.count()
         if total_count > 0:
@@ -781,7 +825,7 @@ def baseline_keluarga():
             return jsonify({"error": f"Kode provinsi '{provinsi_raw}' tidak dikenal."}), 400
         if allowed is not None and prov_slug not in allowed:
             return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
-        prov_bps = prov_info["bps"]   # 2-digit BPS kode, cocok dengan kode_provinsi di ZawaKeluarga
+        prov_bps = prov_info["bps"]
 
     label = prov_info["label"] if prov_info else "Keluarga"
     label_provinsi = prov_slug or "nasional"
@@ -823,26 +867,27 @@ def baseline_keluarga():
                 logger.warning(f"[Baseline] gagal cache keluarga NKK={search}: {e}")
         return _build_table_response(payload, label, label_provinsi)
 
-    # ── DB query dengan filter wilayah + pagination ─────────────────
+    # ── DB query dengan filter wilayah + pagination ──────────
     db_page = _parse_db_cursor(cursor) if cursor else 1
     if db_page is None:
         db_page = 1
 
     q = ZawaKeluarga.query
 
-    # Filter provinsi via kode_provinsi (BPS 2-digit, dengan/tanpa titik tidak relevan di sini)
+    # Filter provinsi: gunakan kode_provinsi (BPS 2-digit) sebagai sumber kebenaran
+    # Tambahkan juga filter nama provinsi sebagai fallback untuk data lama
     if prov_bps:
-        q = q.filter(ZawaKeluarga.kode_provinsi == prov_bps)
+        q = q.filter(db.or_(
+            ZawaKeluarga.kode_provinsi == prov_bps,
+            ZawaKeluarga.kode_provinsi == prov_bps.lstrip('0'),
+        ))
 
-    # Filter kabkota via kode_kabupaten_kota (4-digit dengan titik: "11.01" atau tanpa: "1101")
     if kabkota_dotted:
         q = q.filter(_kode_filter(ZawaKeluarga.kode_kabupaten_kota, kabkota_filter))
 
-    # Filter kecamatan via kode_kecamatan (6-digit dengan titik: "11.01.03" atau tanpa: "110103")
     if kecamatan_dotted:
         q = q.filter(_kode_filter(ZawaKeluarga.kode_kecamatan, kecamatan_filter))
 
-    # Filter teks
     if search:
         q_lower = f"%{search.lower()}%"
         q = q.filter(db.or_(
@@ -882,7 +927,6 @@ def baseline_keluarga():
         }), 200
 
     # ── Fallback ke ZAWA (hanya jika tidak ada filter wilayah spesifik) ──
-    # Jika ada filter tapi DB kosong, kembalikan empty daripada hit ZAWA tanpa filter
     if prov_bps or kabkota_dotted or kecamatan_dotted:
         columns = []
         return jsonify({
@@ -926,3 +970,31 @@ def baseline_data():
 def baseline_clear_cache():
     _CACHE.clear()
     return jsonify({"message": "Cache berhasil dikosongkan."}), 200
+
+
+# ─── ENDPOINT: Repair provinsi_slug dari kode_provinsi_ktp ───
+
+@api_v1_bp.post('/baseline/repair/provinsi-slug')
+@jwt_required()
+def baseline_repair_provinsi_slug():
+    """
+    Perbaiki data lama: update provinsi_slug berdasarkan kode_provinsi_ktp.
+    Panggil sekali dari admin untuk migrasi data yang salah label.
+    """
+    updated = 0
+    rows = ZawaAnggota.query.filter(
+        ZawaAnggota.kode_provinsi_ktp.isnot(None),
+        ZawaAnggota.kode_provinsi_ktp != ''
+    ).all()
+    for row in rows:
+        bps = str(row.kode_provinsi_ktp or '').strip().zfill(2)
+        correct = _BPS_TO_SLUG.get(bps)
+        if correct and row.provinsi_slug != correct:
+            row.provinsi_slug = correct
+            updated += 1
+    db.session.commit()
+    logger.info(f"[Repair] provinsi_slug diperbaiki: {updated} baris")
+    return jsonify({
+        "message": f"Selesai. {updated} baris provinsi_slug diperbaiki.",
+        "updated": updated,
+    }), 200
