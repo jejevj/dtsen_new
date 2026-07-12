@@ -12,7 +12,6 @@ def _parse_date(val) -> str | None:
 
 
 def _i(val) -> int | None:
-    """Konversi ke int, kembalikan None jika kosong/tidak valid."""
     if val is None or str(val).strip() == '':
         return None
     try:
@@ -22,7 +21,6 @@ def _i(val) -> int | None:
 
 
 def _d(val) -> Decimal | None:
-    """Konversi ke Decimal, kembalikan None jika kosong/tidak valid."""
     if val is None or str(val).strip() == '':
         return None
     try:
@@ -32,7 +30,6 @@ def _d(val) -> Decimal | None:
 
 
 def _s(val) -> str | None:
-    """Konversi ke string, kembalikan None jika kosong."""
     if val is None:
         return None
     s = str(val).strip()
@@ -44,7 +41,6 @@ class ZawaAnggota(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
 
-    # Identitas utama
     nomor_induk_kependudukan = db.Column(db.String(20), unique=True, nullable=False, index=True)
     nomor_kartu_keluarga     = db.Column(db.String(20), nullable=True, index=True)
     nama                     = db.Column(db.String(255), nullable=True)
@@ -53,11 +49,10 @@ class ZawaAnggota(db.Model):
     status_kawin             = db.Column(db.String(5),   nullable=True)
     status_hubungan_keluarga = db.Column(db.String(5),   nullable=True)
 
-    # Alamat KTP
     alamat_ktp               = db.Column(db.Text,        nullable=True)
     dusun_ktp                = db.Column(db.String(100), nullable=True)
-    rt_ktp                   = db.Column(db.Integer,     nullable=True)  # INT di SQL
-    rw_ktp                   = db.Column(db.Integer,     nullable=True)  # INT di SQL
+    rt_ktp                   = db.Column(db.Integer,     nullable=True)
+    rw_ktp                   = db.Column(db.Integer,     nullable=True)
     kelurahan_desa_ktp       = db.Column(db.String(100), nullable=True)
     kecamatan_ktp            = db.Column(db.String(100), nullable=True)
     kabupaten_kota_ktp       = db.Column(db.String(100), nullable=True)
@@ -67,24 +62,21 @@ class ZawaAnggota(db.Model):
     kode_kabupaten_kota_ktp  = db.Column(db.String(10),  nullable=True)
     kode_provinsi_ktp        = db.Column(db.String(10),  nullable=True)
 
-    # Pendidikan
     partisipasi_sekolah             = db.Column(db.String(5), nullable=True)
-    jenjang_tertinggi_yang_diduduki = db.Column(db.Integer,   nullable=True)  # INT
-    kelas_tertinggi_yang_diduduki   = db.Column(db.Integer,   nullable=True)  # INT
-    ijazah_tertinggi_yang_dimiliki  = db.Column(db.Integer,   nullable=True)  # INT
+    jenjang_tertinggi_yang_diduduki = db.Column(db.Integer,   nullable=True)
+    kelas_tertinggi_yang_diduduki   = db.Column(db.Integer,   nullable=True)
+    ijazah_tertinggi_yang_dimiliki  = db.Column(db.Integer,   nullable=True)
 
-    # Pekerjaan
     status_bekerja                                     = db.Column(db.String(5),      nullable=True)
     status_dalam_pekerjaan_utama                       = db.Column(db.String(5),      nullable=True)
-    lapangan_usaha_dari_pekerjaan_utama                = db.Column(db.Integer,        nullable=True)  # INT
-    lapangan_usaha_dari_usaha_utama                    = db.Column(db.Integer,        nullable=True)  # INT
+    lapangan_usaha_dari_pekerjaan_utama                = db.Column(db.Integer,        nullable=True)
+    lapangan_usaha_dari_usaha_utama                    = db.Column(db.Integer,        nullable=True)
     kepemilikan_usaha                                  = db.Column(db.String(5),      nullable=True)
-    jumlah_usaha                                       = db.Column(db.Integer,        nullable=True)  # INT
-    omzet_usaha_utama                                  = db.Column(db.Numeric(15, 2), nullable=True)  # DECIMAL
-    jumlah_pekerja_yang_dibayar_dari_usaha_utama       = db.Column(db.Integer,        nullable=True)  # INT
-    jumlah_pekerja_yang_tidak_dibayar_dari_usaha_utama = db.Column(db.Integer,        nullable=True)  # INT
+    jumlah_usaha                                       = db.Column(db.Integer,        nullable=True)
+    omzet_usaha_utama                                  = db.Column(db.Numeric(15, 2), nullable=True)
+    jumlah_pekerja_yang_dibayar_dari_usaha_utama       = db.Column(db.Integer,        nullable=True)
+    jumlah_pekerja_yang_tidak_dibayar_dari_usaha_utama = db.Column(db.Integer,        nullable=True)
 
-    # Disabilitas
     penglihatan               = db.Column(db.String(5), nullable=True)
     pendengaran               = db.Column(db.String(5), nullable=True)
     berjalan_atau_naik_tangga = db.Column(db.String(5), nullable=True)
@@ -96,16 +88,13 @@ class ZawaAnggota(db.Model):
     pengendalian_perilaku     = db.Column(db.String(5), nullable=True)
     kesedihan_depresi         = db.Column(db.String(5), nullable=True)
 
-    # Kesehatan
     kondisi_gizi    = db.Column(db.String(5), nullable=True)
-    penyakit_kronis = db.Column(db.Integer,   nullable=True)  # INT
+    penyakit_kronis = db.Column(db.Integer,   nullable=True)
 
-    # Bansos
     pbi_nas          = db.Column(db.String(5),  nullable=True)
     pbi_pemda        = db.Column(db.String(5),  nullable=True)
     id_pelanggan_pln = db.Column(db.String(20), nullable=True)
 
-    # Sync metadata
     provinsi_slug = db.Column(db.String(20), nullable=True, index=True)
     synced_at     = db.Column(db.DateTime,   default=datetime.utcnow)
     raw_data      = db.Column(db.JSON,       nullable=True)
@@ -174,12 +163,11 @@ class ZawaKeluarga(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
 
-    # Identitas
+    # API mengembalikan nomor_kartu_keluarga sebagai integer — simpan sebagai string
     nomor_kartu_keluarga    = db.Column(db.String(20),  unique=True, nullable=False, index=True)
     nama_anggota_keluarga   = db.Column(db.String(255), nullable=True)
     jumlah_anggota_keluarga = db.Column(db.Integer,     nullable=True)
 
-    # Alamat
     alamat              = db.Column(db.Text,        nullable=True)
     kelurahan_desa      = db.Column(db.String(100), nullable=True)
     kecamatan           = db.Column(db.String(100), nullable=True)
@@ -190,22 +178,20 @@ class ZawaKeluarga(db.Model):
     kode_kabupaten_kota = db.Column(db.String(10),  nullable=True)
     kode_provinsi       = db.Column(db.String(10),  nullable=True)
 
-    # Kondisi rumah
-    luas_lantai               = db.Column(db.Integer,   nullable=True)  # INT
-    jenis_lantai_terluas      = db.Column(db.Integer,   nullable=True)  # INT
-    jenis_dinding_terluas     = db.Column(db.Integer,   nullable=True)  # INT
-    jenis_atap_terluas        = db.Column(db.Integer,   nullable=True)  # INT
+    luas_lantai               = db.Column(db.Integer,   nullable=True)
+    jenis_lantai_terluas      = db.Column(db.Integer,   nullable=True)
+    jenis_dinding_terluas     = db.Column(db.Integer,   nullable=True)
+    jenis_atap_terluas        = db.Column(db.Integer,   nullable=True)
     jenis_kloset              = db.Column(db.String(5), nullable=True)
     fasilitas_bab             = db.Column(db.String(5), nullable=True)
-    sumber_air_minum_utama    = db.Column(db.Integer,   nullable=True)  # INT
+    sumber_air_minum_utama    = db.Column(db.Integer,   nullable=True)
     sumber_penerangan_utama   = db.Column(db.String(5), nullable=True)
-    bahan_bakar_utama_memasak = db.Column(db.Integer,   nullable=True)  # INT
-    daya_terpasang            = db.Column(db.Integer,   nullable=True)  # INT
+    bahan_bakar_utama_memasak = db.Column(db.Integer,   nullable=True)
+    daya_terpasang            = db.Column(db.Integer,   nullable=True)
     pembuangan_akhir_tinja    = db.Column(db.String(5), nullable=True)
     status_kepemilikan_rumah  = db.Column(db.String(5), nullable=True)
     kepemilikan_aset          = db.Column(db.String(5), nullable=True)
 
-    # Aset bergerak
     aset_bergerak_sepeda_motor           = db.Column(db.String(5), nullable=True)
     aset_bergerak_mobil                  = db.Column(db.String(5), nullable=True)
     aset_bergerak_sepeda                 = db.Column(db.String(5), nullable=True)
@@ -221,31 +207,32 @@ class ZawaKeluarga(db.Model):
     aset_bergerak_pemanas_air            = db.Column(db.String(5), nullable=True)
     aset_bergerak_telepon_rumah          = db.Column(db.String(5), nullable=True)
 
-    # Aset tidak bergerak
     aset_tidak_bergerak_rumah_lainnya = db.Column(db.String(5), nullable=True)
     aset_tidak_bergerak_lahan_lainnya = db.Column(db.String(5), nullable=True)
 
-    # Ternak
     jumlah_ternak_sapi          = db.Column(db.Integer, nullable=True)
     jumlah_ternak_kerbau        = db.Column(db.Integer, nullable=True)
     jumlah_ternak_kuda          = db.Column(db.Integer, nullable=True)
     jumlah_ternak_kambing_domba = db.Column(db.Integer, nullable=True)
     jumlah_ternak_babi          = db.Column(db.Integer, nullable=True)
 
-    # Bansos & Ekonomi
     pbi_nas          = db.Column(db.String(5),  nullable=True)
     pbi_pemda        = db.Column(db.String(5),  nullable=True)
     desil_nasional   = db.Column(db.String(5),  nullable=True)
     id_pelanggan_pln = db.Column(db.String(20), nullable=True)
 
-    # Sync metadata
     synced_at = db.Column(db.DateTime, default=datetime.utcnow)
     raw_data  = db.Column(db.JSON,     nullable=True)
 
     @classmethod
     def from_api(cls, item: dict):
+        """
+        Build ZawaKeluarga dari response API.
+        API mengembalikan nomor_kartu_keluarga sebagai integer —
+        konversi ke string agar konsisten dengan model.
+        """
         return cls(
-            nomor_kartu_keluarga             = _s(item.get("nomor_kartu_keluarga")),
+            nomor_kartu_keluarga             = str(item.get("nomor_kartu_keluarga") or "").strip(),
             nama_anggota_keluarga            = _s(item.get("nama_anggota_keluarga")),
             jumlah_anggota_keluarga          = _i(item.get("jumlah_anggota_keluarga")),
             alamat                           = _s(item.get("alamat")),
@@ -304,9 +291,17 @@ class ZawaSyncLog(db.Model):
 
     id             = db.Column(db.Integer,    primary_key=True, autoincrement=True)
     sync_type      = db.Column(db.String(50), nullable=False)
+    provinsi_slug  = db.Column(db.String(20), nullable=True)   # NULL untuk sync keluarga (nasional)
     status         = db.Column(db.String(20), nullable=False, default="pending")
     total_fetched  = db.Column(db.Integer,    nullable=True, default=0)
     total_saved    = db.Column(db.Integer,    nullable=True, default=0)
+    total_skipped  = db.Column(db.Integer,    nullable=True, default=0)  # NKK sudah ada di DB
+    total_error    = db.Column(db.Integer,    nullable=True, default=0)  # NKK gagal fetch
     error_message  = db.Column(db.Text,       nullable=True)
-    started_at     = db.Column(db.DateTime,   default=datetime.utcnow)
+    started_at     = db.Column(db.DateTime,   nullable=False, default=datetime.utcnow)
     finished_at    = db.Column(db.DateTime,   nullable=True)
+
+    def duration_seconds(self) -> float | None:
+        if self.started_at and self.finished_at:
+            return round((self.finished_at - self.started_at).total_seconds(), 2)
+        return None
