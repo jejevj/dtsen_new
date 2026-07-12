@@ -69,7 +69,13 @@ def _zawa_headers() -> dict:
 
 
 def _is_numeric_id(s: str) -> bool:
+    """True jika string hanya angka minimal 10 digit (NIK/NKK)."""
     return bool(re.fullmatch(r'\d{10,}', s.strip()))
+
+
+def _is_nkk(s: str) -> bool:
+    """True jika string adalah Nomor Kartu Keluarga yang valid (tepat 16 digit)."""
+    return bool(re.fullmatch(r'\d{16}', s.strip()))
 
 
 def _ok_payload(items, label, provinsi, meta_override=None):
@@ -165,7 +171,7 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
 
 def _fetch_by_id(zawa_path: str, param_name: str, id_str: str, cache_prefix: str):
     """
-    Hit endpoint by-nik. Mengembalikan (payload|None, error_str|None, not_found: bool).
+    Hit endpoint by-id ZAWA. Mengembalikan (payload|None, error_str|None, not_found: bool).
     404 dari ZAWA = data tidak ditemukan, bukan error server.
     """
     cache_key = f"{cache_prefix}:{id_str}"
@@ -339,14 +345,49 @@ def baseline_keluarga():
     cursor = request.args.get('cursor') or None
     search = request.args.get('search', '').strip()
 
+    # FIX: Gunakan _is_nkk() untuk validasi 16 digit NKK secara eksplisit.
+    # Path endpoint yang benar adalah 'zawa/keluarga-by-nkk' dengan param
+    # 'nomor_kartu_keluarga' sesuai spec tampilan-filter.json.
+    # Fallback ke path lama 'keluarga-by-nik' jika endpoint baru tidak tersedia (404).
+    if search and _is_nkk(search):
+        nkk = search.strip()
+
+        # Coba endpoint utama: zawa/keluarga-by-nkk
+        payload, err, not_found = _fetch_by_id(
+            "zawa/keluarga-by-nkk", "nomor_kartu_keluarga",
+            nkk, "keluarga-by-nkk"
+        )
+
+        # Jika endpoint by-nkk tidak ada di ZAWA (404/error), fallback ke by-nik path
+        if not_found or err:
+            logger.info(
+                f"[Baseline] keluarga-by-nkk {'not_found' if not_found else 'error'}, "
+                f"fallback ke keluarga-by-nik param=nomor_kartu_keluarga nkk={nkk}"
+            )
+            payload, err, not_found = _fetch_by_id(
+                "zawa/keluarga-by-nik", "nomor_kartu_keluarga",
+                nkk, "keluarga-by-nik-nkk"
+            )
+
+        if not_found:
+            return _err_200(
+                f"Nomor KK {nkk} tidak ditemukan di data ZAWA.",
+                "Keluarga", "nasional"
+            )
+        if err:
+            return _err_200(err, "Keluarga", "nasional")
+        return _build_table_response(payload, "Keluarga", "nasional")
+
+    # Jika bukan NKK valid tapi tetap angka >=10 digit, coba sebagai NIK fallback
     if search and _is_numeric_id(search):
+        logger.info(f"[Baseline] keluarga: input angka non-NKK '{search}', coba by-nik")
         payload, err, not_found = _fetch_by_id(
             "zawa/keluarga-by-nik", "nomor_kartu_keluarga",
-            search.strip(), "keluarga-by-nkk"
+            search.strip(), "keluarga-by-nik-nkk"
         )
         if not_found:
             return _err_200(
-                f"Nomor KK {search} tidak ditemukan di data ZAWA.",
+                f"Nomor KK/NIK {search} tidak ditemukan di data ZAWA.",
                 "Keluarga", "nasional"
             )
         if err:
