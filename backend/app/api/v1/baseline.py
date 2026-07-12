@@ -58,8 +58,8 @@ ZAWA_TIMEOUT = 60
 ZAWA_LIMIT   = 10
 
 # ── Batas row saat sync ke DB
-SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000   # max 10.000 per provinsi
-SYNC_MAX_KELUARGA_TOTAL       = 50_000   # max 50.000 total
+SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000
+SYNC_MAX_KELUARGA_TOTAL       = 50_000
 
 _CACHE: dict = {}
 CACHE_TTL = 600
@@ -81,6 +81,18 @@ def _is_numeric_id(s: str) -> bool:
 
 def _is_nkk(s: str) -> bool:
     return bool(re.fullmatch(r'\d{16}', s.strip()))
+
+
+def _row_to_dict(row) -> dict:
+    """Konversi DB row ke dict. Pakai raw_data jika ada, fallback ke __dict__."""
+    if row.raw_data and isinstance(row.raw_data, dict):
+        return row.raw_data
+    # fallback: ambil semua kolom kecuali internal SQLAlchemy
+    d = {c.name: getattr(row, c.name) for c in row.__table__.columns}
+    d.pop("raw_data", None)
+    d.pop("synced_at", None)
+    d.pop("id", None)
+    return d
 
 
 def _ok_payload(items, label, provinsi, meta_override=None):
@@ -251,11 +263,6 @@ def _build_table_response(payload, label, provinsi):
 # ─────────────────────────────────────────────
 
 def _parse_db_cursor(cursor: str):
-    """
-    Decode cursor page-based untuk DB lokal.
-    Format: "db:page_N" → return int N (1-based page number).
-    Return None jika bukan cursor DB.
-    """
     if cursor and cursor.startswith("db:page_"):
         try:
             return int(cursor[len("db:page_"):])
@@ -428,14 +435,6 @@ def _cache_keluarga_to_db(items: list):
 @api_v1_bp.post('/baseline/sync/anggota')
 @jwt_required()
 def baseline_sync_anggota():
-    """
-    Sync data anggota ZAWA ke DB lokal.
-    Batas: SYNC_MAX_ANGGOTA_PER_PROVINSI (10.000) row per provinsi.
-
-    Body JSON (opsional):
-      { "provinsi": "aceh" }   ← sync 1 provinsi
-      {}                       ← sync semua provinsi
-    """
     body         = request.get_json(silent=True) or {}
     provinsi_req = (body.get("provinsi") or "").lower().strip()
 
@@ -469,27 +468,20 @@ def baseline_sync_anggota():
                 sisa    = SYNC_MAX_ANGGOTA_PER_PROVINSI - total_fetched
                 params  = {"cursor": cursor} if cursor else {}
                 payload, err = _fetch_zawa_page(f"zawa/{info['slug']}", params)
-
                 if err:
                     error_msg = err
                     break
-
                 items = payload["items"]
                 if not items:
                     break
-
-                # Potong jika melebihi batas
                 if len(items) > sisa:
                     items = items[:sisa]
-
                 total_fetched += len(items)
                 saved = _cache_anggota_to_db(items, slug)
                 total_saved += saved
-
                 if not payload["hasNextPage"] or not payload["nextCursor"]:
                     break
                 cursor = payload["nextCursor"]
-
         except Exception as e:
             error_msg = str(e)
             logger.error(f"[Sync] anggota {slug} error: {e}", exc_info=True)
@@ -522,10 +514,6 @@ def baseline_sync_anggota():
 @api_v1_bp.post('/baseline/sync/keluarga')
 @jwt_required()
 def baseline_sync_keluarga():
-    """
-    Sync data keluarga ZAWA ke DB lokal.
-    Batas: SYNC_MAX_KELUARGA_TOTAL (50.000) row total (tidak per provinsi).
-    """
     log = ZawaSyncLog(
         sync_type="keluarga",
         provinsi_slug=None,
@@ -545,26 +533,20 @@ def baseline_sync_keluarga():
             sisa   = SYNC_MAX_KELUARGA_TOTAL - total_fetched
             params = {"cursor": cursor} if cursor else {}
             payload, err = _fetch_zawa_page("zawa/keluarga", params)
-
             if err:
                 error_msg = err
                 break
-
             items = payload["items"]
             if not items:
                 break
-
             if len(items) > sisa:
                 items = items[:sisa]
-
             total_fetched += len(items)
             saved = _cache_keluarga_to_db(items)
             total_saved += saved
-
             if not payload["hasNextPage"] or not payload["nextCursor"]:
                 break
             cursor = payload["nextCursor"]
-
     except Exception as e:
         error_msg = str(e)
         logger.error(f"[Sync] keluarga error: {e}", exc_info=True)
@@ -590,7 +572,6 @@ def baseline_sync_keluarga():
 @api_v1_bp.get('/baseline/sync/status')
 @jwt_required()
 def baseline_sync_status():
-    """Lihat 20 log sync terakhir."""
     logs = ZawaSyncLog.query.order_by(ZawaSyncLog.started_at.desc()).limit(20).all()
     return jsonify({
         "data": [
@@ -675,7 +656,7 @@ def baseline_anggota():
         if db_row:
             logger.info(f"[Baseline] anggota NIK={search} ditemukan di DB lokal")
             return _ok_payload(
-                [db_row.to_dict()], info["label"], provinsi,
+                [_row_to_dict(db_row)], info["label"], provinsi,
                 {"searchMode": "db_cache", "source": "local_db"}
             )
 
@@ -694,7 +675,6 @@ def baseline_anggota():
         if err:
             return _err_200(err, info["label"], provinsi)
 
-        # Simpan ke DB agar request berikutnya dari cache
         if payload["items"]:
             try:
                 _cache_anggota_to_db(payload["items"], provinsi)
@@ -711,7 +691,7 @@ def baseline_anggota():
                    .all())
         if db_rows:
             logger.info(f"[Baseline] anggota provinsi={provinsi} dari DB lokal ({len(db_rows)} rows)")
-            items = [r.to_dict() for r in db_rows]
+            items = [_row_to_dict(r) for r in db_rows]
             return _ok_payload(
                 items, info["label"], provinsi,
                 {"searchMode": "db_cache", "source": "local_db",
@@ -730,7 +710,6 @@ def baseline_anggota():
             if q in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
-    # Simpan halaman ini ke DB (background best-effort)
     if payload["items"]:
         try:
             _cache_anggota_to_db(payload["items"], provinsi)
@@ -748,16 +727,14 @@ def baseline_keluarga():
 
     # ── Search by NKK (16 digit)
     if search and _is_nkk(search):
-        # 1. Cek DB lokal dulu
         db_row = ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=search.strip()).first()
         if db_row:
             logger.info(f"[Baseline] keluarga NKK={search} ditemukan di DB lokal")
             return _ok_payload(
-                [db_row.to_dict()], "Keluarga", "nasional",
+                [_row_to_dict(db_row)], "Keluarga", "nasional",
                 {"searchMode": "db_cache", "source": "local_db"}
             )
 
-        # 2. Fallback ke ZAWA API
         try:
             nkk_int = int(search.strip())
         except ValueError:
@@ -776,7 +753,6 @@ def baseline_keluarga():
         if err:
             return _err_200(err, "Keluarga", "nasional")
 
-        # Simpan ke DB
         if payload["items"]:
             try:
                 _cache_keluarga_to_db(payload["items"])
@@ -786,21 +762,15 @@ def baseline_keluarga():
         return _build_table_response(payload, "Keluarga", "nasional")
 
     # ── List mode: utamakan DB lokal, fallback ke ZAWA jika DB kosong
-    #
-    # Cek apakah ada data di DB lokal (hanya sekali saat pertama load)
     db_total = ZawaKeluarga.query.count()
 
     if db_total > 0:
-        # ── Serve dari DB lokal dengan page-based pagination
-        # Decode page dari cursor format "db:page_N", default page 1
         db_page = _parse_db_cursor(cursor) if cursor else 1
         if db_page is None:
-            # cursor bukan format DB (misal sisa cursor ZAWA lama), reset ke page 1
             db_page = 1
 
         offset = (db_page - 1) * ZAWA_LIMIT
 
-        # Build query dengan optional text search
         q_obj = ZawaKeluarga.query
         if search:
             q_lower = f"%{search.lower()}%"
@@ -817,14 +787,13 @@ def baseline_keluarga():
             )
 
         filtered_total = q_obj.count()
-        total_pages    = max(1, -(-filtered_total // ZAWA_LIMIT))  # ceiling division
+        total_pages    = max(1, -(-filtered_total // ZAWA_LIMIT))
         db_rows        = q_obj.order_by(ZawaKeluarga.id).offset(offset).limit(ZAWA_LIMIT).all()
-        items          = [r.to_dict() for r in db_rows]
+        items          = [_row_to_dict(r) for r in db_rows]
 
         has_next = db_page < total_pages
         has_prev = db_page > 1
         next_cur = _build_db_cursor(db_page + 1) if has_next else None
-        prev_cur = _build_db_cursor(db_page - 1) if has_prev else None  # noqa: F841 (reserved for future use)
 
         logger.info(
             f"[Baseline] keluarga dari DB lokal: page={db_page}/{total_pages} "
@@ -864,7 +833,6 @@ def baseline_keluarga():
             if q in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
-    # Simpan ke DB (best-effort) agar request berikutnya dari DB
     if payload["items"]:
         try:
             _cache_keluarga_to_db(payload["items"])
