@@ -53,11 +53,12 @@ class Laz(db.Model):
     created_at                   = db.Column(db.DateTime,     nullable=False, default=datetime.utcnow)
     updated_at                   = db.Column(db.DateTime,     nullable=True)
 
-    # Relasi ke akses dtsen berdasarkan laz_kode
+    # Relasi ke TDtsenAkses — backref diberi nama berbeda agar tidak bentrok
+    # dengan property 'laz' yang ada di TDtsenAkses
     dtsen_akses = db.relationship(
         'TDtsenAkses',
         primaryjoin='foreign(TDtsenAkses.laz_kode) == Laz.laz_kode',
-        backref='laz',
+        backref='laz_info',   # <-- bukan 'laz' agar tidak konflik dengan property laz di TDtsenAkses
         lazy='dynamic',
         viewonly=True
     )

@@ -13,8 +13,7 @@ class TDtsenAkses(db.Model):
     __tablename__ = 't_dtsen_akses'
 
     dtsen_akses_id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    laz_kode               = db.Column(db.String(50), db.ForeignKey('t_laz.laz_kode'),
-                                       nullable=True, index=True)
+    laz_kode               = db.Column(db.String(50), nullable=True, index=True)
     nik                    = db.Column(db.String(20), nullable=True, index=True)
     nama_lengkap           = db.Column(db.String(255), nullable=True)
     lahir_tanggal          = db.Column(db.Date, nullable=True)
@@ -44,15 +43,21 @@ class TDtsenAkses(db.Model):
     updated_at             = db.Column(db.DateTime, nullable=True)
 
     # Relasi ke wilayah dan dokumen
-    wilayah   = db.relationship('TDtsenWilayah', backref='akses', lazy='dynamic',
-                                foreign_keys='TDtsenWilayah.dtsen_akses_id')
-    dokumen   = db.relationship('TDtsenDokumen', backref='akses', lazy='dynamic',
-                                foreign_keys='TDtsenDokumen.dtsen_akses_id')
+    wilayah = db.relationship('TDtsenWilayah', backref='akses', lazy='dynamic',
+                              foreign_keys='TDtsenWilayah.dtsen_akses_id')
+    dokumen = db.relationship('TDtsenDokumen', backref='akses_dokumen', lazy='dynamic',
+                              foreign_keys='TDtsenDokumen.dtsen_akses_id')
 
-    # Relasi ke t_laz untuk membaca skala
-    laz = db.relationship('Laz', foreign_keys=[laz_kode],
-                          primaryjoin='TDtsenAkses.laz_kode == foreign(Laz.laz_kode)',
-                          backref='akses_users', lazy='joined', viewonly=True)
+    # Relasi ke Laz — join manual pakai non-FK karena laz_kode bukan FK DDL
+    # backref ini ada di sisi Laz sebagai 'laz_info', di sini kita pakai
+    # primaryjoin langsung tanpa backref tambahan
+    laz = db.relationship(
+        'Laz',
+        primaryjoin='foreign(TDtsenAkses.laz_kode) == Laz.laz_kode',
+        lazy='joined',
+        viewonly=True,
+        uselist=False
+    )
 
     @property
     def user_type(self):
@@ -63,7 +68,7 @@ class TDtsenAkses(db.Model):
     def laz_skala(self) -> int | None:
         """
         Return skala LAZ yang dimiliki akun ini:
-          1 = Nasional  -> bisa akses semua provinsi (berdasar t_dtsen_wilayah)
+          1 = Nasional  -> bisa akses semua provinsi
           2 = Provinsi  -> bisa akses kabkota yang di-assign
           3 = Kab/Kota  -> bisa akses kecamatan saja
         Return None jika LAZ tidak ditemukan.
