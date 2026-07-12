@@ -155,11 +155,19 @@ def _laz_skala(dtsen: TDtsenAkses | None) -> int | None:
     return dtsen.laz_skala if dtsen else None
 
 def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
+    """
+    Return None  → akses penuh semua provinsi (tuser / LAZ skala Nasional).
+    Return []    → tidak ada akses (akun tidak ditemukan).
+    Return [...]  → hanya provinsi yang tercatat di t_dtsen_wilayah.
+    """
     if _is_tuser(identity):
         return None
     dtsen = _get_dtsen_akses(identity)
     if dtsen is None:
         return []
+    # FIX: LAZ skala 1 (Nasional) → akses penuh semua provinsi, sama seperti tuser
+    if _laz_skala(dtsen) == 1:
+        return None
     rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
     allowed = []
     for row in rows:
