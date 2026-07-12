@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  sync_anggota:
+    build:
+      context: .
+      dockerfile: Dockerfile.anggota
+    container_name: dtsen_sync_anggota
+    restart: "no"           # Jalankan sekali, lalu berhenti sendiri
+    env_file:
+      - .env
+    environment:
+      # Override di sini jika perlu, atau cukup set di .env
+      # MAX_PAGES: "2"       # default 2 halaman (~100 data/provinsi)
+      # SLEEP_BETWEEN: "0.3"
+      # PROVINSI: "jambi"    # opsional: jalankan hanya 1 provinsi
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./logs:/app/logs    # Log tersimpan persisten di host
+    network_mode: "host"    # Akses DB langsung lewat host network
