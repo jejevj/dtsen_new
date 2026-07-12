@@ -28,7 +28,7 @@
             <!-- Avatar -->
             <div :style="{
               width:'80px', height:'80px', borderRadius:'16px',
-              background: data.jenis_kelamin === 'Laki-laki' || data.jenis_kelamin === 'l' || data.jenis_kelamin === 'L' ? '#eff6ff' : '#fdf2f8',
+              background: isLaki ? '#eff6ff' : '#fdf2f8',
               display:'flex', alignItems:'center', justifyContent:'center',
               flexShrink:0, border: '2px solid ' + (isLaki ? '#bfdbfe' : '#fbcfe8')
             }">
@@ -201,7 +201,7 @@
             </div>
             <div class="stat-box" :style="{ background: data.id_pelanggan_pln ? '#f0fdf4' : '#f8fafc' }">
               <p class="stat-label">ID Pelanggan PLN</p>
-              <p class="stat-val" style="font-size:1rem;font-family:monospace;" :style="{ color: data.id_pelanggan_pln ? '#15803d' : '#94a3b8' }">
+              <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;" :style="{ color: data.id_pelanggan_pln ? '#15803d' : '#94a3b8' }">
                 {{ data.id_pelanggan_pln ?? 'Tidak ada' }}
               </p>
             </div>
@@ -219,6 +219,7 @@ import { useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
+import { fetchBaselineProvinsi } from '@/services/baselineService'
 
 const route     = useRoute()
 const authStore = useAuthStore()
@@ -234,14 +235,31 @@ const userIdentifier = computed(() => {
 
 async function loadData() {
   loading.value = true
+  data.value = null
+  const nik = route.params.nik
+
   try {
-    const nik = route.params.nik
-    // Cari di semua data dengan search NIK
-    const res = await api.get('/baseline/anggota', { params: { search: nik, provinsi: 'all' } })
+    // 1. Coba cari di DB cache dulu — cukup search=NIK dengan provinsi pertama
+    //    Backend akan hit zawa/anggota-by-nik langsung (search by numeric id),
+    //    provinsi hanya dipakai untuk label, bukan filter actual saat search by NIK.
+    const provinsiList = await fetchBaselineProvinsi()
+    const firstProvinsi = provinsiList?.[0]?.kode  // BPS 2-digit atau slug
+
+    if (!firstProvinsi) {
+      console.error('[AnggotaDetail] Tidak ada provinsi yang dapat diakses')
+      return
+    }
+
+    const res = await api.get('/baseline/anggota', {
+      params: { provinsi: firstProvinsi, search: nik },
+    })
+
     const items = res.data?.data ?? []
-    data.value = items.find(r =>
-      r.nomor_induk_kependudukan === nik || r.nik === nik
+    // Match exact NIK
+    data.value = items.find(
+      r => r.nomor_induk_kependudukan === nik || r.nik === nik
     ) ?? items[0] ?? null
+
   } catch (e) {
     console.error('[AnggotaDetail] gagal load:', e)
   } finally {
@@ -272,87 +290,62 @@ function maskNIK(nik) {
   if (!nik) return '-'
   return String(nik).slice(0, 6) + '••••' + String(nik).slice(-4)
 }
-
 function statusKawinLabel(v) {
-  return { '1':'Belum Kawin', '2':'Kawin', '3':'Cerai Hidup', '4':'Cerai Mati' }[String(v)] ?? v ?? '-'
+  return { '1':'Belum Kawin','2':'Kawin','3':'Cerai Hidup','4':'Cerai Mati' }[String(v)] ?? v ?? '-'
 }
-
 function hubunganLabel(v) {
   return {
-    '1':'Kepala Keluarga', '2':'Istri/Suami', '3':'Anak',
-    '4':'Menantu', '5':'Cucu', '6':'Orang Tua', '7':'Mertua',
-    '8':'Famili Lain', '9':'Pembantu', '10':'Lainnya'
+    '1':'Kepala Keluarga','2':'Istri/Suami','3':'Anak',
+    '4':'Menantu','5':'Cucu','6':'Orang Tua','7':'Mertua',
+    '8':'Famili Lain','9':'Pembantu','10':'Lainnya'
   }[String(v)] ?? v ?? '-'
 }
-
 function partisipasiLabel(v) {
-  return {
-    '1':'Tidak/Belum Sekolah', '2':'Masih Sekolah',
-    '3':'Tidak Sekolah Lagi'
-  }[String(v)] ?? v ?? '-'
+  return { '1':'Tidak/Belum Sekolah','2':'Masih Sekolah','3':'Tidak Sekolah Lagi' }[String(v)] ?? v ?? '-'
 }
-
 function jenjangLabel(v) {
   return {
-    '1':'SD/MI', '2':'SMP/MTs', '3':'SMA/MA/SMK',
-    '4':'D1/D2/D3', '5':'D4/S1', '6':'S2', '7':'S3',
-    '0':'Tidak/Belum Sekolah'
+    '0':'Tidak/Belum Sekolah','1':'SD/MI','2':'SMP/MTs','3':'SMA/MA/SMK',
+    '4':'D1/D2/D3','5':'D4/S1','6':'S2','7':'S3'
   }[String(v)] ?? v ?? '-'
 }
-
 function ijazahLabel(v) {
   return {
-    '1':'SD/MI', '2':'SMP/MTs', '3':'SMA/MA/SMK',
-    '4':'D1/D2/D3', '5':'D4/S1', '6':'S2', '7':'S3',
-    '0':'Tidak Ada Ijazah'
+    '0':'Tidak Ada Ijazah','1':'SD/MI','2':'SMP/MTs','3':'SMA/MA/SMK',
+    '4':'D1/D2/D3','5':'D4/S1','6':'S2','7':'S3'
   }[String(v)] ?? v ?? '-'
 }
-
 function statusBekerjaLabel(v) {
   return {
-    '1':'Bekerja', '2':'Tidak Bekerja',
-    '3':'Ibu Rumah Tangga', '4':'Sekolah', '5':'Lainnya'
+    '1':'Bekerja','2':'Tidak Bekerja','3':'Ibu Rumah Tangga','4':'Sekolah','5':'Lainnya'
   }[String(v)] ?? v ?? '-'
 }
-
 function statusDalamPekerjaanLabel(v) {
   return {
-    '1':'Berusaha Sendiri', '2':'Berusaha Dibantu',
-    '3':'Buruh/Karyawan', '4':'Pekerja Bebas',
-    '5':'Pekerja Tak Dibayar'
+    '1':'Berusaha Sendiri','2':'Berusaha Dibantu',
+    '3':'Buruh/Karyawan','4':'Pekerja Bebas','5':'Pekerja Tak Dibayar'
   }[String(v)] ?? v ?? '-'
 }
-
 function lapanganUsahaLabel(v) {
   return {
-    '1':'Pertanian', '2':'Pertambangan', '3':'Industri Pengolahan',
-    '4':'Listrik/Gas/Air', '5':'Konstruksi', '6':'Perdagangan',
-    '7':'Transportasi', '8':'Keuangan', '9':'Jasa'
+    '1':'Pertanian','2':'Pertambangan','3':'Industri Pengolahan',
+    '4':'Listrik/Gas/Air','5':'Konstruksi','6':'Perdagangan',
+    '7':'Transportasi','8':'Keuangan','9':'Jasa'
   }[String(v)] ?? v ?? '-'
 }
-
 function kepemilikanUsahaLabel(v) {
-  return {
-    '1':'Milik Sendiri', '2':'Bukan Milik Sendiri'
-  }[String(v)] ?? v ?? '-'
+  return { '1':'Milik Sendiri','2':'Bukan Milik Sendiri' }[String(v)] ?? v ?? '-'
 }
-
 function giziLabel(v) {
-  return {
-    '1':'Baik', '2':'Kurang', '3':'Buruk'
-  }[String(v)] ?? v ?? '-'
+  return { '1':'Baik','2':'Kurang','3':'Buruk' }[String(v)] ?? v ?? '-'
 }
-
 function penyakitKronisLabel(v) {
   if (!v && v !== 0) return '-'
-  return {
-    '0':'Tidak Ada', '1':'Satu Jenis', '2':'Dua Jenis atau Lebih'
-  }[String(v)] ?? 'Ada'
+  return { '0':'Tidak Ada','1':'Satu Jenis','2':'Dua Jenis atau Lebih' }[String(v)] ?? 'Ada'
 }
-
 function formatRupiah(n) {
   if (!n && n !== 0) return '-'
-  return 'Rp\u202f' + Number(n).toLocaleString('id-ID')
+  return 'Rp ' + Number(n).toLocaleString('id-ID')
 }
 
 onMounted(() => loadData())
@@ -366,11 +359,8 @@ onMounted(() => loadData())
   .grid-3 { grid-template-columns:1fr; }
 }
 .detail-card {
-  background:white;
-  border-radius:14px;
-  border:1px solid #f1f5f9;
-  padding:22px;
-  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+  background:white; border-radius:14px; border:1px solid #f1f5f9;
+  padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.04);
 }
 .wm-card { position:relative; overflow:hidden; }
 .wm-overlay { position:absolute; inset:0; z-index:0; pointer-events:none; user-select:none; }
