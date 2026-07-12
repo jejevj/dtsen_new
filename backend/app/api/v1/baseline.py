@@ -10,6 +10,7 @@ from . import api_v1_bp
 from ...extensions import db
 from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 from ...models.t_dtsen_wilayah import TDtsenWilayah
+from ...models.t_dtsen_akses import TDtsenAkses
 from ...services.auth_service import parse_identity_str
 
 logger = logging.getLogger('app')
@@ -62,7 +63,6 @@ ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
 ZAWA_TIMEOUT = 60
 ZAWA_LIMIT   = 10
 
-# Batas row saat sync ke DB
 SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000
 SYNC_MAX_KELUARGA_TOTAL       = 50_000
 
@@ -71,11 +71,10 @@ CACHE_TTL = 600
 
 
 # ─────────────────────────────────────────────
-# Helper: ambil identity dari JWT
+# Helper: identity & kontrol akses berbasis skala LAZ
 # ─────────────────────────────────────────────
 
 def _current_identity() -> dict:
-    """Return {'type': ..., 'id': ...} dari JWT."""
     return parse_identity_str(get_jwt_identity())
 
 
@@ -83,27 +82,171 @@ def _is_tuser(identity: dict) -> bool:
     return identity.get('type') in ('tuser', 'admin', 'user')
 
 
+def _get_dtsen_akses(identity: dict) -> TDtsenAkses | None:
+    """Ambil row TDtsenAkses beserta relasi laz (eager loaded)."""
+    if _is_tuser(identity):
+        return None
+    return TDtsenAkses.query.filter_by(
+        dtsen_akses_id=identity.get('id')
+    ).first()
+
+
+def _laz_skala(dtsen: TDtsenAkses | None) -> int | None:
+    """Return skala LAZ (1/2/3) atau None jika tidak ada."""
+    if dtsen is None:
+        return None
+    return dtsen.laz_skala
+
+
 def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
     """
-    Return daftar slug ZAWA provinsi yang boleh diakses user ini.
-    - tuser / admin  : None  (berarti akses semua provinsi)
-    - dtsen          : list slug dari t_dtsen_wilayah milik akun tersebut
+    Return daftar slug ZAWA provinsi yang boleh diakses.
+    - tuser/admin          : None  (semua provinsi)
+    - dtsen skala 1 (Nas.) : list provinsi_kode dari t_dtsen_wilayah -> slug
+    - dtsen skala 2 (Prov.): list provinsi unik dari kabkota yang di-assign
+    - dtsen skala 3 (Kabko): list provinsi dari kecamatan yang di-assign
+    Skala 2 & 3 → provinsi tetap bisa difilter sebagai entry point dropdown,
+    drilldown lebih lanjut dikontrol via endpoint wilayah terpisah.
     """
     if _is_tuser(identity):
-        return None  # semua provinsi boleh
+        return None
 
-    dtsen_id = identity.get('id')
-    rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen_id).all()
+    dtsen = _get_dtsen_akses(identity)
+    if dtsen is None:
+        return []
+
+    skala = _laz_skala(dtsen)
+    rows  = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
 
     allowed = []
     for row in rows:
-        # Prioritaskan kecamatan_kode > kabkota_kode > provinsi_kode
         prov_kode = (row.provinsi_kode or '').strip().zfill(2)
         slug = _BPS_TO_SLUG.get(prov_kode)
         if slug and slug not in allowed:
             allowed.append(slug)
 
-    return allowed
+    return allowed  # sama untuk skala 1, 2, 3 — provinsi selalu jadi entry point
+
+
+def _get_allowed_kabkota(identity: dict) -> list[str] | None:
+    """
+    Return list kabkota_kode yang boleh diakses.
+    - tuser/admin          : None (semua)
+    - dtsen skala 1 (Nas.) : None (semua kabkota dalam provinsi yang dipilih)
+    - dtsen skala 2 (Prov.): list kabkota_kode dari t_dtsen_wilayah
+    - dtsen skala 3 (Kabko): list kabkota_kode dari t_dtsen_wilayah
+    """
+    if _is_tuser(identity):
+        return None
+
+    dtsen = _get_dtsen_akses(identity)
+    if dtsen is None:
+        return []
+
+    skala = _laz_skala(dtsen)
+    if skala == 1:
+        return None  # nasional: bebas semua kabkota
+
+    # skala 2 & 3: dibatasi oleh kabkota_kode di t_dtsen_wilayah
+    rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
+    return list({r.kabkota_kode for r in rows if r.kabkota_kode})
+
+
+def _get_allowed_kecamatan(identity: dict) -> list[str] | None:
+    """
+    Return list kecamatan_kode yang boleh diakses.
+    - tuser/admin          : None (semua)
+    - dtsen skala 1 (Nas.) : None (semua kecamatan)
+    - dtsen skala 2 (Prov.): None (semua kecamatan dalam kabkota)
+    - dtsen skala 3 (Kabko): list kecamatan_kode dari t_dtsen_wilayah
+    """
+    if _is_tuser(identity):
+        return None
+
+    dtsen = _get_dtsen_akses(identity)
+    if dtsen is None:
+        return []
+
+    skala = _laz_skala(dtsen)
+    if skala in (1, 2):
+        return None  # nasional & provinsi: bebas semua kecamatan
+
+    # skala 3: dibatasi oleh kecamatan_kode
+    rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
+    return list({r.kecamatan_kode for r in rows if r.kecamatan_kode})
+
+
+def _get_wilayah_scope(identity: dict) -> dict:
+    """
+    Kembalikan scope wilayah lengkap + metadata skala untuk dikirim ke frontend.
+    Frontend menggunakan ini untuk menentukan drilldown mana yang aktif.
+    """
+    if _is_tuser(identity):
+        return {
+            'skala': 0,
+            'skala_label': 'superadmin',
+            'provinsi': None,
+            'kabkota': None,
+            'kecamatan': None,
+            'drilldown': ['provinsi', 'kabkota', 'kecamatan'],
+        }
+
+    dtsen = _get_dtsen_akses(identity)
+    if dtsen is None:
+        return {'skala': None, 'drilldown': []}
+
+    skala = _laz_skala(dtsen) or 0
+    rows  = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
+
+    provinsi_list  = list({r.provinsi_kode  for r in rows if r.provinsi_kode})
+    kabkota_list   = list({r.kabkota_kode   for r in rows if r.kabkota_kode})
+    kecamatan_list = list({r.kecamatan_kode for r in rows if r.kecamatan_kode})
+
+    SKALA_LABEL = {1: 'nasional', 2: 'provinsi', 3: 'kabkota'}
+    SKALA_DRILLDOWN = {
+        1: ['provinsi', 'kabkota', 'kecamatan'],  # nasional: mulai dari provinsi
+        2: ['kabkota', 'kecamatan'],              # provinsi: mulai dari kabkota
+        3: ['kecamatan'],                          # kabkota : hanya kecamatan
+    }
+
+    return {
+        'skala':        skala,
+        'skala_label':  SKALA_LABEL.get(skala, 'unknown'),
+        'laz_kode':     dtsen.laz_kode,
+        'laz_nama':     dtsen.laz.laz_nama if dtsen.laz else None,
+        'provinsi':     provinsi_list,
+        'kabkota':      kabkota_list   if skala >= 2 else None,
+        'kecamatan':    kecamatan_list if skala >= 3 else None,
+        'drilldown':    SKALA_DRILLDOWN.get(skala, []),
+    }
+
+
+# ─────────────────────────────────────────────
+# Endpoint baru: scope wilayah untuk frontend
+# ─────────────────────────────────────────────
+
+@api_v1_bp.get('/baseline/wilayah-scope')
+@jwt_required()
+def baseline_wilayah_scope():
+    """
+    Endpoint untuk frontend agar bisa tahu drilldown wilayah apa saja
+    yang tersedia untuk user yang sedang login.
+
+    Response contoh (skala 2 - Provinsi LAZ):
+    {
+      "skala": 2,
+      "skala_label": "provinsi",
+      "laz_kode": "LAZ-JBR",
+      "laz_nama": "LAZ Jawa Barat",
+      "provinsi": ["32"],
+      "kabkota": ["3201", "3273"],
+      "kecamatan": null,
+      "drilldown": ["kabkota", "kecamatan"]
+    }
+    """
+    identity = _current_identity()
+    scope    = _get_wilayah_scope(identity)
+    return jsonify(scope), 200
 
 
 def _zawa_headers() -> dict:
@@ -125,7 +268,6 @@ def _is_nkk(s: str) -> bool:
 
 
 def _row_to_dict(row) -> dict:
-    """Konversi DB row ke dict. Pakai raw_data jika ada, fallback ke __dict__."""
     if row.raw_data and isinstance(row.raw_data, dict):
         return row.raw_data
     d = {c.name: getattr(row, c.name) for c in row.__table__.columns}
@@ -312,7 +454,6 @@ def _build_db_cursor(page: int) -> str:
 
 
 def _cache_anggota_to_db(items: list, provinsi_slug: str):
-    """Simpan list anggota dari ZAWA ke DB. Skip jika NIK sudah ada."""
     if not items:
         return 0
     saved = 0
@@ -389,7 +530,6 @@ def _cache_anggota_to_db(items: list, provinsi_slug: str):
 
 
 def _cache_keluarga_to_db(items: list):
-    """Simpan list keluarga dari ZAWA ke DB. Skip jika NKK sudah ada."""
     if not items:
         return 0
     saved = 0
@@ -664,20 +804,18 @@ def baseline_ping():
 def baseline_provinsi_list():
     """
     Return daftar provinsi yang boleh diakses user yang sedang login.
-    - tuser / admin : semua provinsi dari PROVINSI_MAP
-    - dtsen         : hanya provinsi sesuai t_dtsen_wilayah milik akun tsb
+    - tuser/admin          : semua provinsi dari PROVINSI_MAP
+    - dtsen (semua skala)  : hanya provinsi sesuai t_dtsen_wilayah
     """
     identity = _current_identity()
     allowed  = _allowed_provinsi_slugs(identity)
 
     if allowed is None:
-        # tuser / admin — kembalikan semua
         items = [
             {"kode": k, "label": v["label"]}
             for k, v in sorted(PROVINSI_MAP.items(), key=lambda x: x[1]["label"])
         ]
     else:
-        # dtsen — filter hanya slug yang diizinkan
         items = [
             {"kode": k, "label": PROVINSI_MAP[k]["label"]}
             for k in allowed
@@ -685,7 +823,9 @@ def baseline_provinsi_list():
         ]
         items.sort(key=lambda x: x["label"])
 
-    return jsonify({"data": items}), 200
+    # Sertakan scope wilayah agar frontend bisa tahu drilldown yang aktif
+    scope = _get_wilayah_scope(identity)
+    return jsonify({"data": items, "scope": scope}), 200
 
 
 @api_v1_bp.get('/baseline/anggota')
@@ -697,6 +837,9 @@ def baseline_anggota():
     provinsi = request.args.get('provinsi', '').lower().strip()
     cursor   = request.args.get('cursor') or None
     search   = request.args.get('search', '').strip()
+    # Filter opsional untuk drilldown kabkota & kecamatan
+    kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
+    kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
 
     if not provinsi:
         return jsonify({"error": "Parameter 'provinsi' wajib diisi."}), 400
@@ -704,9 +847,21 @@ def baseline_anggota():
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
 
-    # Cek akses: dtsen hanya boleh akses provinsi yang ada di wilayahnya
+    # Guard akses provinsi
     if allowed is not None and provinsi not in allowed:
         return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
+
+    # Guard akses kabkota (skala 2 & 3)
+    if kabkota_filter:
+        allowed_kabkota = _get_allowed_kabkota(identity)
+        if allowed_kabkota is not None and kabkota_filter not in allowed_kabkota:
+            return jsonify({"error": "Akses ditolak. Kabupaten/Kota ini tidak termasuk wilayah Anda."}), 403
+
+    # Guard akses kecamatan (skala 3)
+    if kecamatan_filter:
+        allowed_kec = _get_allowed_kecamatan(identity)
+        if allowed_kec is not None and kecamatan_filter not in allowed_kec:
+            return jsonify({"error": "Akses ditolak. Kecamatan ini tidak termasuk wilayah Anda."}), 403
 
     if search and _is_numeric_id(search):
         db_row = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=search.strip()).first()
@@ -735,10 +890,12 @@ def baseline_anggota():
         return _build_table_response(payload, info["label"], provinsi)
 
     if not cursor:
-        db_rows = (ZawaAnggota.query
-                   .filter_by(provinsi_slug=provinsi)
-                   .limit(ZAWA_LIMIT)
-                   .all())
+        q = ZawaAnggota.query.filter_by(provinsi_slug=provinsi)
+        if kabkota_filter:
+            q = q.filter(ZawaAnggota.kode_kabupaten_kota_ktp == kabkota_filter)
+        if kecamatan_filter:
+            q = q.filter(ZawaAnggota.kode_kecamatan_ktp == kecamatan_filter)
+        db_rows = q.limit(ZAWA_LIMIT).all()
         if db_rows:
             logger.info(f"[Baseline] anggota provinsi={provinsi} dari DB lokal ({len(db_rows)} rows)")
             items = [_row_to_dict(r) for r in db_rows]
@@ -754,10 +911,10 @@ def baseline_anggota():
         return _err_200(err, info["label"], provinsi)
 
     if search:
-        q = search.lower()
+        q_str = search.lower()
         payload["items"] = [
             r for r in payload["items"]
-            if q in " ".join(str(v).lower() for v in r.values() if v)
+            if q_str in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
     if payload["items"]:
