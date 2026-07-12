@@ -9,103 +9,35 @@
           <p class="text-sm text-slate-500 mt-0.5">Daftar penerima manfaat zakat · Desil 1–4</p>
         </div>
         <Button
-          :icon="showFilter ? 'pi pi-filter-slash' : 'pi pi-filter'"
-          :label="showFilter ? 'Sembunyikan Filter' : 'Tampilkan Filter'"
-          :severity="showFilter ? 'secondary' : 'primary'"
+          icon="pi pi-filter"
+          label="Filter"
+          severity="primary"
           outlined
           size="small"
-          @click="showFilter = !showFilter"
-        />
+          @click="showFilter = true"
+        >
+          <template #default>
+            <span>Filter</span>
+            <span
+              v-if="activeFilterCount > 0"
+              class="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary-600 text-white text-[10px] font-bold"
+            >{{ activeFilterCount }}</span>
+          </template>
+        </Button>
       </div>
-
-      <!-- ===== PANEL FILTER DINAMIS ===== -->
-      <transition name="slide-down">
-        <div v-if="showFilter" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-
-          <div v-if="filterLoading" class="flex items-center gap-2 text-slate-400 text-sm py-2">
-            <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi filter…
-          </div>
-
-          <div v-else-if="filterError" class="text-sm text-red-500 py-2">
-            <i class="pi pi-exclamation-triangle mr-1"></i> {{ filterError }}
-          </div>
-
-          <div v-else-if="filterFields.length" class="space-y-4">
-            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Filter Pencarian</p>
-
-            <div
-              v-for="(groupFields, groupName) in groupedFilterFields"
-              :key="groupName"
-              class="space-y-2"
-            >
-              <p v-if="groupName" class="text-xs font-medium text-slate-400">{{ groupName }}</p>
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                <div v-for="field in groupFields" :key="field.field_key">
-                  <label class="block text-xs font-medium text-slate-600 mb-1">{{ field.field_label }}</label>
-
-                  <Select
-                    v-if="field.refs && field.refs.length"
-                    v-model="activeFilters[field.field_key]"
-                    :options="[{ ref_value: '', ref_label: 'Semua' }, ...field.refs]"
-                    option-label="ref_label"
-                    option-value="ref_value"
-                    :placeholder="'Semua ' + field.field_label"
-                    class="w-full text-sm"
-                    show-clear
-                  />
-
-                  <InputNumber
-                    v-else-if="field.field_type === 'Integer' || field.field_type === 'Float'"
-                    v-model="activeFilters[field.field_key]"
-                    :placeholder="field.field_label"
-                    class="w-full"
-                    :min-fraction-digits="field.field_type === 'Float' ? 2 : 0"
-                    :max-fraction-digits="field.field_type === 'Float' ? 2 : 0"
-                  />
-
-                  <DatePicker
-                    v-else-if="field.field_type === 'Date'"
-                    v-model="activeFilters[field.field_key]"
-                    :placeholder="field.field_label"
-                    date-format="dd/mm/yy"
-                    class="w-full"
-                    show-button-bar
-                  />
-
-                  <InputText
-                    v-else
-                    v-model="activeFilters[field.field_key]"
-                    :placeholder="'Cari ' + field.field_label"
-                    class="w-full text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-2 pt-2 border-t border-slate-100">
-              <Button label="Terapkan Filter" icon="pi pi-search" size="small" @click="applyFilter" />
-              <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined @click="resetFilter" />
-            </div>
-          </div>
-
-          <div v-else class="text-sm text-slate-400 py-2">
-            <i class="pi pi-info-circle mr-1"></i>
-            Belum ada field filter yang dikonfigurasi di master tampilan.
-          </div>
-        </div>
-      </transition>
 
       <!-- ===== TABEL DATA MUSTAHIK ===== -->
       <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
 
+        <!-- Toolbar: search global + badge filter aktif -->
         <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100">
           <div class="flex items-center gap-2">
             <i class="pi pi-users text-slate-400"></i>
             <span class="text-sm font-semibold text-slate-700">Daftar Mustahik</span>
             <span
-              v-if="Object.values(activeFilters).some(v => v !== '' && v != null)"
-              class="ml-1 px-2 py-0.5 bg-primary-100 text-primary-700 text-xs font-semibold rounded-full"
-            >Filter aktif</span>
+              v-if="activeFilterCount > 0"
+              class="ml-1 px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 text-xs font-semibold rounded-full"
+            >{{ activeFilterCount }} filter aktif</span>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs text-slate-400">Cari:</span>
@@ -119,25 +51,24 @@
           </div>
         </div>
 
+        <!-- Loading -->
         <div v-if="tableLoading" class="flex justify-center items-center py-16 text-slate-400">
           <i class="pi pi-spin pi-spinner mr-2"></i> Memuat data…
         </div>
 
+        <!-- Error -->
         <div v-else-if="tableError" class="py-12 text-center text-red-500 text-sm">
           <i class="pi pi-exclamation-circle text-2xl mb-2 block"></i>
           {{ tableError }}
         </div>
 
-        <div v-else-if="!tableFetched" class="py-16 text-center text-slate-400 text-sm">
-          <i class="pi pi-filter text-3xl mb-3 block opacity-30"></i>
-          Gunakan filter di atas lalu klik <strong>Terapkan Filter</strong> untuk menampilkan data.
-        </div>
-
+        <!-- Kosong -->
         <div v-else-if="rows.length === 0" class="py-16 text-center text-slate-400 text-sm">
           <i class="pi pi-inbox text-3xl mb-3 block opacity-30"></i>
           Tidak ada data mustahik yang sesuai filter.
         </div>
 
+        <!-- Tabel -->
         <div v-else class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -187,8 +118,9 @@
           </table>
         </div>
 
+        <!-- Pagination -->
         <div
-          v-if="tableFetched && rows.length > 0"
+          v-if="rows.length > 0"
           class="flex items-center justify-between px-5 py-3 border-t border-slate-100"
         >
           <span class="text-xs text-slate-400">
@@ -201,8 +133,140 @@
           </div>
         </div>
       </div>
-
     </div>
+
+    <!-- ===== DRAWER FILTER (dari kanan) ===== -->
+    <teleport to="body">
+      <!-- Backdrop -->
+      <transition name="fade-backdrop">
+        <div
+          v-if="showFilter"
+          class="fixed inset-0 bg-black/30 z-40"
+          @click="showFilter = false"
+        />
+      </transition>
+
+      <!-- Panel -->
+      <transition name="slide-right">
+        <div
+          v-if="showFilter"
+          class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
+        >
+          <!-- Header drawer -->
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+              <i class="pi pi-filter text-primary-600"></i>
+              <span class="font-semibold text-slate-800">Filter Pencarian</span>
+              <span
+                v-if="activeFilterCount > 0"
+                class="px-2 py-0.5 bg-primary-600 text-white text-xs font-bold rounded-full"
+              >{{ activeFilterCount }}</span>
+            </div>
+            <button
+              class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition"
+              @click="showFilter = false"
+            >
+              <i class="pi pi-times text-sm"></i>
+            </button>
+          </div>
+
+          <!-- Body drawer (scrollable) -->
+          <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+
+            <!-- Loading konfigurasi -->
+            <div v-if="filterLoading" class="flex items-center gap-2 text-slate-400 text-sm py-4">
+              <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi filter…
+            </div>
+
+            <!-- Error konfigurasi -->
+            <div v-else-if="filterError" class="text-sm text-red-500 bg-red-50 rounded-xl p-3">
+              <i class="pi pi-exclamation-triangle mr-1"></i> {{ filterError }}
+            </div>
+
+            <template v-else>
+              <!-- Group per field_group -->
+              <div
+                v-for="(groupFields, groupName) in groupedFilterFields"
+                :key="groupName"
+                class="space-y-3"
+              >
+                <p v-if="groupName" class="text-xs font-bold text-slate-400 uppercase tracking-wider">{{ groupName }}</p>
+
+                <div v-for="field in groupFields" :key="field.field_key">
+                  <label class="block text-xs font-medium text-slate-600 mb-1">{{ field.field_label }}</label>
+
+                  <!-- Dropdown jika ada refs -->
+                  <Select
+                    v-if="field.refs && field.refs.length"
+                    v-model="activeFilters[field.field_key]"
+                    :options="[{ ref_value: '', ref_label: 'Semua' }, ...field.refs]"
+                    option-label="ref_label"
+                    option-value="ref_value"
+                    :placeholder="'Semua ' + field.field_label"
+                    class="w-full text-sm"
+                    show-clear
+                  />
+
+                  <!-- Angka -->
+                  <InputNumber
+                    v-else-if="field.field_type === 'Integer' || field.field_type === 'Float'"
+                    v-model="activeFilters[field.field_key]"
+                    :placeholder="field.field_label"
+                    class="w-full"
+                    :min-fraction-digits="field.field_type === 'Float' ? 2 : 0"
+                    :max-fraction-digits="field.field_type === 'Float' ? 2 : 0"
+                  />
+
+                  <!-- Tanggal -->
+                  <DatePicker
+                    v-else-if="field.field_type === 'Date'"
+                    v-model="activeFilters[field.field_key]"
+                    :placeholder="field.field_label"
+                    date-format="dd/mm/yy"
+                    class="w-full"
+                    show-button-bar
+                  />
+
+                  <!-- Teks -->
+                  <InputText
+                    v-else
+                    v-model="activeFilters[field.field_key]"
+                    :placeholder="'Cari ' + field.field_label"
+                    class="w-full text-sm"
+                  />
+                </div>
+              </div>
+
+              <!-- Kosong: belum ada field filter -->
+              <div v-if="!filterFields.length" class="text-sm text-slate-400 py-4">
+                <i class="pi pi-info-circle mr-1"></i>
+                Belum ada field filter yang dikonfigurasi.
+              </div>
+            </template>
+          </div>
+
+          <!-- Footer drawer: tombol aksi -->
+          <div class="px-5 py-4 border-t border-slate-100 flex gap-2">
+            <Button
+              label="Terapkan"
+              icon="pi pi-check"
+              class="flex-1"
+              size="small"
+              @click="applyFilter"
+            />
+            <Button
+              label="Reset"
+              icon="pi pi-times"
+              size="small"
+              severity="secondary"
+              outlined
+              @click="resetFilter"
+            />
+          </div>
+        </div>
+      </transition>
+    </teleport>
+
   </AppLayout>
 </template>
 
@@ -217,13 +281,17 @@ import DatePicker  from 'primevue/datepicker'
 import { fetchFilterFields } from '@/services/tampilanDtsenService'
 import api                   from '@/services/api'
 
-// ── Filter panel ────────────────────────────────────────────────────────────
+// ── Drawer state ─────────────────────────────────────────────────────────────
 const showFilter    = ref(false)
 const filterLoading = ref(false)
 const filterError   = ref('')
 const filterFields  = ref([])
 const activeFilters = reactive({})
 const globalSearch  = ref('')
+
+const activeFilterCount = computed(() =>
+  Object.values(activeFilters).filter(v => v !== '' && v != null).length
+)
 
 const groupedFilterFields = computed(() => {
   const groups = {}
@@ -245,17 +313,16 @@ async function loadFilterFields() {
       if (!(f.field_key in activeFilters)) activeFilters[f.field_key] = ''
     }
   } catch (e) {
-    filterError.value = 'Gagal memuat konfigurasi filter. Pastikan koneksi ke server aktif.'
+    filterError.value = 'Gagal memuat konfigurasi filter.'
     console.error('[TampilanDtsen] fetchFilterFields error:', e)
   } finally {
     filterLoading.value = false
   }
 }
 
-// ── Tabel ──────────────────────────────────────────────────────────────────────
+// ── Tabel ─────────────────────────────────────────────────────────────────────
 const tableLoading = ref(false)
 const tableError   = ref('')
-const tableFetched = ref(false)
 const rows         = ref([])
 const pagination   = reactive({ page: 1, perPage: 20, total: 0, totalPages: 1 })
 
@@ -274,7 +341,6 @@ async function fetchMustahik(page = 1) {
     pagination.page       = d.page        ?? page
     pagination.total      = d.total       ?? rows.value.length
     pagination.totalPages = d.total_pages ?? d.pages ?? 1
-    tableFetched.value    = true
   } catch (e) {
     tableError.value = 'Gagal memuat data mustahik: ' + (e?.response?.data?.message ?? e.message)
     console.error('[Mustahik] fetchMustahik error:', e)
@@ -283,23 +349,38 @@ async function fetchMustahik(page = 1) {
   }
 }
 
-function applyFilter() { pagination.page = 1; fetchMustahik(1) }
+function applyFilter() {
+  showFilter.value  = false
+  pagination.page   = 1
+  fetchMustahik(1)
+}
 
 function resetFilter() {
   for (const k of Object.keys(activeFilters)) activeFilters[k] = ''
   globalSearch.value = ''
-  tableFetched.value = false
-  rows.value         = []
+  pagination.page    = 1
+  fetchMustahik(1)
 }
 
 function changePage(p) { fetchMustahik(p) }
 
-onMounted(() => { loadFilterFields() })
+// Data langsung dimuat saat halaman dibuka
+onMounted(() => {
+  loadFilterFields()
+  fetchMustahik(1)
+})
 </script>
 
 <style scoped>
-.slide-down-enter-active { transition: all 0.25s ease; }
-.slide-down-enter-from   { opacity: 0; transform: translateY(-8px); }
-.slide-down-leave-active { transition: all 0.2s ease; }
-.slide-down-leave-to     { opacity: 0; transform: translateY(-6px); }
+/* Backdrop */
+.fade-backdrop-enter-active,
+.fade-backdrop-leave-active { transition: opacity 0.25s ease; }
+.fade-backdrop-enter-from,
+.fade-backdrop-leave-to     { opacity: 0; }
+
+/* Drawer slide dari kanan */
+.slide-right-enter-active { transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+.slide-right-leave-active { transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1); }
+.slide-right-enter-from   { transform: translateX(100%); }
+.slide-right-leave-to     { transform: translateX(100%); }
 </style>
