@@ -27,8 +27,7 @@
           <!-- Badges -->
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
             <span v-for="badge in badges" :key="badge"
-              style="padding:4px 12px;border-radius:99px;background:rgba(255,255,255,0.08);color:#a7f3d0;font-size:11px;font-weight:500;border:1px solid rgba(255,255,255,0.1);">{{
-              badge }}</span>
+              style="padding:4px 12px;border-radius:99px;background:rgba(255,255,255,0.08);color:#a7f3d0;font-size:11px;font-weight:500;border:1px solid rgba(255,255,255,0.1);">{{ badge }}</span>
           </div>
         </div>
 
@@ -65,7 +64,14 @@
 
           <!-- Social icons -->
           <div style="display:flex;gap:8px;">
-            <a v-for="social in socials" :key="social.label" href="social.href" :title="social.label" class="social-btn"
+            <a
+              v-for="social in socials"
+              :key="social.label"
+              :href="social.href"
+              :title="social.label"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="social-btn"
               style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;transition:background 0.15s;text-decoration:none;">
               <i :class="social.icon" :style="{ fontSize: '13px', color: social.color }"></i>
             </a>
@@ -101,11 +107,10 @@ const footerLinks = [
 ]
 
 const socials = [
-  { icon: 'pi pi-instagram', color: '#ee2a7b ', label: 'Instagram', href: 'https://www.instagram.com/bimasislam/' },
-  { icon: 'pi pi-twitter', color: '#38bdf8', label: 'Twitter', href: 'https://twitter.com/BimasIslam' },
-  { icon: 'pi pi-facebook', color: '#1877F2', label: 'Facebook', href: 'https://www.facebook.com/Ditjen.Bimas.Islam' },
-  // { icon: 'pi pi-github', color: '#ffffff', label: 'GitHub', href: '' },
-  { icon: 'pi pi-youtube', color: '#f87171', label: 'YouTube', href: 'https://www.youtube.com/channel/UCMDwUz44x_O10PRlm_vsYog' },
+  { icon: 'pi pi-instagram', color: '#ee2a7b', label: 'Instagram', href: 'https://www.instagram.com/bimasislam/' },
+  { icon: 'pi pi-twitter',   color: '#38bdf8', label: 'Twitter',   href: 'https://twitter.com/BimasIslam' },
+  { icon: 'pi pi-facebook',  color: '#1877F2', label: 'Facebook',  href: 'https://www.facebook.com/Ditjen.Bimas.Islam' },
+  { icon: 'pi pi-youtube',   color: '#f87171', label: 'YouTube',   href: 'https://www.youtube.com/channel/UCMDwUz44x_O10PRlm_vsYog' },
 ]
 </script>
 
