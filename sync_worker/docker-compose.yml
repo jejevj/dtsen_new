@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  sync_keluarga:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dtsen_sync_keluarga
+    restart: "no"          # Tidak auto-restart — jalankan manual saat diperlukan
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs   # Log tersimpan di host
+    network_mode: "host"   # Akses DB langsung lewat host network
