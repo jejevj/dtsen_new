@@ -62,7 +62,8 @@ _BPS_TO_SLUG: dict[str, str] = {v["bps"]: k for k, v in PROVINSI_MAP.items()}
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
 ZAWA_TIMEOUT = 60
-ZAWA_LIMIT   = 10
+ZAWA_LIMIT   = 10   # page size untuk ZAWA API
+DB_PAGE_SIZE = 50   # page size untuk query DB lokal
 
 SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000
 SYNC_MAX_KELUARGA_PER_RUN     = 5_000
@@ -72,19 +73,8 @@ CACHE_TTL = 600
 
 
 # ─── Kode wilayah normalizer ──────────────────────────────────
-# DB menyimpan kode dengan titik: "11.06", "11.06.11"
-# Frontend/BPS kirim tanpa titik:  "1106",  "110611"
-# Kedua format harus bisa match.
 
 def _normalize_kode(raw: str) -> tuple[str, str]:
-    """
-    Kembalikan (dotted, plain):
-      "11.06"  → ("11.06",  "1106")
-      "1106"   → ("11.06",  "1106")   ← 4 digit kabkota
-      "110611" → ("11.06.11", "110611") ← 6 digit kecamatan
-      "11.06.11" → ("11.06.11", "110611")
-    Format lain dikembalikan apa adanya di keduanya.
-    """
     s = raw.strip()
     if '.' in s:
         plain  = s.replace('.', '')
@@ -103,10 +93,6 @@ def _normalize_kode(raw: str) -> tuple[str, str]:
 
 
 def _kode_filter(column, raw: str):
-    """
-    SQLAlchemy filter yang cocok untuk kode dengan/tanpa titik.
-    Cek kedua format sekaligus agar backward compatible.
-    """
     dotted, plain = _normalize_kode(raw)
     if dotted == plain:
         return column == raw
@@ -116,23 +102,16 @@ def _kode_filter(column, raw: str):
 # ─── Provinsi resolver ────────────────────────────────────────
 
 def _resolve_provinsi(raw: str):
-    """
-    Terima slug ('aceh') ATAU kode BPS ('11', '32').
-    Return: (slug: str, info: dict) atau (None, None).
-    """
     if not raw:
         return None, None
     val = raw.lower().strip()
-
     if val in PROVINSI_MAP:
         return val, PROVINSI_MAP[val]
-
     if re.fullmatch(r'\d{1,2}', val):
         bps  = val.zfill(2)
         slug = _BPS_TO_SLUG.get(bps)
         if slug:
             return slug, PROVINSI_MAP[slug]
-
     return None, None
 
 
@@ -153,17 +132,6 @@ def _laz_skala(dtsen: TDtsenAkses | None) -> int | None:
     return dtsen.laz_skala if dtsen else None
 
 def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
-    """
-    Return None   → akses penuh semua provinsi (hanya tuser/admin).
-    Return []     → tidak ada akses (akun tidak ditemukan).
-    Return [...]  → hanya provinsi yang tercatat di t_dtsen_wilayah.
-
-    Semua skala LAZ (1/2/3) dibatasi oleh provinsi di t_dtsen_wilayah.
-    Perbedaan skala hanya berlaku pada level kabkota & kecamatan:
-      - Skala 1 (Nasional) : kabkota & kecamatan bebas semua
-      - Skala 2 (Provinsi) : kecamatan bebas semua, kabkota sesuai t_dtsen_wilayah
-      - Skala 3 (Kab/Kota) : kabkota & kecamatan sesuai t_dtsen_wilayah
-    """
     if _is_tuser(identity):
         return None
     dtsen = _get_dtsen_akses(identity)
@@ -179,32 +147,22 @@ def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
     return allowed
 
 def _get_allowed_kabkota(identity: dict) -> list[str] | None:
-    """
-    Return None   → kabkota bebas semua (tuser atau LAZ skala 1 Nasional).
-    Return [...]  → hanya kabkota yang tercatat di t_dtsen_wilayah.
-    """
     if _is_tuser(identity):
         return None
     dtsen = _get_dtsen_akses(identity)
     if dtsen is None:
         return []
-    # Skala 1 (Nasional): provinsi dibatasi, tapi kabkota bebas semua
     if _laz_skala(dtsen) == 1:
         return None
     rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
     return list({r.kabkota_kode for r in rows if r.kabkota_kode})
 
 def _get_allowed_kecamatan(identity: dict) -> list[str] | None:
-    """
-    Return None   → kecamatan bebas semua (tuser atau LAZ skala 1/2).
-    Return [...]  → hanya kecamatan yang tercatat di t_dtsen_wilayah.
-    """
     if _is_tuser(identity):
         return None
     dtsen = _get_dtsen_akses(identity)
     if dtsen is None:
         return []
-    # Skala 1 (Nasional) & 2 (Provinsi): kecamatan bebas semua
     if _laz_skala(dtsen) in (1, 2):
         return None
     rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen.dtsen_akses_id).all()
@@ -658,11 +616,6 @@ def baseline_ping():
 @api_v1_bp.get('/baseline/provinsi')
 @jwt_required()
 def baseline_provinsi_list():
-    """
-    Return list provinsi sesuai akses.
-    Setiap item: { kode: <bps_kode>, label: <nama>, slug: <slug> }
-    sehingga frontend bisa pakai kode BPS sebagai value dropdown.
-    """
     identity = _current_identity()
     allowed  = _allowed_provinsi_slugs(identity)
     if allowed is None:
@@ -695,7 +648,6 @@ def baseline_anggota():
     if not provinsi_raw:
         return jsonify({"error": "Parameter 'provinsi' wajib diisi."}), 400
 
-    # ── Terima slug ATAU kode BPS ──────────────────────────────
     provinsi, info = _resolve_provinsi(provinsi_raw)
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi_raw}' tidak dikenal."}), 400
@@ -703,7 +655,6 @@ def baseline_anggota():
     if allowed is not None and provinsi not in allowed:
         return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
 
-    # ── Normalisasi kode kabkota / kecamatan ─────────────────
     kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
         kabkota_dotted, kabkota_plain = _normalize_kode(kabkota_filter)
@@ -739,23 +690,56 @@ def baseline_anggota():
                 logger.warning(f"[Baseline] gagal cache anggota NIK={search}: {e}")
         return _build_table_response(payload, info["label"], provinsi)
 
-    # ── Coba DB cache dulu ────────────────────────────────────
+    # ── DB cache dengan pagination proper ────────────────────────
+    # Gunakan db:page_ cursor (sama seperti /baseline/keluarga).
+    # Jika cursor adalah ZAWA cursor (bukan db:page_), langsung fallback ke ZAWA.
+    db_page = None
     if not cursor:
+        db_page = 1
+    else:
+        db_page = _parse_db_cursor(cursor)  # None jika bukan db cursor
+
+    if db_page is not None:
         q = ZawaAnggota.query.filter_by(provinsi_slug=provinsi)
         if kabkota_dotted:
             q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))
         if kecamatan_dotted:
             q = q.filter(_kode_filter(ZawaAnggota.kode_kecamatan_ktp, kecamatan_filter))
-        db_rows = q.limit(ZAWA_LIMIT).all()
-        if db_rows:
-            items = [_row_to_dict(r) for r in db_rows]
-            return _ok_payload(items, info["label"], provinsi,
-                               {"searchMode": "db_cache", "source": "local_db",
-                                "totalItems": len(items), "limit": ZAWA_LIMIT})
+        if search:
+            q_lower = f"%{search.lower()}%"
+            q = q.filter(db.or_(
+                ZawaAnggota.nama.ilike(q_lower),
+                ZawaAnggota.nomor_induk_kependudukan.ilike(q_lower),
+            ))
 
-    # ── Fallback ke ZAWA ─────────────────────────────────────
+        total_count = q.count()
+        if total_count > 0:
+            total_pages = max(1, -(-total_count // DB_PAGE_SIZE))
+            offset      = (db_page - 1) * DB_PAGE_SIZE
+            db_rows     = q.order_by(ZawaAnggota.id).offset(offset).limit(DB_PAGE_SIZE).all()
+            items       = [_row_to_dict(r) for r in db_rows]
+            has_next    = db_page < total_pages
+            next_cur    = _build_db_cursor(db_page + 1) if has_next else None
+            columns     = list(items[0].keys()) if items else []
+            return jsonify({
+                "data": items, "columns": columns,
+                "meta": {
+                    "provinsi": provinsi, "label": info["label"],
+                    "totalItems":      total_count,
+                    "totalPages":      total_pages,
+                    "currentPage":     db_page,
+                    "hasNextPage":     has_next,
+                    "hasPreviousPage": db_page > 1,
+                    "nextCursor":      next_cur,
+                    "limit":           DB_PAGE_SIZE,
+                    "searchMode":      "db_cache",
+                    "source":          "local_db",
+                }
+            }), 200
+
+    # ── Fallback ke ZAWA API ──────────────────────────────────
     params: dict = {}
-    if cursor:
+    if cursor and not cursor.startswith("db:page_"):
         params["cursor"] = cursor
     if kabkota_dotted:
         params["kode_kabupaten_kota"] = kabkota_dotted
