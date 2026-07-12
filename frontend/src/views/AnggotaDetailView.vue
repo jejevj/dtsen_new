@@ -45,7 +45,7 @@
                   {{ statusKawinLabel(data.status_kawin) }}
                 </span>
               </div>
-              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNIK(data.nomor_induk_kependudukan) }}</strong></p>
+              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ data.nomor_induk_kependudukan ?? '-' }}</strong></p>
               <p style="font-size:13px;color:#64748b;margin:0;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ data.nomor_kartu_keluarga ?? '-' }}</strong></p>
             </div>
 
@@ -239,11 +239,8 @@ async function loadData() {
   const nik = route.params.nik
 
   try {
-    // 1. Coba cari di DB cache dulu — cukup search=NIK dengan provinsi pertama
-    //    Backend akan hit zawa/anggota-by-nik langsung (search by numeric id),
-    //    provinsi hanya dipakai untuk label, bukan filter actual saat search by NIK.
     const provinsiList = await fetchBaselineProvinsi()
-    const firstProvinsi = provinsiList?.[0]?.kode  // BPS 2-digit atau slug
+    const firstProvinsi = provinsiList?.[0]?.kode
 
     if (!firstProvinsi) {
       console.error('[AnggotaDetail] Tidak ada provinsi yang dapat diakses')
@@ -255,7 +252,6 @@ async function loadData() {
     })
 
     const items = res.data?.data ?? []
-    // Match exact NIK
     data.value = items.find(
       r => r.nomor_induk_kependudukan === nik || r.nik === nik
     ) ?? items[0] ?? null
@@ -286,10 +282,6 @@ const disabilitasItems = computed(() => [
 ])
 
 // ─── Label helpers ──────────────────────────────────────────
-function maskNIK(nik) {
-  if (!nik) return '-'
-  return String(nik).slice(0, 6) + '••••' + String(nik).slice(-4)
-}
 function statusKawinLabel(v) {
   return { '1':'Belum Kawin','2':'Kawin','3':'Cerai Hidup','4':'Cerai Mati' }[String(v)] ?? v ?? '-'
 }
