@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 import requests
 from flask import request, jsonify
@@ -52,7 +53,18 @@ ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
 ZAWA_TIMEOUT = 30
 
 _CACHE: dict = {}
-CACHE_TTL = 600
+CACHE_TTL = 600  # 10 menit
+
+
+def _zawa_headers() -> dict:
+    """Bangun headers untuk request ke ZAWA, termasuk x-api-key dari env."""
+    api_key = os.environ.get("ZAWA_API_KEY", "")
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["x-api-key"] = api_key
+    else:
+        logger.warning("[Baseline] ZAWA_API_KEY tidak di-set di environment!")
+    return headers
 
 
 def _safe_int(val, default, min_val=1, max_val=None):
@@ -76,7 +88,7 @@ def _fetch_zawa(slug: str):
     url = f"{ZAWA_BASE}/zawa/{slug}"
     logger.info(f"[Baseline] fetch ZAWA url={url}")
     try:
-        resp = requests.get(url, timeout=ZAWA_TIMEOUT, headers={"Accept": "application/json"})
+        resp = requests.get(url, timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
         logger.info(f"[Baseline] ZAWA response status={resp.status_code} slug={slug}")
         resp.raise_for_status()
         raw = resp.json()
@@ -105,26 +117,20 @@ def _fetch_zawa(slug: str):
     return rows, None
 
 
-# ── Diagnostik ────────────────────────────────────────────────────────────────
+# ── Diagnostik ─────────────────────────────────────────────────────────────
 @api_v1_bp.get('/baseline/ping')
 @jwt_required()
 def baseline_ping():
-    """
-    Test koneksi dari server ke ZAWA.
-    Gunakan untuk diagnosa apakah server produksi bisa reach spl-satudata.kemenag.go.id
-    """
     import socket
     results = {}
-
-    # 1. DNS resolve
     host = "spl-satudata.kemenag.go.id"
+
     try:
         ip = socket.gethostbyname(host)
         results["dns"] = {"ok": True, "ip": ip}
     except Exception as e:
         results["dns"] = {"ok": False, "error": str(e)}
 
-    # 2. TCP connect port 443
     try:
         s = socket.create_connection((host, 443), timeout=5)
         s.close()
@@ -132,30 +138,22 @@ def baseline_ping():
     except Exception as e:
         results["tcp_443"] = {"ok": False, "error": str(e)}
 
-    # 3. HTTP GET ke endpoint ZAWA (slug aceh = anggota)
     test_url = f"{ZAWA_BASE}/zawa/anggota"
     t0 = time.time()
     try:
-        resp = requests.get(test_url, timeout=15, headers={"Accept": "application/json"})
+        resp = requests.get(test_url, timeout=15, headers=_zawa_headers())
         elapsed = round(time.time() - t0, 2)
-        try:
-            body_sample = resp.text[:200]
-        except Exception:
-            body_sample = "(tidak bisa baca body)"
         results["http_get"] = {
             "ok":      resp.status_code < 400,
             "status":  resp.status_code,
             "elapsed": f"{elapsed}s",
-            "sample":  body_sample,
+            "sample":  resp.text[:200],
         }
-    except requests.exceptions.SSLError as e:
-        results["http_get"] = {"ok": False, "error": f"SSLError: {e}"}
-    except requests.exceptions.ConnectionError as e:
-        results["http_get"] = {"ok": False, "error": f"ConnectionError: {e}"}
-    except requests.exceptions.Timeout:
-        results["http_get"] = {"ok": False, "error": "Timeout >15s"}
     except Exception as e:
         results["http_get"] = {"ok": False, "error": str(e)}
+
+    api_key_set = bool(os.environ.get("ZAWA_API_KEY", ""))
+    results["api_key_configured"] = {"ok": api_key_set, "set": api_key_set}
 
     overall_ok = all(v.get("ok") for v in results.values())
     logger.info(f"[Baseline] ping results: {results}")
