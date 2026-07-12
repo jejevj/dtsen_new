@@ -74,7 +74,7 @@
               <p class="section-title"><i class="pi pi-id-card"></i> Data Pribadi</p>
               <table class="info-table">
                 <tbody>
-                  <tr><td class="td-label">Tanggal Lahir</td><td class="td-value">{{ data.tanggal_lahir ?? '-' }}</td></tr>
+                  <tr><td class="td-label">Tanggal Lahir</td><td class="td-value">{{ formatTanggal(data.tanggal_lahir) }}</td></tr>
                   <tr><td class="td-label">Jenis Kelamin</td><td class="td-value">{{ isLaki ? 'Laki-laki' : 'Perempuan' }}</td></tr>
                   <tr><td class="td-label">Status Kawin</td><td class="td-value">{{ statusKawinLabel(data.status_kawin) }}</td></tr>
                   <tr><td class="td-label">Hub. Keluarga</td><td class="td-value">{{ hubunganLabel(data.status_hubungan_keluarga) }}</td></tr>
@@ -282,6 +282,12 @@ const disabilitasItems = computed(() => [
 ])
 
 // ─── Label helpers ──────────────────────────────────────────
+function formatTanggal(v) {
+  if (!v) return '-'
+  const d = new Date(v)
+  if (isNaN(d.getTime())) return v
+  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+}
 function statusKawinLabel(v) {
   return { '1':'Belum Kawin','2':'Kawin','3':'Cerai Hidup','4':'Cerai Mati' }[String(v)] ?? v ?? '-'
 }
