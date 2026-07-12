@@ -8,20 +8,18 @@ from app.extensions import db
 from app.models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 import requests
 
-# ─── Konstanta ─────────────────────────────────────────────────────────────────────────────
+# ─── Konstanta ──────────────────────────────────────────────────────────────────
 ZAWA_BASE_URL  = "https://spl-satudata.kemenag.go.id/core/api/zawa"
 ZAWA_API_KEY   = os.getenv("ZAWA_API_KEY", "prod-53a81004-085d-426b-a5a0-c6ef6cdf18e1")
 ZAWA_PAGE_SIZE = 100
 
-# Data ZAWA sangat besar: keluarga ~61 juta, anggota ~4.6 juta
-# Set limit sesuai kebutuhan, atau 0 untuk unlimited
 MAX_ANGGOTA_PER_PROVINSI = int(os.getenv("MAX_ANGGOTA_PER_PROVINSI", "500000"))
 MAX_KELUARGA_TOTAL       = int(os.getenv("MAX_KELUARGA_TOTAL", "5000000"))
 
 RETRY_MAX   = 3
 RETRY_DELAY = 5
 
-# ─── State tracker ───────────────────────────────────────────────────────────────────
+# ─── State tracker ──────────────────────────────────────────────────────────────
 _running_jobs: dict[str, bool] = {}
 _jobs_lock = threading.Lock()
 
@@ -72,40 +70,32 @@ def _fetch_page(url: str, params: dict, logger: logging.Logger) -> dict | None:
     return None
 
 
-def _get_next_cursor(page_data: dict) -> str | None:
-    """Baca nextCursor dari berbagai kemungkinan nama key API."""
-    return (
-        page_data.get("nextCursor")
-        or page_data.get("next_cursor")
-        or page_data.get("cursor")
-        or None
-    )
-
-
-def _save_cursor(job_id: str, cursor: str | None):
-    cursor_dir = os.path.join(os.getcwd(), "logs", "sync")
-    os.makedirs(cursor_dir, exist_ok=True)
-    path = os.path.join(cursor_dir, f"{job_id}.cursor")
+def _save_page(job_id: str, page: int):
+    """Simpan last successful page untuk resume."""
+    path = os.path.join(os.getcwd(), "logs", "sync", f"{job_id}.page")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w") as f:
-        f.write(cursor or "")
+        f.write(str(page))
 
 
-def _load_cursor(job_id: str) -> str | None:
-    path = os.path.join(os.getcwd(), "logs", "sync", f"{job_id}.cursor")
+def _load_page(job_id: str) -> int:
+    """Baca page terakhir, default 1."""
+    path = os.path.join(os.getcwd(), "logs", "sync", f"{job_id}.page")
     if os.path.exists(path):
-        with open(path) as f:
-            val = f.read().strip()
-            return val if val else None
-    return None
+        try:
+            return int(open(path).read().strip())
+        except ValueError:
+            pass
+    return 1
 
 
-def _clear_cursor(job_id: str):
-    path = os.path.join(os.getcwd(), "logs", "sync", f"{job_id}.cursor")
+def _clear_page(job_id: str):
+    path = os.path.join(os.getcwd(), "logs", "sync", f"{job_id}.page")
     if os.path.exists(path):
         os.remove(path)
 
 
-# ─── Core sync functions ────────────────────────────────────────────────────────────
+# ─── Core sync functions ─────────────────────────────────────────────────────────
 def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
     job_id = f"anggota_{provinsi}_{sync_log_id}"
     logger = get_sync_logger(job_id)
@@ -113,10 +103,9 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
 
     total_saved   = 0
     total_fetched = 0
-    cursor = _load_cursor(job_id)
-
-    if cursor:
-        logger.info(f"Resume dari cursor: {cursor}")
+    page = _load_page(job_id)
+    if page > 1:
+        logger.info(f"Resume dari page: {page}")
 
     with app.app_context():
         sync_log = db.session.get(ZawaSyncLog, sync_log_id)
@@ -129,10 +118,7 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
                     logger.info(f"Batas {MAX_ANGGOTA_PER_PROVINSI} baris tercapai.")
                     break
 
-                params = {"provinsi": provinsi, "limit": ZAWA_PAGE_SIZE}
-                if cursor:
-                    params["cursor"] = cursor
-
+                params = {"provinsi": provinsi, "limit": ZAWA_PAGE_SIZE, "page": page}
                 page_data = _fetch_page(f"{ZAWA_BASE_URL}/anggota", params, logger)
 
                 if page_data is None:
@@ -156,33 +142,25 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
                 total_fetched += batch_fetched
                 total_saved   += batch_saved
 
-                new_cursor = _get_next_cursor(page_data)
-                if new_cursor and new_cursor == cursor:
-                    logger.warning(
-                        f"Cursor tidak berubah ({new_cursor}). "
-                        "API stuck atau sudah di halaman terakhir. Stop."
-                    )
-                    break
-
-                cursor = new_cursor
-                _save_cursor(job_id, cursor)
-
                 logger.info(
-                    f"Page OK | fetched={batch_fetched} saved={batch_saved} | "
-                    f"total_fetched={total_fetched} total_saved={total_saved} | "
-                    f"nextCursor={cursor}"
+                    f"Page {page}/{page_data.get('totalPages','?')} OK | "
+                    f"+{batch_fetched} fetched +{batch_saved} saved | "
+                    f"total={total_fetched}"
                 )
 
-                if not page_data.get("hasNextPage") or not cursor:
+                if not page_data.get("hasNextPage"):
                     logger.info("Tidak ada halaman berikutnya. Selesai.")
                     break
+
+                page += 1
+                _save_page(job_id, page)
 
             sync_log.status        = "success"
             sync_log.total_fetched = total_fetched
             sync_log.total_saved   = total_saved
             sync_log.finished_at   = datetime.utcnow()
             db.session.commit()
-            _clear_cursor(job_id)
+            _clear_page(job_id)
             logger.info(f"=== SELESAI sukses. total_saved={total_saved} ===")
 
         except Exception as exc:
@@ -207,10 +185,9 @@ def _sync_keluarga(app, sync_log_id: int):
 
     total_saved   = 0
     total_fetched = 0
-    cursor = _load_cursor(job_id)
-
-    if cursor:
-        logger.info(f"Resume dari cursor: {cursor}")
+    page = _load_page(job_id)
+    if page > 1:
+        logger.info(f"Resume dari page: {page}")
 
     with app.app_context():
         sync_log = db.session.get(ZawaSyncLog, sync_log_id)
@@ -223,10 +200,7 @@ def _sync_keluarga(app, sync_log_id: int):
                     logger.info(f"Batas {MAX_KELUARGA_TOTAL} baris tercapai.")
                     break
 
-                params = {"limit": ZAWA_PAGE_SIZE}
-                if cursor:
-                    params["cursor"] = cursor
-
+                params = {"limit": ZAWA_PAGE_SIZE, "page": page}
                 page_data = _fetch_page(f"{ZAWA_BASE_URL}/keluarga", params, logger)
 
                 if page_data is None:
@@ -250,33 +224,25 @@ def _sync_keluarga(app, sync_log_id: int):
                 total_fetched += batch_fetched
                 total_saved   += batch_saved
 
-                new_cursor = _get_next_cursor(page_data)
-                if new_cursor and new_cursor == cursor:
-                    logger.warning(
-                        f"Cursor tidak berubah ({new_cursor}). "
-                        "API stuck atau sudah di halaman terakhir. Stop."
-                    )
-                    break
-
-                cursor = new_cursor
-                _save_cursor(job_id, cursor)
-
                 logger.info(
-                    f"Page OK | fetched={batch_fetched} saved={batch_saved} | "
-                    f"total_fetched={total_fetched} total_saved={total_saved} | "
-                    f"nextCursor={cursor}"
+                    f"Page {page}/{page_data.get('totalPages','?')} OK | "
+                    f"+{batch_fetched} fetched +{batch_saved} saved | "
+                    f"total={total_fetched}"
                 )
 
-                if not page_data.get("hasNextPage") or not cursor:
+                if not page_data.get("hasNextPage"):
                     logger.info("Tidak ada halaman berikutnya. Selesai.")
                     break
+
+                page += 1
+                _save_page(job_id, page)
 
             sync_log.status        = "success"
             sync_log.total_fetched = total_fetched
             sync_log.total_saved   = total_saved
             sync_log.finished_at   = datetime.utcnow()
             db.session.commit()
-            _clear_cursor(job_id)
+            _clear_page(job_id)
             logger.info(f"=== SELESAI sukses. total_saved={total_saved} ===")
 
         except Exception as exc:
@@ -294,7 +260,7 @@ def _sync_keluarga(app, sync_log_id: int):
                 _running_jobs.pop(job_id, None)
 
 
-# ─── Public API ───────────────────────────────────────────────────────────────────────
+# ─── Public API ──────────────────────────────────────────────────────────────────
 def start_sync_anggota(app, provinsi: str) -> dict:
     job_key = f"anggota_{provinsi}"
 
