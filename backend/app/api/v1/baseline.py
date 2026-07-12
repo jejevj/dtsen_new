@@ -50,7 +50,7 @@ PROVINSI_MAP = {
 }
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
-ZAWA_TIMEOUT = 30
+ZAWA_TIMEOUT = 60  # dinaikkan ke 60 detik
 ZAWA_LIMIT   = 10
 
 _CACHE: dict = {}
@@ -79,14 +79,6 @@ def _safe_int(val, default, min_val=1, max_val=None):
 
 
 def _fetch_zawa_page(zawa_path: str, params: dict = None):
-    """
-    Fetch satu halaman dari ZAWA.
-    zawa_path : bagian setelah /core/api/, mis. 'zawa/anggota' atau 'zawa/keluarga'
-    params    : query params tambahan (cursor, nomor_kartu_keluarga, dll)
-    Response ZAWA: { success, message, data: { limit, currentPage, totalItems,
-                     totalPages, hasNextPage, hasPreviousPage, nextCursor, items: [...] } }
-    Return (payload_dict, error_str|None)
-    """
     cache_key = f"{zawa_path}:{sorted((params or {}).items())}"
     now = time.time()
     cached = _CACHE.get(cache_key)
@@ -106,7 +98,7 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
     except requests.exceptions.ConnectionError as e:
         return None, f"Tidak dapat terhubung ke ZAWA: {e}"
     except requests.exceptions.Timeout:
-        return None, "Timeout (>30 detik)."
+        return None, "Timeout saat menghubungi ZAWA. Coba lagi beberapa saat."
     except requests.exceptions.HTTPError as e:
         logger.error(f"[Baseline] HTTP error path={zawa_path}: {e}")
         return None, f"ZAWA HTTP error: {e}"
@@ -156,7 +148,7 @@ def _build_table_response(payload, label, provinsi):
     }), 200
 
 
-# ── Diagnostik ─────────────────────────────────────────────────────────────
+# ── Diagnostik
 @api_v1_bp.get('/baseline/ping')
 @jwt_required()
 def baseline_ping():
@@ -177,7 +169,7 @@ def baseline_ping():
     test_url = f"{ZAWA_BASE}/zawa/anggota"
     t0 = time.time()
     try:
-        resp = requests.get(test_url, timeout=15, headers=_zawa_headers())
+        resp = requests.get(test_url, timeout=30, headers=_zawa_headers())
         elapsed = round(time.time() - t0, 2)
         results["http_get"] = {"ok": resp.status_code < 400, "status": resp.status_code, "elapsed": f"{elapsed}s", "sample": resp.text[:300]}
     except Exception as e:
@@ -187,7 +179,7 @@ def baseline_ping():
     return jsonify({"ok": overall_ok, "checks": results, "target": host}), 200 if overall_ok else 502
 
 
-# ── Provinsi list ─────────────────────────────────────────────────────────────
+# ── Provinsi list
 @api_v1_bp.get('/baseline/provinsi')
 @jwt_required()
 def baseline_provinsi_list():
@@ -198,14 +190,10 @@ def baseline_provinsi_list():
     return jsonify({"data": items}), 200
 
 
-# ── Tab Anggota ─────────────────────────────────────────────────────────────
+# ── Tab Anggota
 @api_v1_bp.get('/baseline/anggota')
 @jwt_required()
 def baseline_anggota():
-    """
-    Data anggota per provinsi (cursor-based).
-    Query: provinsi (wajib), cursor (opsional), search (opsional)
-    """
     provinsi = request.args.get('provinsi', '').lower().strip()
     cursor   = request.args.get('cursor') or None
     search   = request.args.get('search', '').lower().strip()
@@ -233,15 +221,10 @@ def baseline_anggota():
     return _build_table_response(payload, info["label"], provinsi)
 
 
-# ── Tab Keluarga ─────────────────────────────────────────────────────────────
+# ── Tab Keluarga
 @api_v1_bp.get('/baseline/keluarga')
 @jwt_required()
 def baseline_keluarga():
-    """
-    Data keluarga (cursor-based, endpoint zawa/keluarga global).
-    Query: cursor (opsional), search (opsional)
-    Endpoint ZAWA: GET /zawa/keluarga
-    """
     cursor = request.args.get('cursor') or None
     search = request.args.get('search', '').lower().strip()
 
@@ -262,14 +245,14 @@ def baseline_keluarga():
     return _build_table_response(payload, "Keluarga", "nasional")
 
 
-# ── Endpoint lama (/baseline) – tetap dipertahankan agar tidak breaking
+# ── Alias lama
 @api_v1_bp.get('/baseline')
 @jwt_required()
 def baseline_data():
     return baseline_anggota()
 
 
-# ── Flush cache ─────────────────────────────────────────────────────────────
+# ── Flush cache
 @api_v1_bp.delete('/baseline/cache')
 @jwt_required()
 def baseline_clear_cache():
