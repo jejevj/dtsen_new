@@ -1,4 +1,4 @@
-from flask import jsonify
+from flask import jsonify, request
 from . import api_v1_bp
 from ...models.tampilan_dtsen import TampilanDtsen
 
@@ -29,21 +29,33 @@ def list_tampilan_dtsen():
 @api_v1_bp.get('/tampilan-dtsen/filter')
 def list_filter_fields():
     """
-    Ambil hanya field yang is_filter=1 dan is_active=1.
-    Digunakan frontend untuk membangun panel filter dinamis.
+    Ambil field yang is_filter=1 dan is_active=1.
+    Opsional: filter by kategori (individu / keluarga).
+    Query param: ?kategori=individu
     ---
     tags:
       - TampilanDtsen
+    parameters:
+      - in: query
+        name: kategori
+        type: string
+        enum: [individu, keluarga]
+        description: Filter berdasarkan kategori field
     responses:
       200:
         description: Daftar field filter berhasil diambil
     """
-    fields = (
+    q = (
         TampilanDtsen.query
         .filter_by(is_active=1, is_filter=1)
-        .order_by(TampilanDtsen.urutan.asc())
-        .all()
     )
+
+    kategori = request.args.get('kategori')
+    if kategori:
+        q = q.filter_by(kategori=kategori)
+
+    fields = q.order_by(TampilanDtsen.urutan.asc()).all()
+
     return jsonify({
         'status': 'success',
         'data':   [f.to_dict(with_refs=True) for f in fields],
