@@ -4,13 +4,13 @@ from flask_jwt_extended import (
     jwt_required, get_jwt_identity
 )
 from . import api_v1_bp
-from ...services.auth_service import AuthService
+from ...services.auth_service import AuthService, parse_identity_str
 from ...services.otp_service  import generate_otp, save_otp, verify_otp, send_otp_email
 from ...services.wa_service   import send_wa_otp, normalize_contact
 from ...extensions            import db
 
 
-# ── Helpers ─────────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 def _mask_email(email: str) -> str:
     if not email or '@' not in email:
         return ''
@@ -29,8 +29,9 @@ def _parse_otp_key(otp_key: str):
     user_type = parts[3]
     return user_id, user_type
 
-def _make_identity(user_id: int, user_type: str) -> dict:
-    return {'type': user_type, 'id': user_id}
+def _make_identity_str(user_id: int, user_type: str) -> str:
+    """Buat identity string 'type:id' untuk JWT subject."""
+    return f"{user_type}:{user_id}"
 
 def _get_phone(user: dict) -> str:
     for field in ('notelp', 'tuser_notelp', 'phone', 'handphone', 'no_hp', 'telepon'):
@@ -59,7 +60,6 @@ def _fetch_phone_from_db(user_id: int, user_type: str) -> str:
     return ''
 
 def _fetch_email_from_db(user_id: int, user_type: str) -> str:
-    """Ambil email langsung dari DB sebagai fallback jika payload kosong."""
     try:
         if user_type == 'tuser':
             row = db.session.execute(
@@ -79,7 +79,7 @@ def _fetch_email_from_db(user_id: int, user_type: str) -> str:
     return ''
 
 
-# ── Step 1: Login → kirim OTP Email ───────────────────────────────────────────
+# ── Step 1: Login → kirim OTP Email ──────────────────────────────────────────
 @api_v1_bp.post('/auth/login')
 def login():
     data       = request.get_json() or {}
@@ -117,13 +117,12 @@ def login():
             'email_masked': _mask_email(email),
             'phone':        phone,
             'phone_masked': _mask_phone(phone),
-            # Simpan identifier asli untuk diambil kembali saat step 3
             'identifier':   identifier,
         }
     }), 200
 
 
-# ── Step 2: Verifikasi OTP Email → kirim OTP WA ────────────────────────────
+# ── Step 2: Verifikasi OTP Email → kirim OTP WA ──────────────────────────
 @api_v1_bp.post('/auth/otp/verify-email')
 def otp_verify_email():
     from flask import current_app
@@ -138,8 +137,9 @@ def otp_verify_email():
         return jsonify({'message': 'Kode OTP email salah atau sudah kadaluarsa.'}), 401
 
     user_id, user_type = _parse_otp_key(otp_key)
+    identity_dict = {'type': user_type, 'id': user_id}
 
-    user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
+    user_data = AuthService.get_current_user(identity_dict)
     user      = user_data.get('user', {})
     phone     = _get_phone(user) or _fetch_phone_from_db(user_id, user_type)
 
@@ -167,7 +167,7 @@ def otp_verify_email():
     }), 200
 
 
-# ── Step 3: Verifikasi OTP WA → kembalikan JWT ────────────────────────────
+# ── Step 3: Verifikasi OTP WA → kembalikan JWT ───────────────────────────
 @api_v1_bp.post('/auth/otp/verify-wa')
 def otp_verify_wa():
     from flask import current_app
@@ -188,17 +188,17 @@ def otp_verify_wa():
         return jsonify({'message': 'Kode OTP WhatsApp salah atau sudah kadaluarsa.'}), 401
 
     user_id, user_type = _parse_otp_key(wa_key)
-    identity = _make_identity(user_id, user_type)
 
-    access_token  = create_access_token(identity=identity)
-    refresh_token = create_refresh_token(identity=identity)
+    # Identity sebagai STRING untuk JWT subject (wajib di Flask-JWT-Extended v4+)
+    identity_str  = _make_identity_str(user_id, user_type)
+    access_token  = create_access_token(identity=identity_str)
+    refresh_token = create_refresh_token(identity=identity_str)
 
-    user_data = AuthService.get_current_user(identity)
+    # Ambil payload user dengan dict identity (helper internal)
+    identity_dict = {'type': user_type, 'id': user_id}
+    user_data = AuthService.get_current_user(identity_dict)
     user      = user_data.get('user', {})
 
-    # ── Pastikan field 'email' selalu terisi untuk kebutuhan watermark & audit ──
-    # Jika email kosong di payload (user login pakai notelp), ambil dari DB.
-    # Jika masih kosong, gunakan notelp sebagai identitas terakhir.
     if not user.get('email'):
         email_from_db = _fetch_email_from_db(user_id, user_type)
         if email_from_db:
@@ -214,7 +214,7 @@ def otp_verify_wa():
     }), 200
 
 
-# ── Resend OTP Email ───────────────────────────────────────────────────────────────
+# ── Resend OTP Email ───────────────────────────────────────────────────────
 @api_v1_bp.post('/auth/otp/resend-email')
 def otp_resend_email():
     data    = request.get_json() or {}
@@ -223,7 +223,7 @@ def otp_resend_email():
         return jsonify({'message': 'otp_key wajib diisi.'}), 400
 
     user_id, user_type = _parse_otp_key(otp_key)
-    user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
+    user_data = AuthService.get_current_user({'type': user_type, 'id': user_id})
     user      = user_data.get('user', {})
     email     = user.get('email') or user.get('tuser_email') or ''
     user_name = user.get('user_fullname') or user.get('nama_lengkap') or ''
@@ -234,7 +234,7 @@ def otp_resend_email():
     return jsonify({'message': 'OTP email dikirim ulang.', 'otp_sent': sent}), 200
 
 
-# ── Resend OTP WA ────────────────────────────────────────────────────────────────
+# ── Resend OTP WA ──────────────────────────────────────────────────────────
 @api_v1_bp.post('/auth/otp/resend-wa')
 def otp_resend_wa():
     data   = request.get_json() or {}
@@ -243,7 +243,7 @@ def otp_resend_wa():
         return jsonify({'message': 'wa_otp_key wajib diisi.'}), 400
 
     user_id, user_type = _parse_otp_key(wa_key)
-    user_data = AuthService.get_current_user(_make_identity(user_id, user_type))
+    user_data = AuthService.get_current_user({'type': user_type, 'id': user_id})
     user      = user_data.get('user', {})
     phone     = _get_phone(user) or _fetch_phone_from_db(user_id, user_type)
 
@@ -253,20 +253,23 @@ def otp_resend_wa():
     return jsonify({'message': 'OTP WhatsApp dikirim ulang.', 'wa_otp_sent': sent}), 200
 
 
-# ── Standard ─────────────────────────────────────────────────────────────────────────
+# ── Refresh token ────────────────────────────────────────────────────────────
 @api_v1_bp.post('/auth/refresh')
 @jwt_required(refresh=True)
 def refresh():
-    identity     = get_jwt_identity()
-    access_token = create_access_token(identity=identity)
+    identity_str = get_jwt_identity()          # sudah string 'type:id'
+    access_token = create_access_token(identity=identity_str)
     return jsonify({'access_token': access_token, 'token_type': 'Bearer'}), 200
 
+
+# ── /auth/me ────────────────────────────────────────────────────────────────────
 @api_v1_bp.get('/auth/me')
 @jwt_required()
 def me():
-    identity = get_jwt_identity()
-    result   = AuthService.get_current_user(identity)
-    # Pastikan email juga terisi di endpoint /me
+    identity_str = get_jwt_identity()          # string 'type:id'
+    identity     = parse_identity_str(identity_str)
+    result       = AuthService.get_current_user(identity)
+
     user = result.get('user', {})
     if isinstance(user, dict) and not user.get('email'):
         user_id   = identity.get('id')
@@ -276,8 +279,11 @@ def me():
             user['email'] = email_from_db
         elif user.get('notelp'):
             user['email'] = user['notelp']
+
     return jsonify(result), result.get('status_code', 200)
 
+
+# ── Logout ──────────────────────────────────────────────────────────────────────
 @api_v1_bp.post('/auth/logout')
 @jwt_required()
 def logout():

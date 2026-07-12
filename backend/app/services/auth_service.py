@@ -6,49 +6,45 @@ from ..models.t_dtsen_akses import TDtsenAkses
 
 
 def md5(plain: str) -> str:
-    """Hash plaintext dengan MD5 (sesuai skema DB lama)."""
     return hashlib.md5(plain.encode('utf-8')).hexdigest()
 
 
-def _build_identity(user) -> dict:
+def build_identity_str(user) -> str:
     """
-    Bungkus JWT identity dengan type + id.
-    user_type diambil dari property model sehingga tidak hard-code di sini.
+    JWT subject HARUS string (Flask-JWT-Extended v4+).
+    Format: "tuser:123" atau "dtsen:456"
     """
-    return {'type': user.user_type, 'id': (
-        user.iduser if user.user_type == 'tuser' else user.dtsen_akses_id
-    )}
+    uid = user.iduser if user.user_type == 'tuser' else user.dtsen_akses_id
+    return f"{user.user_type}:{uid}"
+
+
+def parse_identity_str(identity: str) -> dict:
+    """
+    Parse string identity kembali ke dict {'type': ..., 'id': ...}.
+    Kompatibel dengan kode lama yang pakai dict identity.
+    """
+    try:
+        user_type, uid = identity.split(':', 1)
+        return {'type': user_type, 'id': int(uid)}
+    except Exception:
+        return {'type': None, 'id': None}
 
 
 class AuthService:
 
-    # ------------------------------------------------------------------
-    # LOGIN
-    # ------------------------------------------------------------------
     @staticmethod
     def login(identifier: str, password: str) -> dict:
-        """
-        Login fleksibel:
-        - identifier bisa email atau notelp
-        - Dicari di tuser dulu, lalu t_dtsen_akses
-        - Password diverifikasi dengan MD5
-        - Khusus tuser: is_dtsen_user harus 'Y' agar bisa login
-        """
         if not identifier or not password:
             return {'message': 'Identifier dan password wajib diisi.', 'status_code': 400}
 
         hashed = md5(password)
 
-        # --- 1. Cari di tuser (user internal SIMZAT) ---
+        # --- Cari di tuser ---
         tuser = TUser.query.filter(
-            or_(
-                TUser.email  == identifier,
-                TUser.notelp == identifier,
-            )
+            or_(TUser.email == identifier, TUser.notelp == identifier)
         ).first()
 
         if tuser:
-            # Cek flag akses DTSEN terlebih dahulu
             is_dtsen = (tuser.is_dtsen_user or '').strip().upper()
             if is_dtsen != 'Y':
                 return {
@@ -56,7 +52,6 @@ class AuthService:
                     'status_code': 403,
                     'error_code': 'DTSEN_ACCESS_DENIED',
                 }
-
             if tuser.is_expired == 'Y':
                 return {'message': 'Akun sudah kadaluarsa.', 'status_code': 403}
             if tuser.approve != 1:
@@ -64,9 +59,9 @@ class AuthService:
             if tuser.user_password != hashed:
                 return {'message': 'Email/No. HP atau password salah.', 'status_code': 401}
 
-            identity      = _build_identity(tuser)
-            access_token  = create_access_token(identity=identity)
-            refresh_token = create_refresh_token(identity=identity)
+            identity_str  = build_identity_str(tuser)
+            access_token  = create_access_token(identity=identity_str)
+            refresh_token = create_refresh_token(identity=identity_str)
             return {
                 'access_token':  access_token,
                 'refresh_token': refresh_token,
@@ -74,12 +69,9 @@ class AuthService:
                 'user':          AuthService._tuser_payload(tuser),
             }
 
-        # --- 2. Cari di t_dtsen_akses (user eksternal LAZ/DTSEN) ---
+        # --- Cari di t_dtsen_akses ---
         dtsen = TDtsenAkses.query.filter(
-            or_(
-                TDtsenAkses.email  == identifier,
-                TDtsenAkses.notelp == identifier,
-            )
+            or_(TDtsenAkses.email == identifier, TDtsenAkses.notelp == identifier)
         ).first()
 
         if dtsen:
@@ -93,9 +85,9 @@ class AuthService:
             if dtsen.dtsen_akses_password != hashed:
                 return {'message': 'Email/No. HP atau password salah.', 'status_code': 401}
 
-            identity      = _build_identity(dtsen)
-            access_token  = create_access_token(identity=identity)
-            refresh_token = create_refresh_token(identity=identity)
+            identity_str  = build_identity_str(dtsen)
+            access_token  = create_access_token(identity=identity_str)
+            refresh_token = create_refresh_token(identity=identity_str)
             return {
                 'access_token':  access_token,
                 'refresh_token': refresh_token,
@@ -103,22 +95,21 @@ class AuthService:
                 'user':          AuthService._dtsen_payload(dtsen),
             }
 
-        # --- Tidak ditemukan di mana pun ---
         return {
             'message': 'Akun dengan email/nomor HP tersebut tidak ditemukan.',
             'status_code': 404,
             'error_code': 'ACCOUNT_NOT_FOUND',
         }
 
-    # ------------------------------------------------------------------
-    # GET CURRENT USER  (/auth/me)
-    # ------------------------------------------------------------------
     @staticmethod
-    def get_current_user(identity: dict) -> dict:
+    def get_current_user(identity) -> dict:
         """
-        Ambil profil user dari JWT identity.
-        identity = {'type': 'tuser'|'dtsen', 'id': <int>}
+        Menerima identity berupa string '"type:id"' (format baru)
+        atau dict {'type':..,'id':..} (format lama, auto-convert).
         """
+        if isinstance(identity, str):
+            identity = parse_identity_str(identity)
+
         user_type = identity.get('type')
         user_id   = identity.get('id')
 
@@ -126,19 +117,16 @@ class AuthService:
             user = TUser.query.get(user_id)
             if not user:
                 return {'message': 'User tidak ditemukan.', 'status_code': 404}
-            return AuthService._tuser_payload(user)
+            return {'user': AuthService._tuser_payload(user)}
 
         if user_type == 'dtsen':
             user = TDtsenAkses.query.get(user_id)
             if not user:
                 return {'message': 'User tidak ditemukan.', 'status_code': 404}
-            return AuthService._dtsen_payload(user)
+            return {'user': AuthService._dtsen_payload(user)}
 
         return {'message': 'Tipe user tidak dikenali.', 'status_code': 400}
 
-    # ------------------------------------------------------------------
-    # PAYLOAD HELPERS
-    # ------------------------------------------------------------------
     @staticmethod
     def _tuser_payload(u: TUser) -> dict:
         return {
