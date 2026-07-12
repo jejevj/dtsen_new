@@ -85,8 +85,9 @@ def run_sync_keluarga(app):
 
         try:
             while not _stop:
-                if MAX_KELUARGA_TOTAL > 0 and total_fetched >= MAX_KELUARGA_TOTAL:
-                    logger.info(f"Batas {MAX_KELUARGA_TOTAL} tercapai.")
+                # Batas dihitung dari total_saved (bukan total_fetched)
+                if MAX_KELUARGA_TOTAL > 0 and total_saved >= MAX_KELUARGA_TOTAL:
+                    logger.info(f"Batas {MAX_KELUARGA_TOTAL} rows tersimpan tercapai.")
                     break
 
                 params    = {"limit": ZAWA_PAGE_SIZE, "page": page}
@@ -120,7 +121,7 @@ def run_sync_keluarga(app):
                 logger.info(
                     f"Page {page}/{page_data.get('totalPages','?')} OK | "
                     f"+{batch_fetched} fetched +{batch_saved} saved | "
-                    f"total_fetched={total_fetched} total_saved={total_saved}"
+                    f"total_fetched={total_fetched} total_saved={total_saved}/{MAX_KELUARGA_TOTAL}"
                 )
 
                 if not page_data.get("hasNextPage"):
@@ -174,8 +175,9 @@ def run_sync_anggota(app, provinsi: str):
 
         try:
             while not _stop:
-                if MAX_ANGGOTA_PER_PROVINSI > 0 and total_fetched >= MAX_ANGGOTA_PER_PROVINSI:
-                    logger.info(f"Batas {MAX_ANGGOTA_PER_PROVINSI} tercapai.")
+                # Batas dihitung dari total_saved (bukan total_fetched)
+                if MAX_ANGGOTA_PER_PROVINSI > 0 and total_saved >= MAX_ANGGOTA_PER_PROVINSI:
+                    logger.info(f"Batas {MAX_ANGGOTA_PER_PROVINSI} rows tersimpan tercapai.")
                     break
 
                 params    = {"provinsi": provinsi, "limit": ZAWA_PAGE_SIZE, "page": page}
@@ -209,7 +211,7 @@ def run_sync_anggota(app, provinsi: str):
                 logger.info(
                     f"Page {page}/{page_data.get('totalPages','?')} OK | "
                     f"+{batch_fetched} fetched +{batch_saved} saved | "
-                    f"total_fetched={total_fetched} total_saved={total_saved}"
+                    f"total_fetched={total_fetched} total_saved={total_saved}/{MAX_ANGGOTA_PER_PROVINSI}"
                 )
 
                 if not page_data.get("hasNextPage"):
