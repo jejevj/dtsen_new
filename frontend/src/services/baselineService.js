@@ -1,6 +1,7 @@
 import api from './api'
 
 // Provinsi list (sesuai akses)
+// Response: [{ kode: "32", label: "Jawa Barat", slug: "jabar" }, ...]
 export async function fetchBaselineProvinsi() {
   const res = await api.get('/baseline/provinsi')
   return res.data?.data ?? []
@@ -12,10 +13,21 @@ export async function fetchWilayahDropdown(params = {}) {
   return res.data
 }
 
-// Kabkota by provinsi
-export async function fetchKabkota(provinsi_kode) {
+/**
+ * Kabkota by provinsi — gunakan kode BPS 2-digit ("32", "31", dst)
+ * Endpoint /wilayah/kabkota menerima provinsi_kode = BPS kode
+ */
+export async function fetchKabkotaByBps(provinsi_kode) {
+  if (!provinsi_kode) return []
   const res = await api.get('/wilayah/kabkota', { params: { provinsi_kode } })
   return res.data?.data ?? []
+}
+
+/**
+ * @deprecated Gunakan fetchKabkotaByBps(bps_kode) — slug tidak diterima oleh /wilayah/kabkota
+ */
+export async function fetchKabkota(provinsi_kode) {
+  return fetchKabkotaByBps(provinsi_kode)
 }
 
 // Kecamatan by kabkota
@@ -33,7 +45,6 @@ export async function fetchBaselineAnggota(params = {}) {
 // Anggota detail by NIK
 export async function fetchBaselineAnggotaByNik(nik) {
   const res = await api.get('/baseline/anggota', { params: { provinsi: 'all', search: nik } })
-  // Fallback: coba semua provinsi dengan search NIK
   const items = res.data?.data ?? []
   return items.find(r => r.nomor_induk_kependudukan === nik || r.nik === nik) ?? items[0] ?? null
 }
