@@ -87,7 +87,6 @@ def _row_to_dict(row) -> dict:
     """Konversi DB row ke dict. Pakai raw_data jika ada, fallback ke __dict__."""
     if row.raw_data and isinstance(row.raw_data, dict):
         return row.raw_data
-    # fallback: ambil semua kolom kecuali internal SQLAlchemy
     d = {c.name: getattr(row, c.name) for c in row.__table__.columns}
     d.pop("raw_data", None)
     d.pop("synced_at", None)
@@ -660,15 +659,10 @@ def baseline_anggota():
                 {"searchMode": "db_cache", "source": "local_db"}
             )
 
-        # ── 2. Fallback ke ZAWA API
-        try:
-            nik_int = int(search.strip())
-        except ValueError:
-            return _err_200("Format NIK tidak valid.", info["label"], provinsi)
-
+        # ── 2. Fallback ke ZAWA API — kirim NIK sebagai string
         payload, err, not_found = _fetch_by_id(
             "zawa/anggota-by-nik", "nomor_induk_kependudukan",
-            nik_int, "anggota-by-nik"
+            search.strip(), "anggota-by-nik"
         )
         if not_found:
             return _err_200(f"NIK {search} tidak ditemukan di data ZAWA.", info["label"], provinsi)
@@ -735,15 +729,11 @@ def baseline_keluarga():
                 {"searchMode": "db_cache", "source": "local_db"}
             )
 
-        try:
-            nkk_int = int(search.strip())
-        except ValueError:
-            return _err_200("Format Nomor KK tidak valid.", "Keluarga", "nasional")
-
-        logger.info(f"[Baseline] keluarga search by NKK={nkk_int} (integer)")
+        # Kirim NKK ke ZAWA sebagai string — tidak di-convert ke int
+        logger.info(f"[Baseline] keluarga search by NKK={search} (string)")
         payload, err, not_found = _fetch_by_id(
             "zawa/keluarga-by-nik", "nomor_kartu_keluarga",
-            nkk_int, "keluarga-by-nik"
+            search.strip(), "keluarga-by-nik"
         )
         if not_found:
             return _err_200(
