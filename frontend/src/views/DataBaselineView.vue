@@ -86,7 +86,7 @@
             <div class="flex gap-2 pb-0.5">
               <Button
                 label="Tampilkan" icon="pi pi-search" size="small"
-                :disabled="!anggota.provinsi" :loading="anggota.loading"
+                :loading="anggota.loading"
                 @click="loadAnggota()"
               />
               <Button
@@ -103,7 +103,7 @@
           :loading="anggota.loading" :error="anggota.error"
           :rows="anggota.rows" :columns="anggota.columns"
           :meta="anggota.meta" :history-stack="anggota.historyStack"
-          :empty-hint="!anggota.provinsi ? 'Pilih provinsi untuk menampilkan data anggota.' : 'Tidak ada data yang sesuai.'"
+          empty-hint="Tidak ada data yang sesuai."
           title="Data Anggota"
           @next="nextAnggota" @prev="prevAnggota"
           @detail="goToAnggotaDetail"
@@ -188,7 +188,7 @@
           :loading="keluarga.loading" :error="keluarga.error"
           :rows="keluarga.rows" :columns="keluarga.columns"
           :meta="keluarga.meta" :history-stack="keluarga.historyStack"
-          empty-hint="Pilih provinsi atau masukkan kata kunci untuk menampilkan data keluarga."
+          empty-hint="Tidak ada data yang sesuai."
           title="Data Keluarga"
           @next="nextKeluarga" @prev="prevKeluarga"
           @detail="goToKeluargaDetail"
@@ -229,7 +229,7 @@ function goToKeluargaDetail(row) {
   router.push({ name: 'baseline-keluarga-detail', params: { nkk: String(nkk) } })
 }
 
-// ── Tabs ─────────────────────────────────────────────────
+// ── Tabs ───────────────────────────────────────────────
 const tabs = [
   { key: 'anggota',  label: 'Anggota',  icon: 'pi pi-users' },
   { key: 'keluarga', label: 'Keluarga', icon: 'pi pi-home' },
@@ -239,7 +239,7 @@ function switchTab(key) {
   activeTab.value = key
 }
 
-// ── Provinsi (shared) ────────────────────────────────────
+// ── Provinsi (shared) ─────────────────────────────────────
 const wilayahLoading  = ref(false)
 const provinsiOptions = ref([])
 
@@ -248,9 +248,20 @@ async function loadWilayah() {
   try {
     const list = await fetchBaselineProvinsi()
     provinsiOptions.value = list
-    if (list.length === 1) {
-      anggota.provinsi = list[0].kode
-      onAnggotaProvinsiChange()
+
+    if (list.length > 0) {
+      // Selalu set provinsi pertama sebagai default — berlaku untuk semua skala
+      const defaultProvinsi = list[0].kode
+      anggota.provinsi  = defaultProvinsi
+      keluarga.provinsi = defaultProvinsi
+
+      // Load kabkota untuk dropdown (background, tidak blokir data)
+      onAnggotaProvinsiChange(false)  // false = jangan load data lagi (loadAnggota dipanggil di bawah)
+      onKeluargaProvinsiChange(false)
+
+      // Auto-load data langsung
+      loadAnggota()
+      loadKeluarga()
     }
   } catch (e) {
     console.error('[Wilayah] gagal load provinsi:', e)
@@ -265,7 +276,7 @@ const anggotaKecamatanOptions = ref([])
 const anggotaKabkotaLoading   = ref(false)
 const anggotaKecamatanLoading = ref(false)
 
-async function onAnggotaProvinsiChange() {
+async function onAnggotaProvinsiChange(autoLoad = true) {
   anggota.kabkota   = ''
   anggota.kecamatan = ''
   anggotaKabkotaOptions.value   = []
@@ -279,6 +290,7 @@ async function onAnggotaProvinsiChange() {
   } finally {
     anggotaKabkotaLoading.value = false
   }
+  if (autoLoad) loadAnggota()
 }
 
 async function onAnggotaKabkotaChange() {
@@ -301,7 +313,7 @@ const keluargaKecamatanOptions = ref([])
 const keluargaKabkotaLoading   = ref(false)
 const keluargaKecamatanLoading = ref(false)
 
-async function onKeluargaProvinsiChange() {
+async function onKeluargaProvinsiChange(autoLoad = true) {
   keluarga.kabkota   = ''
   keluarga.kecamatan = ''
   keluargaKabkotaOptions.value   = []
@@ -315,6 +327,7 @@ async function onKeluargaProvinsiChange() {
   } finally {
     keluargaKabkotaLoading.value = false
   }
+  if (autoLoad) loadKeluarga()
 }
 
 async function onKeluargaKabkotaChange() {
@@ -331,7 +344,7 @@ async function onKeluargaKabkotaChange() {
   }
 }
 
-// ── Table state factory ───────────────────────────────────
+// ── Table state factory ────────────────────────────────────
 function makeTableState() {
   return reactive({
     loading: false, error: '',
@@ -351,7 +364,7 @@ function makeTableState() {
 const anggota  = makeTableState()
 const keluarga = makeTableState()
 
-// ── Anggota ───────────────────────────────────────────────
+// ── Anggota ──────────────────────────────────────────────
 async function loadAnggota(cursor = null) {
   if (!anggota.provinsi) return
   anggota.loading = true; anggota.error = ''
@@ -379,7 +392,8 @@ function prevAnggota() {
   if (anggota.historyStack.length) loadAnggota(anggota.historyStack.pop())
 }
 function resetAnggota() {
-  anggota.provinsi  = ''
+  const defaultProv = provinsiOptions.value[0]?.kode ?? ''
+  anggota.provinsi  = defaultProv
   anggota.kabkota   = ''
   anggota.kecamatan = ''
   anggota.search    = ''
@@ -391,9 +405,10 @@ function resetAnggota() {
     label:'', totalItems:0, totalPages:1, currentPage:1,
     hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
   })
+  if (defaultProv) loadAnggota()
 }
 
-// ── Keluarga ──────────────────────────────────────────────
+// ── Keluarga ────────────────────────────────────────────
 async function loadKeluarga(cursor = null) {
   keluarga.loading = true; keluarga.error = ''
   try {
@@ -420,7 +435,8 @@ function prevKeluarga() {
   if (keluarga.historyStack.length) loadKeluarga(keluarga.historyStack.pop())
 }
 function resetKeluarga() {
-  keluarga.provinsi  = ''
+  const defaultProv = provinsiOptions.value[0]?.kode ?? ''
+  keluarga.provinsi  = defaultProv
   keluarga.kabkota   = ''
   keluarga.kecamatan = ''
   keluarga.search    = ''
@@ -432,6 +448,7 @@ function resetKeluarga() {
     label:'', totalItems:0, totalPages:1, currentPage:1,
     hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
   })
+  if (defaultProv) loadKeluarga()
 }
 
 onMounted(() => loadWilayah())
