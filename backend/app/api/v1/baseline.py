@@ -57,6 +57,7 @@ PROVINSI_MAP = {
     "papdy":     {"label": "Papua Barat Daya",   "slug": "papdy",      "bps": "92"},
 }
 
+# Lookup: BPS kode (2 digit) → slug
 _BPS_TO_SLUG: dict[str, str] = {v["bps"]: k for k, v in PROVINSI_MAP.items()}
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
@@ -64,11 +65,39 @@ ZAWA_TIMEOUT = 60
 ZAWA_LIMIT   = 10
 
 SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000
-# Batas NKK yang akan di-fetch per run sync keluarga (hindari timeout)
 SYNC_MAX_KELUARGA_PER_RUN     = 5_000
 
 _CACHE: dict = {}
 CACHE_TTL = 600
+
+
+# ─── Provinsi resolver ────────────────────────────────────────
+# Terima slug ("aceh"), kode BPS tanpa nol ("11"), atau kode BPS dengan nol ("11")
+# Return: (slug, info_dict) | (None, None)
+
+def _resolve_provinsi(raw: str):
+    """
+    Normalisasi input provinsi dari frontend.
+    Frontend baru kirim kode BPS (mis. '11', '32').
+    Frontend lama bisa kirim slug (mis. 'aceh', 'jabar').
+    Return: (slug: str, info: dict) atau (None, None) jika tidak dikenal.
+    """
+    if not raw:
+        return None, None
+    val = raw.lower().strip()
+
+    # 1. Coba langsung sebagai slug
+    if val in PROVINSI_MAP:
+        return val, PROVINSI_MAP[val]
+
+    # 2. Coba sebagai kode BPS (1-2 digit angka), normalisasi ke 2 digit
+    if re.fullmatch(r'\d{1,2}', val):
+        bps = val.zfill(2)
+        slug = _BPS_TO_SLUG.get(bps)
+        if slug:
+            return slug, PROVINSI_MAP[slug]
+
+    return None, None
 
 
 # ─── Identity & Access Control ────────────────────────────────
@@ -280,7 +309,6 @@ def _fetch_by_id(zawa_path: str, param_name: str, id_val, cache_prefix: str):
         logger.error(f"[Baseline] by-id error: {e}", exc_info=True)
         return None, f"Error: {e}", False
     data_obj = raw.get("data")
-    # keluarga-by-nik mengembalikan object tunggal, bukan list/items
     if isinstance(data_obj, list):
         items = data_obj
     elif isinstance(data_obj, dict):
@@ -289,7 +317,7 @@ def _fetch_by_id(zawa_path: str, param_name: str, id_val, cache_prefix: str):
             "items", "data", "limit", "currentPage", "totalItems",
             "totalPages", "hasNextPage", "hasPreviousPage", "nextCursor"
         ) for k in data_obj):
-            items = [data_obj]  # object tunggal — bungkus sebagai list
+            items = [data_obj]
     else:
         items = []
     payload = {
@@ -349,11 +377,6 @@ def _cache_anggota_to_db(items: list, provinsi_slug: str):
 
 
 def _upsert_keluarga_from_api_item(item: dict) -> str:
-    """
-    Insert satu record keluarga dari response API.
-    NKK dari API bisa berupa integer — dikonversi ke string.
-    Return: 'saved' | 'skipped' | 'error'
-    """
     nkk = str(item.get("nomor_kartu_keluarga") or "").strip()
     if not nkk:
         return 'error'
@@ -437,13 +460,6 @@ def baseline_sync_anggota():
 @api_v1_bp.post('/baseline/sync/keluarga')
 @jwt_required()
 def baseline_sync_keluarga():
-    """
-    Strategi sync keluarga:
-    1. Ambil semua NKK unik dari zawa_anggota yang belum ada di zawa_keluarga
-    2. Untuk setiap NKK, hit endpoint GET /zawa/keluarga-by-nik?nomor_kartu_keluarga=<NKK>
-    3. Response berupa object tunggal (bukan list) — bungkus dan insert
-    4. Rate limit API: 60 req/menit — ada jeda kecil antar request
-    """
     body      = request.get_json(silent=True) or {}
     batch_max = int(body.get("batch", SYNC_MAX_KELUARGA_PER_RUN))
 
@@ -454,7 +470,6 @@ def baseline_sync_keluarga():
     db.session.add(log)
     db.session.commit()
 
-    # Ambil NKK unik dari zawa_anggota yang belum ada di zawa_keluarga
     existing_nkk_subq = db.session.query(ZawaKeluarga.nomor_kartu_keluarga).subquery()
     pending_nkk_rows = (
         db.session.query(distinct(ZawaAnggota.nomor_kartu_keluarga))
@@ -479,7 +494,6 @@ def baseline_sync_keluarga():
                 "zawa/keluarga-by-nik", "nomor_kartu_keluarga", nkk, "keluarga-by-nkk"
             )
             if not_found:
-                # NKK tidak ada di ZAWA, skip
                 total_skipped += 1
                 continue
             if err:
@@ -503,7 +517,6 @@ def baseline_sync_keluarga():
             total_error += 1
             error_msg = str(e)
 
-        # Jeda kecil untuk jaga rate limit (60 req/menit = 1 req/detik)
         time.sleep(0.05)
 
     log.status        = "failed" if (total_error > 0 and total_saved == 0) else "success"
@@ -588,16 +601,23 @@ def baseline_ping():
 @api_v1_bp.get('/baseline/provinsi')
 @jwt_required()
 def baseline_provinsi_list():
+    """
+    Return list provinsi sesuai akses.
+    Setiap item: { kode: <bps_kode>, label: <nama>, slug: <slug> }
+    sehingga frontend bisa pakai kode BPS sebagai value dropdown.
+    """
     identity = _current_identity()
     allowed  = _allowed_provinsi_slugs(identity)
     if allowed is None:
-        items = [
-            {"kode": k, "label": v["label"]}
-            for k, v in sorted(PROVINSI_MAP.items(), key=lambda x: x[1]["label"])
-        ]
+        items = sorted(
+            [{"kode": v["bps"], "label": v["label"], "slug": k}
+             for k, v in PROVINSI_MAP.items()],
+            key=lambda x: x["label"]
+        )
     else:
         items = sorted(
-            [{"kode": k, "label": PROVINSI_MAP[k]["label"]} for k in allowed if k in PROVINSI_MAP],
+            [{"kode": PROVINSI_MAP[k]["bps"], "label": PROVINSI_MAP[k]["label"], "slug": k}
+             for k in allowed if k in PROVINSI_MAP],
             key=lambda x: x["label"]
         )
     return jsonify({"data": items, "scope": _get_wilayah_scope(identity)}), 200
@@ -609,23 +629,28 @@ def baseline_anggota():
     identity = _current_identity()
     allowed  = _allowed_provinsi_slugs(identity)
 
-    provinsi         = request.args.get('provinsi', '').lower().strip()
+    provinsi_raw     = request.args.get('provinsi', '').strip()
     cursor           = request.args.get('cursor') or None
     search           = request.args.get('search', '').strip()
     kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
     kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
 
-    if not provinsi:
+    if not provinsi_raw:
         return jsonify({"error": "Parameter 'provinsi' wajib diisi."}), 400
-    info = PROVINSI_MAP.get(provinsi)
+
+    # ── Terima slug ATAU kode BPS ──────────────────────────────
+    provinsi, info = _resolve_provinsi(provinsi_raw)
     if not info:
-        return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
+        return jsonify({"error": f"Kode provinsi '{provinsi_raw}' tidak dikenal."}), 400
+
     if allowed is not None and provinsi not in allowed:
         return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
+
     if kabkota_filter:
         allowed_kabkota = _get_allowed_kabkota(identity)
         if allowed_kabkota is not None and kabkota_filter not in allowed_kabkota:
             return jsonify({"error": "Akses ditolak. Kabupaten/Kota ini tidak termasuk wilayah Anda."}), 403
+
     if kecamatan_filter:
         allowed_kec = _get_allowed_kecamatan(identity)
         if allowed_kec is not None and kecamatan_filter not in allowed_kec:
