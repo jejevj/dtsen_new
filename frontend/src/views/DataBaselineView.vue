@@ -99,12 +99,14 @@
         </div>
 
         <BaselineTable
+          type="anggota"
           :loading="anggota.loading" :error="anggota.error"
           :rows="anggota.rows" :columns="anggota.columns"
           :meta="anggota.meta" :history-stack="anggota.historyStack"
           :empty-hint="!anggota.provinsi ? 'Pilih provinsi untuk menampilkan data anggota.' : 'Tidak ada data yang sesuai.'"
           title="Data Anggota"
           @next="nextAnggota" @prev="prevAnggota"
+          @detail="goToAnggotaDetail"
         />
       </template>
 
@@ -182,12 +184,14 @@
         </div>
 
         <BaselineTable
+          type="keluarga"
           :loading="keluarga.loading" :error="keluarga.error"
           :rows="keluarga.rows" :columns="keluarga.columns"
           :meta="keluarga.meta" :history-stack="keluarga.historyStack"
           empty-hint="Pilih provinsi atau masukkan kata kunci untuk menampilkan data keluarga."
           title="Data Keluarga"
           @next="nextKeluarga" @prev="prevKeluarga"
+          @detail="goToKeluargaDetail"
         />
       </template>
 
@@ -197,6 +201,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppLayout     from '@/components/layout/AppLayout.vue'
 import BaselineTable from '@/components/baseline/BaselineTable.vue'
 import Button        from 'primevue/button'
@@ -210,6 +215,20 @@ import {
   fetchBaselineKeluarga,
 } from '@/services/baselineService'
 
+const router = useRouter()
+
+// ── Navigasi ke halaman detail ───────────────────────────
+function goToAnggotaDetail(row) {
+  const nik = row.nomor_induk_kependudukan || row.nik || row.id
+  if (!nik) return
+  router.push({ name: 'baseline-anggota-detail', params: { nik: String(nik) } })
+}
+function goToKeluargaDetail(row) {
+  const nkk = row.nomor_kartu_keluarga || row.nkk || row.id
+  if (!nkk) return
+  router.push({ name: 'baseline-keluarga-detail', params: { nkk: String(nkk) } })
+}
+
 // ── Tabs ─────────────────────────────────────────────────
 const tabs = [
   { key: 'anggota',  label: 'Anggota',  icon: 'pi pi-users' },
@@ -222,7 +241,7 @@ function switchTab(key) {
 
 // ── Provinsi (shared) ────────────────────────────────────
 const wilayahLoading  = ref(false)
-const provinsiOptions = ref([])  // [{ kode, label, slug }]
+const provinsiOptions = ref([])
 
 async function loadWilayah() {
   wilayahLoading.value = true

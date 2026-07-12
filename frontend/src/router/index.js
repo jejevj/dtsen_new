@@ -42,6 +42,18 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/data-baseline/anggota/:nik',
+    name: 'baseline-anggota-detail',
+    component: () => import('@/views/AnggotaDetailView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/data-baseline/keluarga/:nkk',
+    name: 'baseline-keluarga-detail',
+    component: () => import('@/views/KeluargaDetailView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/cari-data',
     name: 'cari-data',
     component: () => import('@/views/CariDataView.vue'),

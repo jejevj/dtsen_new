@@ -32,9 +32,10 @@
         <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
           <tr>
             <th class="px-4 py-3 text-left whitespace-nowrap">No</th>
-            <th v-for="col in columns" :key="col" class="px-4 py-3 text-left whitespace-nowrap">
+            <th v-for="col in displayColumns" :key="col" class="px-4 py-3 text-left whitespace-nowrap">
               {{ formatColLabel(col) }}
             </th>
+            <th class="px-4 py-3 text-center whitespace-nowrap">Aksi</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
@@ -46,10 +47,18 @@
               {{ (meta.currentPage - 1) * meta.limit + i + 1 }}
             </td>
             <td
-              v-for="col in columns" :key="col"
+              v-for="col in displayColumns" :key="col"
               class="px-4 py-2.5 text-slate-700 max-w-[220px] truncate"
               :title="String(row[col] ?? '')"
             >{{ row[col] ?? '-' }}</td>
+            <td class="px-4 py-2.5 text-center">
+              <Button
+                icon="pi pi-eye" size="small" text rounded
+                class="text-primary-600 hover:bg-primary-50"
+                title="Lihat Detail"
+                @click="$emit('detail', row)"
+              />
+            </td>
           </tr>
         </tbody>
       </table>
@@ -78,9 +87,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import Button from 'primevue/button'
 
-defineProps({
+const props = defineProps({
   loading:      { type: Boolean, default: false },
   error:        { type: String,  default: '' },
   rows:         { type: Array,   default: () => [] },
@@ -89,8 +99,29 @@ defineProps({
   historyStack: { type: Array,   default: () => [] },
   emptyHint:    { type: String,  default: 'Tidak ada data.' },
   title:        { type: String,  default: 'Data' },
+  // 'anggota' | 'keluarga'
+  type:         { type: String,  default: 'anggota' },
 })
-defineEmits(['next', 'prev'])
+defineEmits(['next', 'prev', 'detail'])
+
+// Kolom prioritas per tipe tabel
+const ANGGOTA_COLS  = ['nama', 'nomor_induk_kependudukan', 'jenis_kelamin', 'kabupaten_kota_ktp', 'provinsi_ktp']
+const KELUARGA_COLS = ['nomor_kartu_keluarga', 'nama_anggota_keluarga', 'jumlah_anggota_keluarga', 'kabupaten_kota', 'provinsi']
+
+const displayColumns = computed(() => {
+  const preferred = props.type === 'keluarga' ? KELUARGA_COLS : ANGGOTA_COLS
+  const available = props.columns
+  // Ambil kolom yang tersedia sesuai urutan preferred
+  const picked = preferred.filter(c => available.includes(c))
+  // Jika kurang dari 4 kolom cocok, tambahkan dari kolom tersedia (max 5)
+  if (picked.length < 4) {
+    for (const c of available) {
+      if (!picked.includes(c)) picked.push(c)
+      if (picked.length >= 5) break
+    }
+  }
+  return picked.slice(0, 5)
+})
 
 function formatColLabel(key) {
   return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
