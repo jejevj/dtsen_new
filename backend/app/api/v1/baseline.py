@@ -71,28 +71,66 @@ _CACHE: dict = {}
 CACHE_TTL = 600
 
 
+# ─── Kode wilayah normalizer ──────────────────────────────────
+# DB menyimpan kode dengan titik: "11.06", "11.06.11"
+# Frontend/BPS kirim tanpa titik:  "1106",  "110611"
+# Kedua format harus bisa match.
+
+def _normalize_kode(raw: str) -> tuple[str, str]:
+    """
+    Kembalikan (dotted, plain):
+      "11.06"  → ("11.06",  "1106")
+      "1106"   → ("11.06",  "1106")   ← 4 digit kabkota
+      "110611" → ("11.06.11", "110611") ← 6 digit kecamatan
+      "11.06.11" → ("11.06.11", "110611")
+    Format lain dikembalikan apa adanya di keduanya.
+    """
+    s = raw.strip()
+    # Sudah ada titik → plainnya tinggal hapus titik
+    if '.' in s:
+        plain  = s.replace('.', '')
+        dotted = s
+        return dotted, plain
+    # Tanpa titik — deteksi panjang
+    digits = re.sub(r'\D', '', s)
+    if len(digits) == 4:
+        dotted = f"{digits[:2]}.{digits[2:]}"
+    elif len(digits) == 6:
+        dotted = f"{digits[:2]}.{digits[2:4]}.{digits[4:]}"
+    elif len(digits) == 10:
+        dotted = f"{digits[:2]}.{digits[2:4]}.{digits[4:6]}.{digits[6:]}"
+    else:
+        dotted = s
+    return dotted, digits
+
+
+def _kode_filter(column, raw: str):
+    """
+    SQLAlchemy filter yang cocok untuk kode dengan/tanpa titik.
+    Cek kedua format sekaligus agar backward compatible.
+    """
+    dotted, plain = _normalize_kode(raw)
+    if dotted == plain:
+        return column == raw
+    return db.or_(column == dotted, column == plain)
+
+
 # ─── Provinsi resolver ────────────────────────────────────────
-# Terima slug ("aceh"), kode BPS tanpa nol ("11"), atau kode BPS dengan nol ("11")
-# Return: (slug, info_dict) | (None, None)
 
 def _resolve_provinsi(raw: str):
     """
-    Normalisasi input provinsi dari frontend.
-    Frontend baru kirim kode BPS (mis. '11', '32').
-    Frontend lama bisa kirim slug (mis. 'aceh', 'jabar').
-    Return: (slug: str, info: dict) atau (None, None) jika tidak dikenal.
+    Terima slug ('aceh') ATAU kode BPS ('11', '32').
+    Return: (slug: str, info: dict) atau (None, None).
     """
     if not raw:
         return None, None
     val = raw.lower().strip()
 
-    # 1. Coba langsung sebagai slug
     if val in PROVINSI_MAP:
         return val, PROVINSI_MAP[val]
 
-    # 2. Coba sebagai kode BPS (1-2 digit angka), normalisasi ke 2 digit
     if re.fullmatch(r'\d{1,2}', val):
-        bps = val.zfill(2)
+        bps  = val.zfill(2)
         slug = _BPS_TO_SLUG.get(bps)
         if slug:
             return slug, PROVINSI_MAP[slug]
@@ -646,16 +684,26 @@ def baseline_anggota():
     if allowed is not None and provinsi not in allowed:
         return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
 
+    # ── Normalisasi kode kabkota / kecamatan ─────────────────
+    # Bisa masuk "1106" atau "11.06" — keduanya valid
+    kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
+        kabkota_dotted, kabkota_plain = _normalize_kode(kabkota_filter)
         allowed_kabkota = _get_allowed_kabkota(identity)
-        if allowed_kabkota is not None and kabkota_filter not in allowed_kabkota:
-            return jsonify({"error": "Akses ditolak. Kabupaten/Kota ini tidak termasuk wilayah Anda."}), 403
+        if allowed_kabkota is not None:
+            # cek apakah salah satu format ada di allowed list
+            if kabkota_dotted not in allowed_kabkota and kabkota_plain not in allowed_kabkota:
+                return jsonify({"error": "Akses ditolak. Kabupaten/Kota ini tidak termasuk wilayah Anda."}), 403
 
+    kecamatan_dotted = kecamatan_plain = None
     if kecamatan_filter:
+        kecamatan_dotted, kecamatan_plain = _normalize_kode(kecamatan_filter)
         allowed_kec = _get_allowed_kecamatan(identity)
-        if allowed_kec is not None and kecamatan_filter not in allowed_kec:
-            return jsonify({"error": "Akses ditolak. Kecamatan ini tidak termasuk wilayah Anda."}), 403
+        if allowed_kec is not None:
+            if kecamatan_dotted not in allowed_kec and kecamatan_plain not in allowed_kec:
+                return jsonify({"error": "Akses ditolak. Kecamatan ini tidak termasuk wilayah Anda."}), 403
 
+    # ── Search by NIK ─────────────────────────────────────────
     if search and _is_numeric_id(search):
         db_row = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=search.strip()).first()
         if db_row:
@@ -674,12 +722,14 @@ def baseline_anggota():
                 logger.warning(f"[Baseline] gagal cache anggota NIK={search}: {e}")
         return _build_table_response(payload, info["label"], provinsi)
 
+    # ── Coba DB cache dulu ────────────────────────────────────
     if not cursor:
         q = ZawaAnggota.query.filter_by(provinsi_slug=provinsi)
-        if kabkota_filter:
-            q = q.filter(ZawaAnggota.kode_kabupaten_kota_ktp == kabkota_filter)
-        if kecamatan_filter:
-            q = q.filter(ZawaAnggota.kode_kecamatan_ktp == kecamatan_filter)
+        if kabkota_dotted:
+            # match "11.06" ATAU "1106" — backward compatible
+            q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))
+        if kecamatan_dotted:
+            q = q.filter(_kode_filter(ZawaAnggota.kode_kecamatan_ktp, kecamatan_filter))
         db_rows = q.limit(ZAWA_LIMIT).all()
         if db_rows:
             items = [_row_to_dict(r) for r in db_rows]
@@ -687,7 +737,16 @@ def baseline_anggota():
                                {"searchMode": "db_cache", "source": "local_db",
                                 "totalItems": len(items), "limit": ZAWA_LIMIT})
 
-    params = {"cursor": cursor} if cursor else {}
+    # ── Fallback ke ZAWA — teruskan filter kabkota/kecamatan ─
+    params: dict = {}
+    if cursor:
+        params["cursor"] = cursor
+    # ZAWA menerima kode dengan titik (format BPS resmi)
+    if kabkota_dotted:
+        params["kode_kabupaten_kota"] = kabkota_dotted
+    if kecamatan_dotted:
+        params["kode_kecamatan"] = kecamatan_dotted
+
     payload, err = _fetch_zawa_page(f"zawa/{info['slug']}", params)
     if err:
         return _err_200(err, info["label"], provinsi)
