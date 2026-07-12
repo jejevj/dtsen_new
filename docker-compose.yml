@@ -27,6 +27,7 @@ services:
     environment:
       FLASK_APP: wsgi.py
       FLASK_ENV: production
+      ZAWA_API_KEY: prod-53a81004-085d-426b-a5a0-c6ef6cdf18e1
     volumes:
       - dtsen_uploads:/app/uploads
     ports:
