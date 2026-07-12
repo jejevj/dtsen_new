@@ -5,64 +5,105 @@ import time
 import requests
 from datetime import datetime
 from flask import request, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from . import api_v1_bp
 from ...extensions import db
 from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
+from ...models.t_dtsen_wilayah import TDtsenWilayah
+from ...services.auth_service import parse_identity_str
 
 logger = logging.getLogger('app')
 
 PROVINSI_MAP = {
-    "aceh":      {"label": "Aceh",               "slug": "anggota"},
-    "jambi":     {"label": "Jambi",              "slug": "jambi"},
-    "sumbar":    {"label": "Sumatera Barat",     "slug": "sumbar"},
-    "riau":      {"label": "Riau",               "slug": "riau"},
-    "sumut":     {"label": "Sumatera Utara",     "slug": "sumut"},
-    "kepriau":   {"label": "Kepulauan Riau",     "slug": "kepriau"},
-    "babel":     {"label": "Bangka Belitung",    "slug": "babel"},
-    "lampung":   {"label": "Lampung",            "slug": "lampung"},
-    "bengkulu":  {"label": "Bengkulu",           "slug": "bengkulu"},
-    "sumsel":    {"label": "Sumatera Selatan",   "slug": "sumsel"},
-    "jateng":    {"label": "Jawa Tengah",        "slug": "jateng"},
-    "jabar":     {"label": "Jawa Barat",         "slug": "jabar"},
-    "dkijakarta":{"label": "DKI Jakarta",        "slug": "dkijakarta"},
-    "kaltara":   {"label": "Kalimantan Utara",   "slug": "kaltara"},
-    "kaltim":    {"label": "Kalimantan Timur",   "slug": "kaltim"},
-    "kalsel":    {"label": "Kalimantan Selatan", "slug": "kalsel"},
-    "kalteng":   {"label": "Kalimantan Tengah",  "slug": "kalteng"},
-    "kalbar":    {"label": "Kalimantan Barat",   "slug": "kalbar"},
-    "ntt":       {"label": "Nusa Tenggara Timur","slug": "ntt"},
-    "ntb":       {"label": "Nusa Tenggara Barat","slug": "ntb"},
-    "bali":      {"label": "Bali",               "slug": "bali"},
-    "banten":    {"label": "Banten",             "slug": "banten"},
-    "jatim":     {"label": "Jawa Timur",         "slug": "jatim"},
-    "diy":       {"label": "DI Yogyakarta",      "slug": "diy"},
-    "sulut":     {"label": "Sulawesi Utara",     "slug": "sulut"},
-    "sulteng":   {"label": "Sulawesi Tengah",    "slug": "sulteng"},
-    "sulsel":    {"label": "Sulawesi Selatan",   "slug": "sulsel"},
-    "sultra":    {"label": "Sulawesi Tenggara",  "slug": "sultra"},
-    "papdy":     {"label": "Papua Barat Daya",   "slug": "papdy"},
-    "papgu":     {"label": "Papua Pegunungan",   "slug": "papgu"},
-    "gorontalo": {"label": "Gorontalo",          "slug": "gorontalo"},
-    "sulbar":    {"label": "Sulawesi Barat",     "slug": "sulbar"},
-    "maluku":    {"label": "Maluku",             "slug": "maluku"},
-    "malut":     {"label": "Maluku Utara",       "slug": "malut"},
-    "papua":     {"label": "Papua",              "slug": "papua"},
-    "papbar":    {"label": "Papua Barat",        "slug": "papbar"},
-    "papsel":    {"label": "Papua Selatan",      "slug": "papsel"},
-    "papteng":   {"label": "Papua Tengah",       "slug": "papteng"},
+    "aceh":      {"label": "Aceh",               "slug": "anggota",    "bps": "11"},
+    "sumut":     {"label": "Sumatera Utara",     "slug": "sumut",      "bps": "12"},
+    "sumbar":    {"label": "Sumatera Barat",     "slug": "sumbar",     "bps": "13"},
+    "riau":      {"label": "Riau",               "slug": "riau",       "bps": "14"},
+    "jambi":     {"label": "Jambi",              "slug": "jambi",      "bps": "15"},
+    "sumsel":    {"label": "Sumatera Selatan",   "slug": "sumsel",     "bps": "16"},
+    "bengkulu":  {"label": "Bengkulu",           "slug": "bengkulu",   "bps": "17"},
+    "lampung":   {"label": "Lampung",            "slug": "lampung",    "bps": "18"},
+    "babel":     {"label": "Bangka Belitung",    "slug": "babel",      "bps": "19"},
+    "kepriau":   {"label": "Kepulauan Riau",     "slug": "kepriau",    "bps": "21"},
+    "dkijakarta":{"label": "DKI Jakarta",        "slug": "dkijakarta", "bps": "31"},
+    "jabar":     {"label": "Jawa Barat",         "slug": "jabar",      "bps": "32"},
+    "jateng":    {"label": "Jawa Tengah",        "slug": "jateng",     "bps": "33"},
+    "diy":       {"label": "DI Yogyakarta",      "slug": "diy",        "bps": "34"},
+    "jatim":     {"label": "Jawa Timur",         "slug": "jatim",      "bps": "35"},
+    "banten":    {"label": "Banten",             "slug": "banten",     "bps": "36"},
+    "bali":      {"label": "Bali",               "slug": "bali",       "bps": "51"},
+    "ntb":       {"label": "Nusa Tenggara Barat","slug": "ntb",        "bps": "52"},
+    "ntt":       {"label": "Nusa Tenggara Timur","slug": "ntt",        "bps": "53"},
+    "kalbar":    {"label": "Kalimantan Barat",   "slug": "kalbar",     "bps": "61"},
+    "kalteng":   {"label": "Kalimantan Tengah",  "slug": "kalteng",    "bps": "62"},
+    "kalsel":    {"label": "Kalimantan Selatan", "slug": "kalsel",     "bps": "63"},
+    "kaltim":    {"label": "Kalimantan Timur",   "slug": "kaltim",     "bps": "64"},
+    "kaltara":   {"label": "Kalimantan Utara",   "slug": "kaltara",    "bps": "65"},
+    "sulut":     {"label": "Sulawesi Utara",     "slug": "sulut",      "bps": "71"},
+    "sulteng":   {"label": "Sulawesi Tengah",    "slug": "sulteng",    "bps": "72"},
+    "sulsel":    {"label": "Sulawesi Selatan",   "slug": "sulsel",     "bps": "73"},
+    "sultra":    {"label": "Sulawesi Tenggara",  "slug": "sultra",     "bps": "74"},
+    "gorontalo": {"label": "Gorontalo",          "slug": "gorontalo",  "bps": "75"},
+    "sulbar":    {"label": "Sulawesi Barat",     "slug": "sulbar",     "bps": "76"},
+    "maluku":    {"label": "Maluku",             "slug": "maluku",     "bps": "81"},
+    "malut":     {"label": "Maluku Utara",       "slug": "malut",      "bps": "82"},
+    "papbar":    {"label": "Papua Barat",        "slug": "papbar",     "bps": "91"},
+    "papua":     {"label": "Papua",              "slug": "papua",      "bps": "94"},
+    "papsel":    {"label": "Papua Selatan",      "slug": "papsel",     "bps": "95"},
+    "papteng":   {"label": "Papua Tengah",       "slug": "papteng",    "bps": "96"},
+    "papgu":     {"label": "Papua Pegunungan",   "slug": "papgu",      "bps": "97"},
+    "papdy":     {"label": "Papua Barat Daya",   "slug": "papdy",      "bps": "92"},
 }
+
+# Lookup cepat: bps_kode -> slug ZAWA
+_BPS_TO_SLUG: dict[str, str] = {v["bps"]: k for k, v in PROVINSI_MAP.items()}
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
 ZAWA_TIMEOUT = 60
 ZAWA_LIMIT   = 10
 
-# ── Batas row saat sync ke DB
+# Batas row saat sync ke DB
 SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000
 SYNC_MAX_KELUARGA_TOTAL       = 50_000
 
 _CACHE: dict = {}
 CACHE_TTL = 600
+
+
+# ─────────────────────────────────────────────
+# Helper: ambil identity dari JWT
+# ─────────────────────────────────────────────
+
+def _current_identity() -> dict:
+    """Return {'type': ..., 'id': ...} dari JWT."""
+    return parse_identity_str(get_jwt_identity())
+
+
+def _is_tuser(identity: dict) -> bool:
+    return identity.get('type') in ('tuser', 'admin', 'user')
+
+
+def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
+    """
+    Return daftar slug ZAWA provinsi yang boleh diakses user ini.
+    - tuser / admin  : None  (berarti akses semua provinsi)
+    - dtsen          : list slug dari t_dtsen_wilayah milik akun tersebut
+    """
+    if _is_tuser(identity):
+        return None  # semua provinsi boleh
+
+    dtsen_id = identity.get('id')
+    rows = TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen_id).all()
+
+    allowed = []
+    for row in rows:
+        # Prioritaskan kecamatan_kode > kabkota_kode > provinsi_kode
+        prov_kode = (row.provinsi_kode or '').strip().zfill(2)
+        slug = _BPS_TO_SLUG.get(prov_kode)
+        if slug and slug not in allowed:
+            allowed.append(slug)
+
+    return allowed
 
 
 def _zawa_headers() -> dict:
@@ -257,10 +298,6 @@ def _build_table_response(payload, label, provinsi):
     }), 200
 
 
-# ─────────────────────────────────────────────
-# Helper: decode cursor DB lokal (format "db:page_N")
-# ─────────────────────────────────────────────
-
 def _parse_db_cursor(cursor: str):
     if cursor and cursor.startswith("db:page_"):
         try:
@@ -273,10 +310,6 @@ def _parse_db_cursor(cursor: str):
 def _build_db_cursor(page: int) -> str:
     return f"db:page_{page}"
 
-
-# ─────────────────────────────────────────────
-# Helper: simpan hasil ZAWA ke DB (cache on-demand)
-# ─────────────────────────────────────────────
 
 def _cache_anggota_to_db(items: list, provinsi_slug: str):
     """Simpan list anggota dari ZAWA ke DB. Skip jika NIK sudah ada."""
@@ -592,7 +625,7 @@ def baseline_sync_status():
 
 
 # ─────────────────────────────────────────────
-# ENDPOINT READ — cek DB dulu, fallback ke ZAWA
+# ENDPOINT READ
 # ─────────────────────────────────────────────
 
 @api_v1_bp.get('/baseline/ping')
@@ -629,16 +662,38 @@ def baseline_ping():
 @api_v1_bp.get('/baseline/provinsi')
 @jwt_required()
 def baseline_provinsi_list():
-    items = [
-        {"kode": k, "label": v["label"]}
-        for k, v in sorted(PROVINSI_MAP.items(), key=lambda x: x[1]["label"])
-    ]
+    """
+    Return daftar provinsi yang boleh diakses user yang sedang login.
+    - tuser / admin : semua provinsi dari PROVINSI_MAP
+    - dtsen         : hanya provinsi sesuai t_dtsen_wilayah milik akun tsb
+    """
+    identity = _current_identity()
+    allowed  = _allowed_provinsi_slugs(identity)
+
+    if allowed is None:
+        # tuser / admin — kembalikan semua
+        items = [
+            {"kode": k, "label": v["label"]}
+            for k, v in sorted(PROVINSI_MAP.items(), key=lambda x: x[1]["label"])
+        ]
+    else:
+        # dtsen — filter hanya slug yang diizinkan
+        items = [
+            {"kode": k, "label": PROVINSI_MAP[k]["label"]}
+            for k in allowed
+            if k in PROVINSI_MAP
+        ]
+        items.sort(key=lambda x: x["label"])
+
     return jsonify({"data": items}), 200
 
 
 @api_v1_bp.get('/baseline/anggota')
 @jwt_required()
 def baseline_anggota():
+    identity = _current_identity()
+    allowed  = _allowed_provinsi_slugs(identity)
+
     provinsi = request.args.get('provinsi', '').lower().strip()
     cursor   = request.args.get('cursor') or None
     search   = request.args.get('search', '').strip()
@@ -649,8 +704,11 @@ def baseline_anggota():
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
 
+    # Cek akses: dtsen hanya boleh akses provinsi yang ada di wilayahnya
+    if allowed is not None and provinsi not in allowed:
+        return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
+
     if search and _is_numeric_id(search):
-        # ── 1. Cek DB lokal dulu
         db_row = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=search.strip()).first()
         if db_row:
             logger.info(f"[Baseline] anggota NIK={search} ditemukan di DB lokal")
@@ -659,7 +717,6 @@ def baseline_anggota():
                 {"searchMode": "db_cache", "source": "local_db"}
             )
 
-        # ── 2. Fallback ke ZAWA API — kirim NIK sebagai string
         payload, err, not_found = _fetch_by_id(
             "zawa/anggota-by-nik", "nomor_induk_kependudukan",
             search.strip(), "anggota-by-nik"
@@ -677,7 +734,6 @@ def baseline_anggota():
 
         return _build_table_response(payload, info["label"], provinsi)
 
-    # ── List mode: cek DB lokal (provinsi-slug) sebelum hit ZAWA
     if not cursor:
         db_rows = (ZawaAnggota.query
                    .filter_by(provinsi_slug=provinsi)
@@ -719,7 +775,6 @@ def baseline_keluarga():
     cursor = request.args.get('cursor') or None
     search = request.args.get('search', '').strip()
 
-    # ── Search by NKK (16 digit)
     if search and _is_nkk(search):
         db_row = ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=search.strip()).first()
         if db_row:
@@ -729,7 +784,6 @@ def baseline_keluarga():
                 {"searchMode": "db_cache", "source": "local_db"}
             )
 
-        # Kirim NKK ke ZAWA sebagai string — tidak di-convert ke int
         logger.info(f"[Baseline] keluarga search by NKK={search} (string)")
         payload, err, not_found = _fetch_by_id(
             "zawa/keluarga-by-nik", "nomor_kartu_keluarga",
@@ -751,7 +805,6 @@ def baseline_keluarga():
 
         return _build_table_response(payload, "Keluarga", "nasional")
 
-    # ── List mode: utamakan DB lokal, fallback ke ZAWA jika DB kosong
     db_total = ZawaKeluarga.query.count()
 
     if db_total > 0:
@@ -809,7 +862,6 @@ def baseline_keluarga():
             }
         }), 200
 
-    # ── DB kosong → fallback ke ZAWA API
     logger.info("[Baseline] keluarga DB kosong, fallback ke ZAWA API")
     params = {"cursor": cursor} if cursor else {}
     payload, err = _fetch_zawa_page("zawa/keluarga", params)
