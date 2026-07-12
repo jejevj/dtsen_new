@@ -232,7 +232,7 @@ const userInitials = computed(() =>
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard',         icon: 'pi pi-home' },
-  { to: '/mustahik',  label: 'Data Mustahik',     icon: 'pi pi-users' },
+  { to: '/mustahik',  label: 'Data Penerima Manfaat',     icon: 'pi pi-users' },
   { to: '/report',    label: 'Pemeriksaan DTSEN', icon: 'pi pi-chart-line' },
 ]
 
