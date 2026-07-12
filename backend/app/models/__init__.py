@@ -1,17 +1,26 @@
-from .user import User, UserWilayah
-from .wilayah import Provinsi, KabKota, Kecamatan, Kelurahan
+from .user import User
+from .tuser import TUser
 from .laz import Laz
 from .program import Program
 from .mustahik import Mustahik
-from .tuser import TUser
+from .wilayah import Provinsi, KabKota, Kecamatan, Kelurahan
+from .tampilan_dtsen import TampilanDtsen
 from .t_dtsen_akses import TDtsenAkses
-from .tampilan_dtsen import TampilanDtsen, TampilanDtsenRef
+from .zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 
 __all__ = [
-    'User', 'UserWilayah',
-    'Provinsi', 'KabKota', 'Kecamatan', 'Kelurahan',
-    'Laz', 'Program', 'Mustahik',
+    'User',
     'TUser',
+    'Laz',
+    'Program',
+    'Mustahik',
+    'Provinsi',
+    'KabKota',
+    'Kecamatan',
+    'Kelurahan',
+    'TampilanDtsen',
     'TDtsenAkses',
-    'TampilanDtsen', 'TampilanDtsenRef',
+    'ZawaAnggota',
+    'ZawaKeluarga',
+    'ZawaSyncLog',
 ]
