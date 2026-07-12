@@ -51,19 +51,20 @@ PROVINSI_MAP = {
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
 ZAWA_TIMEOUT = 30
+ZAWA_LIMIT   = 10  # limit bawaan ZAWA per halaman
 
+# Cache: { "slug:cursor": { "payload": {...}, "ts": float } }
 _CACHE: dict = {}
 CACHE_TTL = 600  # 10 menit
 
 
 def _zawa_headers() -> dict:
-    """Bangun headers untuk request ke ZAWA, termasuk x-api-key dari env."""
     api_key = os.environ.get("ZAWA_API_KEY", "")
     headers = {"Accept": "application/json"}
     if api_key:
         headers["x-api-key"] = api_key
     else:
-        logger.warning("[Baseline] ZAWA_API_KEY tidak di-set di environment!")
+        logger.warning("[Baseline] ZAWA_API_KEY tidak di-set!")
     return headers
 
 
@@ -78,43 +79,65 @@ def _safe_int(val, default, min_val=1, max_val=None):
     return result
 
 
-def _fetch_zawa(slug: str):
+def _fetch_zawa_page(slug: str, cursor: str = None):
+    """
+    Fetch satu halaman dari ZAWA.
+    Response ZAWA: { success, message, data: { limit, currentPage, totalItems,
+                    totalPages, hasNextPage, hasPreviousPage, nextCursor, items: [...] } }
+    Return (payload_dict, error_str|None)
+    """
+    cache_key = f"{slug}:{cursor or ''}"
     now = time.time()
-    cached = _CACHE.get(slug)
+    cached = _CACHE.get(cache_key)
     if cached and (now - cached["ts"]) < CACHE_TTL:
-        logger.info(f"[Baseline] cache hit slug={slug}")
-        return cached["data"], None
+        logger.info(f"[Baseline] cache hit key={cache_key}")
+        return cached["payload"], None
 
     url = f"{ZAWA_BASE}/zawa/{slug}"
-    logger.info(f"[Baseline] fetch ZAWA url={url}")
+    params = {}
+    if cursor:
+        params["cursor"] = cursor
+
+    logger.info(f"[Baseline] fetch ZAWA url={url} cursor={cursor}")
     try:
-        resp = requests.get(url, timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
-        logger.info(f"[Baseline] ZAWA response status={resp.status_code} slug={slug}")
+        resp = requests.get(url, params=params, timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
+        logger.info(f"[Baseline] ZAWA status={resp.status_code} slug={slug}")
         resp.raise_for_status()
         raw = resp.json()
     except requests.exceptions.SSLError as e:
-        logger.error(f"[Baseline] SSL error slug={slug}: {e}")
         return None, f"SSL error: {e}"
     except requests.exceptions.ConnectionError as e:
-        logger.error(f"[Baseline] Connection error slug={slug}: {e}")
         return None, f"Tidak dapat terhubung ke ZAWA: {e}"
     except requests.exceptions.Timeout:
-        logger.error(f"[Baseline] Timeout slug={slug}")
-        return None, "Timeout (>30 detik) saat menghubungi ZAWA."
+        return None, "Timeout (>30 detik)."
     except requests.exceptions.HTTPError as e:
         logger.error(f"[Baseline] HTTP error slug={slug}: {e}")
         return None, f"ZAWA HTTP error: {e}"
     except Exception as e:
-        logger.error(f"[Baseline] Unexpected error slug={slug}: {e}", exc_info=True)
+        logger.error(f"[Baseline] error slug={slug}: {e}", exc_info=True)
         return None, f"Error tidak terduga: {e}"
 
-    rows = raw.get('data') or []
-    if not isinstance(rows, list):
-        rows = []
+    # Struktur: raw["data"] adalah dict berisi items & metadata pagination
+    data_obj = raw.get("data", {})
+    if not isinstance(data_obj, dict):
+        logger.error(f"[Baseline] unexpected data type: {type(data_obj)} slug={slug}")
+        return None, "Format response ZAWA tidak dikenal."
 
-    _CACHE[slug] = {"data": rows, "ts": now}
-    logger.info(f"[Baseline] cached {len(rows)} rows slug={slug}")
-    return rows, None
+    items = data_obj.get("items") or []
+    payload = {
+        "items":           items,
+        "totalItems":      data_obj.get("totalItems", 0),
+        "totalPages":      data_obj.get("totalPages", 1),
+        "currentPage":     data_obj.get("currentPage", 1),
+        "hasNextPage":     data_obj.get("hasNextPage", False),
+        "hasPreviousPage": data_obj.get("hasPreviousPage", False),
+        "nextCursor":      data_obj.get("nextCursor"),
+        "limit":           data_obj.get("limit", ZAWA_LIMIT),
+    }
+
+    logger.info(f"[Baseline] got {len(items)} items, total={payload['totalItems']} slug={slug}")
+    _CACHE[cache_key] = {"payload": payload, "ts": now}
+    return payload, None
 
 
 # ── Diagnostik ─────────────────────────────────────────────────────────────
@@ -147,16 +170,14 @@ def baseline_ping():
             "ok":      resp.status_code < 400,
             "status":  resp.status_code,
             "elapsed": f"{elapsed}s",
-            "sample":  resp.text[:200],
+            "sample":  resp.text[:300],
         }
     except Exception as e:
         results["http_get"] = {"ok": False, "error": str(e)}
 
-    api_key_set = bool(os.environ.get("ZAWA_API_KEY", ""))
-    results["api_key_configured"] = {"ok": api_key_set, "set": api_key_set}
+    results["api_key_configured"] = {"ok": bool(os.environ.get("ZAWA_API_KEY")), "set": bool(os.environ.get("ZAWA_API_KEY"))}
 
     overall_ok = all(v.get("ok") for v in results.values())
-    logger.info(f"[Baseline] ping results: {results}")
     return jsonify({"ok": overall_ok, "checks": results, "target": host}), 200 if overall_ok else 502
 
 
@@ -175,9 +196,15 @@ def baseline_provinsi_list():
 @api_v1_bp.get('/baseline')
 @jwt_required()
 def baseline_data():
+    """
+    Ambil data baseline ZAWA per provinsi.
+    Query params:
+      - provinsi   : kode provinsi (wajib)
+      - cursor     : nextCursor dari response sebelumnya (untuk halaman berikutnya)
+      - search     : pencarian bebas di items halaman ini
+    """
     provinsi = request.args.get('provinsi', '').lower().strip()
-    page     = _safe_int(request.args.get('page',     1),  default=1,  min_val=1)
-    per_page = _safe_int(request.args.get('per_page', 20), default=20, min_val=1, max_val=100)
+    cursor   = request.args.get('cursor', None)
     search   = request.args.get('search', '').lower().strip()
 
     if not provinsi:
@@ -187,31 +214,34 @@ def baseline_data():
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
 
-    rows, err = _fetch_zawa(info['slug'])
+    payload, err = _fetch_zawa_page(info['slug'], cursor=cursor)
     if err:
         return jsonify({"error": err}), 502
 
+    rows = payload["items"]
+
+    # Filter search hanya pada items halaman ini
     if search:
         rows = [
             r for r in rows
             if search in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
-    total     = len(rows)
-    start     = (page - 1) * per_page
-    paginated = rows[start: start + per_page]
-    columns   = list(paginated[0].keys()) if paginated else (list(rows[0].keys()) if rows else [])
+    columns = list(rows[0].keys()) if rows else []
 
     return jsonify({
-        "data":    paginated,
+        "data":    rows,
         "columns": columns,
         "meta": {
-            "page":     page,
-            "per_page": per_page,
-            "total":    total,
-            "pages":    max(1, -(-total // per_page)),
-            "provinsi": provinsi,
-            "label":    info["label"],
+            "provinsi":        provinsi,
+            "label":           info["label"],
+            "totalItems":      payload["totalItems"],
+            "totalPages":      payload["totalPages"],
+            "currentPage":     payload["currentPage"],
+            "hasNextPage":     payload["hasNextPage"],
+            "hasPreviousPage": payload["hasPreviousPage"],
+            "nextCursor":      payload["nextCursor"],
+            "limit":           payload["limit"],
         }
     }), 200
 
@@ -220,5 +250,5 @@ def baseline_data():
 @jwt_required()
 def baseline_clear_cache():
     _CACHE.clear()
-    logger.info("[Baseline] cache di-flush manual")
+    logger.info("[Baseline] cache di-flush")
     return jsonify({"message": "Cache berhasil dikosongkan."}), 200
