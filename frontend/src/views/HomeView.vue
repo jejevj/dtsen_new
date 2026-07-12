@@ -163,7 +163,7 @@
         <div class="grid-2" style="display:grid;gap:24px;margin-top:32px;">
           <div style="background:#f8fafc;border-radius:16px;padding:24px;">
             <h3 style="font-size:14px;font-weight:700;color:#374151;margin:0 0 16px;display:flex;align-items:center;gap:8px;">
-              <i class="pi pi-users" style="color:#3b82f6;"></i> Top 5 Mustahik Terbanyak
+              <i class="pi pi-users" style="color:#3b82f6;"></i> Top 5 Penerima Manfaat Terbanyak
             </h3>
             <div v-for="(prov, i) in topProvinces" :key="prov.provinsi_nama" style="margin-bottom:12px;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
