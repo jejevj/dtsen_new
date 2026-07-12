@@ -9,14 +9,14 @@ const api = axios.create({
   timeout: 15000,
 })
 
-// ── Request: attach access token ────────────────────────────────────────────
+// ── Request: attach access token ───────────────────────────────────────
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('dtsen_access_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
-// ── Response: auto-refresh on 401/422 JWT, queue concurrent requests ────────
+// ── Response: auto-refresh hanya pada 401, queue concurrent requests ──────
 let isRefreshing = false
 let failedQueue  = []
 
@@ -25,10 +25,6 @@ function processQueue(error, token = null) {
   failedQueue = []
 }
 
-/**
- * Lazy-load Pinia auth store tanpa circular dependency.
- * Menggunakan dynamic import ESM (kompatibel Vite).
- */
 async function getAuthStore() {
   try {
     const { useAuthStore } = await import('@/stores/auth')
@@ -38,34 +34,13 @@ async function getAuthStore() {
   }
 }
 
-/**
- * Cek apakah error adalah JWT error yang harus ditangani:
- * - 401 Unauthorized  (token tidak ada / header salah)
- * - 422 Unprocessable (token expired / corrupt / subject bukan string)
- */
-function isJwtError(err) {
-  const status = err.response?.status
-  if (status === 401) return true
-  if (status === 422) {
-    // Pastikan 422 ini dari JWT, bukan validasi request biasa
-    const msg = err.response?.data?.msg ?? err.response?.data?.message ?? ''
-    return (
-      msg.toLowerCase().includes('subject') ||
-      msg.toLowerCase().includes('token') ||
-      msg.toLowerCase().includes('expired') ||
-      msg.toLowerCase().includes('signature') ||
-      msg === ''
-    )
-  }
-  return false
-}
-
 api.interceptors.response.use(
   res => res,
   async err => {
     const original = err.config
 
-    if (!isJwtError(err) || original._retry) {
+    // Hanya tangani 401, biarkan status lain (termasuk 422) lewat
+    if (err.response?.status !== 401 || original._retry) {
       return Promise.reject(err)
     }
 
