@@ -15,9 +15,11 @@
 
       <!-- Logo -->
       <router-link to="/" style="display:flex; align-items:center; gap:10px; text-decoration:none; flex-shrink:0;">
-        <div style="width:34px;height:34px;border-radius:10px;background:#16a34a;display:flex;align-items:center;justify-content:center;">
-          <i class="pi pi-chart-bar" style="color:white;font-size:14px;"></i>
-        </div>
+        <img
+          src="https://simzat.kemenag.go.id/simzat/apps/assets/images/ico.png"
+          alt="DTSEN Logo"
+          style="width:34px;height:34px;border-radius:10px;object-fit:contain;"
+        />
         <div style="line-height:1;">
           <div style="font-weight:700;font-size:15px;letter-spacing:-0.02em;color:#15803d;">DTSEN</div>
           <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Zakat</div>
@@ -69,12 +71,10 @@
             v-if="profileOpen"
             style="position:absolute;right:0;top:calc(100% + 8px);background:white;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.10);min-width:200px;overflow:hidden;z-index:100;"
           >
-            <!-- Info user -->
             <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;">
               <p style="font-size:12px;font-weight:700;color:#1e293b;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ authStore.userDisplayName }}</p>
               <p style="font-size:11px;color:#94a3b8;margin:0;">{{ authStore.user?.email || authStore.user?.notelp || '' }}</p>
             </div>
-            <!-- Ke Dashboard -->
             <router-link
               to="/dashboard"
               style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;font-weight:500;color:#374151;text-decoration:none;transition:background 0.15s;"
@@ -83,7 +83,6 @@
               <i class="pi pi-th-large" style="font-size:13px;color:#16a34a;"></i>
               Dashboard
             </router-link>
-            <!-- Logout -->
             <button
               @click="handleLogout"
               style="width:100%;display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;font-weight:500;color:#dc2626;background:transparent;border:none;cursor:pointer;border-top:1px solid #f1f5f9;transition:background 0.15s;"
@@ -186,7 +185,6 @@ const navItems = [
   { label: 'Statistik', href: '#stats',   icon: 'pi pi-chart-bar' },
   { label: 'Peta',      href: '#map',     icon: 'pi pi-map' },
   { label: 'Program',   href: '#program', icon: 'pi pi-list' },
-  // { label: 'Tentang', href: '#tentang', icon: 'pi pi-info-circle' }, // hidden sementara
 ]
 
 async function handleLogout() {

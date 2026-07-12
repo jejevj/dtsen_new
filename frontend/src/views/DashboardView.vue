@@ -1,9 +1,8 @@
 <template>
   <AppLayout>
-    <!-- Wrapper utama: position relative sebagai jangkar SVG watermark -->
     <div class="dash-wrapper">
 
-      <!-- ===== WATERMARK SVG PATTERN ===== -->
+      <!-- WATERMARK -->
       <div class="wm-overlay" aria-hidden="true">
         <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -11,28 +10,19 @@
               patternUnits="userSpaceOnUse"
               patternTransform="rotate(-35)">
               <text x="10" y="40"
-                font-family="Inter, sans-serif"
-                font-size="11"
-                font-weight="700"
-                letter-spacing="2"
-                fill="rgba(15,23,42,0.09)"
-                text-anchor="start">DO NOT COPY</text>
+                font-family="Inter, sans-serif" font-size="11" font-weight="700"
+                letter-spacing="2" fill="rgba(15,23,42,0.09)" text-anchor="start">DO NOT COPY</text>
               <text x="10" y="68"
-                font-family="Inter, sans-serif"
-                font-size="10"
-                font-weight="600"
-                letter-spacing="1"
-                fill="rgba(15,23,42,0.07)"
-                text-anchor="start">{{ userEmail }}</text>
+                font-family="Inter, sans-serif" font-size="10" font-weight="600"
+                letter-spacing="1" fill="rgba(15,23,42,0.07)" text-anchor="start">{{ userEmail }}</text>
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#dash-wm)" />
         </svg>
       </div>
-      <!-- ===== END WATERMARK ===== -->
+      <!-- END WATERMARK -->
 
-      <!-- Semua konten di z-index 1 agar di atas watermark -->
-      <div class="dash-content">
+      <div class="dash-content" ref="dashContent">
 
         <!-- Header -->
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
@@ -79,10 +69,11 @@
         </div>
 
         <!-- Charts row -->
+        <!-- key berubah saat lebar container berubah → Chart.js re-mount & resize otomatis -->
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
           <div class="card-box">
             <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
-            <Chart type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
+            <Chart :key="'pie-'+chartKey" type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
             <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
               <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>L: {{ stats.by_gender.m }}</span>
               <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>P: {{ stats.by_gender.f }}</span>
@@ -90,7 +81,7 @@
           </div>
           <div class="card-box">
             <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Mustahik per Desil</p>
-            <Chart type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
+            <Chart :key="'bar-'+chartKey" type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
           </div>
         </div>
 
@@ -127,14 +118,12 @@
         </div>
 
       </div>
-      <!-- end dash-content -->
-
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import Chart       from 'primevue/chart'
 import AppLayout   from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -203,18 +192,40 @@ const quickNav = [
   { label:'Cari Data',     desc:'Pencarian mustahik & filter NIK', to:'/cari-data', icon:'pi pi-search', iconBg:'#f0fdf4', iconColor:'#16a34a' },
   { label:'Beranda',       desc:'Kembali ke halaman publik',       to:'/',          icon:'pi pi-globe',  iconBg:'#fff7ed', iconColor:'#ea580c' },
 ]
+
+// ── Fix: chart resize saat sidebar collapse ─────────────────────────────────
+// ResizeObserver memantau lebar container. Setiap kali lebar berubah (saat
+// sidebar expand/collapse), chartKey di-increment → Chart remount & fit ulang.
+const dashContent = ref(null)
+const chartKey    = ref(0)
+let   ro          = null
+let   prevWidth   = 0
+
+onMounted(() => {
+  if (!dashContent.value) return
+  ro = new ResizeObserver((entries) => {
+    const w = Math.round(entries[0].contentRect.width)
+    if (w !== prevWidth) {
+      prevWidth = w
+      // Tunda sedikit agar transisi sidebar selesai dulu (300ms)
+      setTimeout(() => { chartKey.value++ }, 320)
+    }
+  })
+  ro.observe(dashContent.value)
+})
+
+onBeforeUnmount(() => {
+  ro?.disconnect()
+})
 </script>
 
 <style scoped>
-/* Jangkar watermark — mengikuti tinggi konten */
 .dash-wrapper {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 24px;
 }
-
-/* SVG overlay memenuhi seluruh .dash-wrapper */
 .wm-overlay {
   position: absolute;
   inset: 0;
@@ -228,8 +239,6 @@ const quickNav = [
   width: 100%;
   height: 100%;
 }
-
-/* Konten di atas watermark */
 .dash-content {
   position: relative;
   z-index: 1;

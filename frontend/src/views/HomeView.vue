@@ -39,18 +39,31 @@
             </p>
 
             <div style="display:flex;flex-wrap:wrap;gap:12px;">
+              <!-- Tombol Lihat Statistik — selalu tampil -->
               <button
                 style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:#f59e0b;border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(245,158,11,0.4);"
                 @click="scrollTo('#stats')"
               >
                 <i class="pi pi-chart-bar"></i> Lihat Statistik
               </button>
+
+              <!-- Belum login: tampilkan Masuk Sistem -->
               <button
+                v-if="!authStore.isAuthenticated"
                 style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:transparent;border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;"
                 @click="loginModal.open()"
               >
                 <i class="pi pi-sign-in"></i> Masuk Sistem
               </button>
+
+              <!-- Sudah login: tampilkan Ke Dashboard -->
+              <router-link
+                v-else
+                to="/dashboard"
+                style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;"
+              >
+                <i class="pi pi-th-large"></i> Ke Dashboard
+              </router-link>
             </div>
           </div>
 
@@ -282,8 +295,10 @@ import IndonesiaMap  from '@/components/charts/IndonesiaMap.vue'
 import ReportService from '@/services/report'
 import { formatShort }        from '@/utils/formatter'
 import { useLoginModalStore } from '@/stores/loginModal'
+import { useAuthStore }       from '@/stores/auth'
 
 const loginModal = useLoginModalStore()
+const authStore  = useAuthStore()
 const mapMetric  = ref('mustahik')
 const mapData    = ref([])
 const genderData = ref({ male_count: 0, female_count: 0 })
@@ -315,7 +330,6 @@ onMounted(async () => {
   }
 })
 
-// ── Hero cards ──────────────────────────────────────────────
 const heroStats = computed(() => [
   { label: 'Total Penyaluran', value: 'Rp ' + formatShort(summary.value?.total_penyaluran||0), icon:'pi pi-wallet',     sub:'Seluruh LAZ terdaftar' },
   { label: 'LAZ Nasional',     value: formatShort(summary.value?.nasional||0),                   icon:'pi pi-building',   sub:'Lembaga aktif' },
@@ -323,7 +337,6 @@ const heroStats = computed(() => [
   { label: 'Penerima Manfaat',         value: formatShort(summary.value?.penerima_manfaat||0),            icon:'pi pi-users',      sub:'Penerima manfaat' },
 ])
 
-// ── Agg stats cards ─────────────────────────────────────────
 const aggStats = computed(() => [
   { label:'Total Penyaluran',  value:'Rp ' + formatShort(summary.value?.total_penyaluran||0),   sub:'Akumulasi seluruh LAZ',          icon:'pi pi-wallet',   iconBg:'#f0fdf4', iconColor:'#16a34a' },
   { label:'Penerima Manfaat',  value:formatShort(summary.value?.penerima_manfaat||0),             sub:'Total mustahik unik',            icon:'pi pi-users',    iconBg:'#eff6ff', iconColor:'#2563eb' },
@@ -331,7 +344,6 @@ const aggStats = computed(() => [
   { label:'Provinsi Terlibat', value:'34',                                                        sub:'Seluruh Indonesia',              icon:'pi pi-map',      iconBg:'#fff7ed', iconColor:'#ea580c' },
 ])
 
-// ── Peta top-5 ───────────────────────────────────────────────
 const topProvinces = computed(() => {
   const sorted = [...mapData.value].sort((a,b)=>(b.mustahik||0)-(a.mustahik||0)).slice(0,5)
   const max    = sorted[0]?.mustahik||1
@@ -344,13 +356,11 @@ const topProvincesByPenyaluran = computed(() => {
   return sorted.map(p=>({...p, pct_penyaluran:Math.round((p.penyaluran/max)*100)}))
 })
 
-// ── Bidang dengan pct ────────────────────────────────────────
 const bidangProgram = computed(() => {
   const total = bidangData.value.reduce((s,b)=>s+(b.total_penyaluran||0),0)||1
   return bidangData.value.map(b=>({...b, pct:((b.total_penyaluran||0)/total)*100}))
 })
 
-// ── Chart data ───────────────────────────────────────────────
 const genderChartData = computed(() => ({
   labels:['Laki-laki','Perempuan'],
   datasets:[{ data:[genderData.value?.male_count||0, genderData.value?.female_count||0], backgroundColor:['#3b82f6','#ec4899'], borderWidth:0 }]
@@ -364,7 +374,6 @@ const trendChartData = computed(() => ({
   datasets:[{ label:'Penyaluran', data:trendData.value.map(d=>(d.Bantuan_Langsung||0)+(d.Bantuan_Tidak_Langsung||0)), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.1)', fill:true, tension:0.4, pointRadius:3 }]
 }))
 
-// ── Chart options — formatShort di axis & tooltip ────────────
 const doughnutOpts = {
   plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
   responsive:true, maintainAspectRatio:false
