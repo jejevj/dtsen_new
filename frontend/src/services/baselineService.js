@@ -7,7 +7,6 @@ export async function fetchBaselineProvinsi() {
 }
 
 // Dropdown wilayah: provinsi + kabkota + kecamatan sesuai skala LAZ
-// params: { provinsi_kode?, kabkota_kode? }
 export async function fetchWilayahDropdown(params = {}) {
   const res = await api.get('/wilayah/dropdown', { params })
   return res.data
@@ -25,14 +24,29 @@ export async function fetchKecamatan(kabkota_kode) {
   return res.data?.data ?? []
 }
 
-// Anggota
+// Anggota list
 export async function fetchBaselineAnggota(params = {}) {
   const res = await api.get('/baseline/anggota', { params })
   return res.data
 }
 
-// Keluarga
+// Anggota detail by NIK
+export async function fetchBaselineAnggotaByNik(nik) {
+  const res = await api.get('/baseline/anggota', { params: { provinsi: 'all', search: nik } })
+  // Fallback: coba semua provinsi dengan search NIK
+  const items = res.data?.data ?? []
+  return items.find(r => r.nomor_induk_kependudukan === nik || r.nik === nik) ?? items[0] ?? null
+}
+
+// Keluarga list
 export async function fetchBaselineKeluarga(params = {}) {
   const res = await api.get('/baseline/keluarga', { params })
   return res.data
+}
+
+// Keluarga detail by NKK
+export async function fetchBaselineKeluargaByNkk(nkk) {
+  const res = await api.get('/baseline/keluarga', { params: { search: nkk } })
+  const items = res.data?.data ?? []
+  return items.find(r => r.nomor_kartu_keluarga === nkk) ?? items[0] ?? null
 }
