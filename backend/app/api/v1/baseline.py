@@ -3,9 +3,12 @@ import os
 import re
 import time
 import requests
+from datetime import datetime
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from . import api_v1_bp
+from ...extensions import db
+from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 
 logger = logging.getLogger('app')
 
@@ -54,6 +57,10 @@ ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
 ZAWA_TIMEOUT = 60
 ZAWA_LIMIT   = 10
 
+# ── Batas row saat sync ke DB
+SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000   # max 10.000 per provinsi
+SYNC_MAX_KELUARGA_TOTAL       = 50_000   # max 50.000 total
+
 _CACHE: dict = {}
 CACHE_TTL = 600
 
@@ -69,17 +76,14 @@ def _zawa_headers() -> dict:
 
 
 def _is_numeric_id(s: str) -> bool:
-    """True jika string hanya angka minimal 10 digit (NIK/NKK)."""
     return bool(re.fullmatch(r'\d{10,}', s.strip()))
 
 
 def _is_nkk(s: str) -> bool:
-    """True jika string adalah Nomor Kartu Keluarga yang valid (tepat 16 digit)."""
     return bool(re.fullmatch(r'\d{16}', s.strip()))
 
 
 def _ok_payload(items, label, provinsi, meta_override=None):
-    """Bangun response 200 sukses."""
     columns = list(items[0].keys()) if items else []
     meta = {
         "provinsi":        provinsi,
@@ -99,10 +103,6 @@ def _ok_payload(items, label, provinsi, meta_override=None):
 
 
 def _err_200(message: str, label: str, provinsi: str):
-    """
-    Kembalikan HTTP 200 dengan data kosong + pesan error.
-    Cloudflare tidak akan memblokir 200.
-    """
     return jsonify({
         "data":    [],
         "columns": [],
@@ -170,11 +170,6 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
 
 
 def _fetch_by_id(zawa_path: str, param_name: str, id_val, cache_prefix: str):
-    """
-    Hit endpoint by-id ZAWA. Mengembalikan (payload|None, error_str|None, not_found: bool).
-    id_val bisa berupa string atau integer — akan dikirim sesuai tipe yang diberikan.
-    404 dari ZAWA = data tidak ditemukan, bukan error server.
-    """
     cache_key = f"{cache_prefix}:{id_val}"
     now = time.time()
     cached = _CACHE.get(cache_key)
@@ -187,15 +182,10 @@ def _fetch_by_id(zawa_path: str, param_name: str, id_val, cache_prefix: str):
         resp = requests.get(url, params={param_name: id_val},
                             timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
         logger.info(f"[Baseline] by-id status={resp.status_code} path={zawa_path}")
-
-        # 404 = data tidak ditemukan, bukan server error
         if resp.status_code == 404:
-            logger.info(f"[Baseline] by-id 404 (not found) path={zawa_path} id={id_val}")
-            return None, None, True  # not_found=True
-
+            return None, None, True
         resp.raise_for_status()
         raw = resp.json()
-
     except requests.exceptions.Timeout:
         return None, "Timeout saat menghubungi ZAWA.", False
     except requests.exceptions.HTTPError as e:
@@ -256,7 +246,353 @@ def _build_table_response(payload, label, provinsi):
     }), 200
 
 
-# ── Diagnostik
+# ─────────────────────────────────────────────
+# Helper: simpan hasil ZAWA ke DB (cache on-demand)
+# ─────────────────────────────────────────────
+
+def _cache_anggota_to_db(items: list, provinsi_slug: str):
+    """Simpan list anggota dari ZAWA ke DB. Skip jika NIK sudah ada."""
+    if not items:
+        return 0
+    saved = 0
+    for row in items:
+        nik = str(row.get("nomor_induk_kependudukan", "") or "").strip()
+        if not nik:
+            continue
+        exists = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first()
+        if exists:
+            continue
+        tgl = None
+        raw_tgl = row.get("tanggal_lahir")
+        if raw_tgl:
+            try:
+                tgl = datetime.fromisoformat(raw_tgl.replace("Z", "+00:00")).date()
+            except Exception:
+                pass
+        obj = ZawaAnggota(
+            nomor_induk_kependudukan  = nik,
+            nomor_kartu_keluarga      = str(row.get("nomor_kartu_keluarga", "") or "").strip() or None,
+            nama                      = row.get("nama"),
+            jenis_kelamin             = str(row.get("jenis_kelamin", "") or ""),
+            tanggal_lahir             = tgl,
+            status_kawin              = str(row.get("status_kawin", "") or "") or None,
+            status_hubungan_keluarga  = str(row.get("status_hubungan_keluarga", "") or "") or None,
+            alamat_ktp                = row.get("alamat_ktp"),
+            dusun_ktp                 = row.get("dusun_ktp"),
+            rt_ktp                    = row.get("rt_ktp"),
+            rw_ktp                    = row.get("rw_ktp"),
+            kelurahan_desa_ktp        = row.get("kelurahan_desa_ktp"),
+            kecamatan_ktp             = row.get("kecamatan_ktp"),
+            kabupaten_kota_ktp        = row.get("kabupaten_kota_ktp"),
+            provinsi_ktp              = row.get("provinsi_ktp"),
+            kode_provinsi_ktp         = str(row.get("kode_provinsi_ktp", "") or "") or None,
+            kode_kabupaten_kota_ktp   = str(row.get("kode_kabupaten_kota_ktp", "") or "") or None,
+            kode_kecamatan_ktp        = str(row.get("kode_kecamatan_ktp", "") or "") or None,
+            kode_kelurahan_desa_ktp   = str(row.get("kode_kelurahan_desa_ktp", "") or "") or None,
+            partisipasi_sekolah       = str(row.get("partisipasi_sekolah", "") or "") or None,
+            jenjang_tertinggi_yang_diduduki   = row.get("jenjang_tertinggi_yang_diduduki"),
+            kelas_tertinggi_yang_diduduki     = row.get("kelas_tertinggi_yang_diduduki"),
+            ijazah_tertinggi_yang_dimiliki    = row.get("ijazah_tertinggi_yang_dimiliki"),
+            status_bekerja                    = str(row.get("status_bekerja", "") or "") or None,
+            status_dalam_pekerjaan_utama      = str(row.get("status_dalam_pekerjaan_utama", "") or "") or None,
+            lapangan_usaha_dari_pekerjaan_utama = row.get("lapangan_usaha_dari_pekerjaan_utama"),
+            lapangan_usaha_dari_usaha_utama     = row.get("lapangan_usaha_dari_usaha_utama"),
+            kepemilikan_usaha                   = str(row.get("kepemilikan_usaha", "") or "") or None,
+            jumlah_usaha                        = row.get("jumlah_usaha"),
+            jumlah_pekerja_yang_dibayar_dari_usaha_utama       = row.get("jumlah_pekerja_yang_dibayar_dari_usaha_utama"),
+            jumlah_pekerja_yang_tidak_dibayar_dari_usaha_utama = row.get("jumlah_pekerja_yang_tidak_dibayar_dari_usaha_utama"),
+            omzet_usaha_utama            = row.get("omzet_usaha_utama"),
+            id_pelanggan_pln             = row.get("id_pelanggan_pln"),
+            kondisi_gizi                 = str(row.get("kondisi_gizi", "") or "") or None,
+            penyakit_kronis              = row.get("penyakit_kronis"),
+            penglihatan                  = str(row.get("penglihatan", "") or "") or None,
+            pendengaran                  = str(row.get("pendengaran", "") or "") or None,
+            berjalan_atau_naik_tangga    = str(row.get("berjalan_atau_naik_tangga", "") or "") or None,
+            menggunakan_tangan_jari      = str(row.get("menggunakan_tangan_jari", "") or "") or None,
+            mengingat_berkonsentrasi     = str(row.get("mengingat_berkonsentrasi", "") or "") or None,
+            berbicara_komunikasi         = str(row.get("berbicara_komunikasi", "") or "") or None,
+            belajar_kemampuan_intelektual= str(row.get("belajar_kemampuan_intelektual", "") or "") or None,
+            mengurus_diri                = str(row.get("mengurus_diri", "") or "") or None,
+            kesedihan_depresi            = str(row.get("kesedihan_depresi", "") or "") or None,
+            pengendalian_perilaku        = str(row.get("pengendalian_perilaku", "") or "") or None,
+            pbi_nas                      = str(row.get("pbi_nas", "") or "") or None,
+            pbi_pemda                    = str(row.get("pbi_pemda", "") or "") or None,
+            raw_data                     = row,
+            provinsi_slug                = provinsi_slug,
+            synced_at                    = datetime.utcnow(),
+        )
+        db.session.add(obj)
+        saved += 1
+    db.session.commit()
+    return saved
+
+
+def _cache_keluarga_to_db(items: list):
+    """Simpan list keluarga dari ZAWA ke DB. Skip jika NKK sudah ada."""
+    if not items:
+        return 0
+    saved = 0
+    for row in items:
+        nkk = str(row.get("nomor_kartu_keluarga", "") or "").strip()
+        if not nkk:
+            continue
+        exists = ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=nkk).first()
+        if exists:
+            continue
+        obj = ZawaKeluarga(
+            nomor_kartu_keluarga    = nkk,
+            nama_anggota_keluarga   = row.get("nama_anggota_keluarga"),
+            jumlah_anggota_keluarga = row.get("jumlah_anggota_keluarga"),
+            alamat                  = row.get("alamat"),
+            kelurahan_desa          = row.get("kelurahan_desa"),
+            kecamatan               = row.get("kecamatan"),
+            kabupaten_kota          = row.get("kabupaten_kota"),
+            provinsi                = row.get("provinsi"),
+            kode_provinsi           = str(row.get("kode_provinsi", "") or "") or None,
+            kode_kabupaten_kota     = str(row.get("kode_kabupaten_kota", "") or "") or None,
+            kode_kecamatan          = str(row.get("kode_kecamatan", "") or "") or None,
+            kode_kelurahan_desa     = str(row.get("kode_kelurahan_desa", "") or "") or None,
+            luas_lantai             = row.get("luas_lantai"),
+            jenis_lantai_terluas    = row.get("jenis_lantai_terluas"),
+            jenis_dinding_terluas   = row.get("jenis_dinding_terluas"),
+            jenis_atap_terluas      = row.get("jenis_atap_terluas"),
+            status_kepemilikan_rumah = str(row.get("status_kepemilikan_rumah", "") or "") or None,
+            fasilitas_bab           = str(row.get("fasilitas_bab", "") or "") or None,
+            jenis_kloset            = str(row.get("jenis_kloset", "") or "") or None,
+            pembuangan_akhir_tinja  = str(row.get("pembuangan_akhir_tinja", "") or "") or None,
+            sumber_air_minum_utama  = row.get("sumber_air_minum_utama"),
+            sumber_penerangan_utama = str(row.get("sumber_penerangan_utama", "") or "") or None,
+            bahan_bakar_utama_memasak = row.get("bahan_bakar_utama_memasak"),
+            daya_terpasang          = row.get("daya_terpasang"),
+            id_pelanggan_pln        = row.get("id_pelanggan_pln"),
+            aset_bergerak_sepeda_motor           = str(row.get("aset_bergerak_sepeda_motor", "") or "") or None,
+            aset_bergerak_mobil                  = str(row.get("aset_bergerak_mobil", "") or "") or None,
+            aset_bergerak_sepeda                 = str(row.get("aset_bergerak_sepeda", "") or "") or None,
+            aset_bergerak_perahu                 = str(row.get("aset_bergerak_perahu", "") or "") or None,
+            aset_bergerak_kapal_perahu_motor     = str(row.get("aset_bergerak_kapal_perahu_motor", "") or "") or None,
+            aset_bergerak_smartphone             = str(row.get("aset_bergerak_smartphone", "") or "") or None,
+            aset_bergerak_komputer_laptop_tablet = str(row.get("aset_bergerak_komputer_laptop_tablet", "") or "") or None,
+            aset_bergerak_tv_datar               = str(row.get("aset_bergerak_tv_datar", "") or "") or None,
+            aset_bergerak_lemari_es              = str(row.get("aset_bergerak_lemari_es", "") or "") or None,
+            aset_bergerak_ac                     = str(row.get("aset_bergerak_ac", "") or "") or None,
+            aset_bergerak_pemanas_air            = str(row.get("aset_bergerak_pemanas_air", "") or "") or None,
+            aset_bergerak_tabung_gas             = str(row.get("aset_bergerak_tabung_gas", "") or "") or None,
+            aset_bergerak_telepon_rumah          = str(row.get("aset_bergerak_telepon_rumah", "") or "") or None,
+            aset_bergerak_emas_perhiasan         = str(row.get("aset_bergerak_emas_perhiasan", "") or "") or None,
+            aset_tidak_bergerak_rumah_lainnya    = str(row.get("aset_tidak_bergerak_rumah_lainnya", "") or "") or None,
+            aset_tidak_bergerak_lahan_lainnya    = str(row.get("aset_tidak_bergerak_lahan_lainnya", "") or "") or None,
+            kepemilikan_aset                     = str(row.get("kepemilikan_aset", "") or "") or None,
+            jumlah_ternak_sapi          = row.get("jumlah_ternak_sapi"),
+            jumlah_ternak_kerbau        = row.get("jumlah_ternak_kerbau"),
+            jumlah_ternak_kuda          = row.get("jumlah_ternak_kuda"),
+            jumlah_ternak_kambing_domba = row.get("jumlah_ternak_kambing_domba"),
+            jumlah_ternak_babi          = row.get("jumlah_ternak_babi"),
+            pbi_nas                     = str(row.get("pbi_nas", "") or "") or None,
+            pbi_pemda                   = str(row.get("pbi_pemda", "") or "") or None,
+            desil_nasional              = str(row.get("desil_nasional", "") or "") or None,
+            raw_data                    = row,
+            synced_at                   = datetime.utcnow(),
+        )
+        db.session.add(obj)
+        saved += 1
+    db.session.commit()
+    return saved
+
+
+# ─────────────────────────────────────────────
+# SYNC ENDPOINTS
+# ─────────────────────────────────────────────
+
+@api_v1_bp.post('/baseline/sync/anggota')
+@jwt_required()
+def baseline_sync_anggota():
+    """
+    Sync data anggota ZAWA ke DB lokal.
+    Batas: SYNC_MAX_ANGGOTA_PER_PROVINSI (10.000) row per provinsi.
+
+    Body JSON (opsional):
+      { "provinsi": "aceh" }   ← sync 1 provinsi
+      {}                       ← sync semua provinsi
+    """
+    body         = request.get_json(silent=True) or {}
+    provinsi_req = (body.get("provinsi") or "").lower().strip()
+
+    targets = {}
+    if provinsi_req:
+        info = PROVINSI_MAP.get(provinsi_req)
+        if not info:
+            return jsonify({"error": f"Kode provinsi '{provinsi_req}' tidak dikenal."}), 400
+        targets = {provinsi_req: info}
+    else:
+        targets = PROVINSI_MAP
+
+    hasil = []
+    for slug, info in targets.items():
+        log = ZawaSyncLog(
+            sync_type=f"anggota:{slug}",
+            provinsi_slug=slug,
+            status="running",
+            started_at=datetime.utcnow(),
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        total_fetched = 0
+        total_saved   = 0
+        cursor        = None
+        error_msg     = None
+
+        try:
+            while total_fetched < SYNC_MAX_ANGGOTA_PER_PROVINSI:
+                sisa    = SYNC_MAX_ANGGOTA_PER_PROVINSI - total_fetched
+                params  = {"cursor": cursor} if cursor else {}
+                payload, err = _fetch_zawa_page(f"zawa/{info['slug']}", params)
+
+                if err:
+                    error_msg = err
+                    break
+
+                items = payload["items"]
+                if not items:
+                    break
+
+                # Potong jika melebihi batas
+                if len(items) > sisa:
+                    items = items[:sisa]
+
+                total_fetched += len(items)
+                saved = _cache_anggota_to_db(items, slug)
+                total_saved += saved
+
+                if not payload["hasNextPage"] or not payload["nextCursor"]:
+                    break
+                cursor = payload["nextCursor"]
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"[Sync] anggota {slug} error: {e}", exc_info=True)
+
+        log.status        = "failed" if error_msg else "success"
+        log.total_fetched = total_fetched
+        log.total_saved   = total_saved
+        log.error_message = error_msg
+        log.finished_at   = datetime.utcnow()
+        db.session.commit()
+
+        hasil.append({
+            "provinsi":      slug,
+            "label":         info["label"],
+            "total_fetched": total_fetched,
+            "total_saved":   total_saved,
+            "status":        log.status,
+            "error":         error_msg,
+            "durasi_detik":  log.duration_seconds(),
+        })
+        logger.info(f"[Sync] anggota {slug}: fetched={total_fetched} saved={total_saved} status={log.status}")
+
+    return jsonify({
+        "message": f"Sync anggota selesai. {len(hasil)} provinsi diproses.",
+        "batas_per_provinsi": SYNC_MAX_ANGGOTA_PER_PROVINSI,
+        "hasil": hasil,
+    }), 200
+
+
+@api_v1_bp.post('/baseline/sync/keluarga')
+@jwt_required()
+def baseline_sync_keluarga():
+    """
+    Sync data keluarga ZAWA ke DB lokal.
+    Batas: SYNC_MAX_KELUARGA_TOTAL (50.000) row total (tidak per provinsi).
+    """
+    log = ZawaSyncLog(
+        sync_type="keluarga",
+        provinsi_slug=None,
+        status="running",
+        started_at=datetime.utcnow(),
+    )
+    db.session.add(log)
+    db.session.commit()
+
+    total_fetched = 0
+    total_saved   = 0
+    cursor        = None
+    error_msg     = None
+
+    try:
+        while total_fetched < SYNC_MAX_KELUARGA_TOTAL:
+            sisa   = SYNC_MAX_KELUARGA_TOTAL - total_fetched
+            params = {"cursor": cursor} if cursor else {}
+            payload, err = _fetch_zawa_page("zawa/keluarga", params)
+
+            if err:
+                error_msg = err
+                break
+
+            items = payload["items"]
+            if not items:
+                break
+
+            if len(items) > sisa:
+                items = items[:sisa]
+
+            total_fetched += len(items)
+            saved = _cache_keluarga_to_db(items)
+            total_saved += saved
+
+            if not payload["hasNextPage"] or not payload["nextCursor"]:
+                break
+            cursor = payload["nextCursor"]
+
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"[Sync] keluarga error: {e}", exc_info=True)
+
+    log.status        = "failed" if error_msg else "success"
+    log.total_fetched = total_fetched
+    log.total_saved   = total_saved
+    log.error_message = error_msg
+    log.finished_at   = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        "message":       "Sync keluarga selesai.",
+        "batas_total":   SYNC_MAX_KELUARGA_TOTAL,
+        "total_fetched": total_fetched,
+        "total_saved":   total_saved,
+        "status":        log.status,
+        "error":         error_msg,
+        "durasi_detik":  log.duration_seconds(),
+    }), 200
+
+
+@api_v1_bp.get('/baseline/sync/status')
+@jwt_required()
+def baseline_sync_status():
+    """Lihat 20 log sync terakhir."""
+    logs = ZawaSyncLog.query.order_by(ZawaSyncLog.started_at.desc()).limit(20).all()
+    return jsonify({
+        "data": [
+            {
+                "id":            l.id,
+                "sync_type":     l.sync_type,
+                "provinsi_slug": l.provinsi_slug,
+                "status":        l.status,
+                "total_fetched": l.total_fetched,
+                "total_saved":   l.total_saved,
+                "error_message": l.error_message,
+                "started_at":    l.started_at.isoformat() if l.started_at else None,
+                "finished_at":   l.finished_at.isoformat() if l.finished_at else None,
+                "durasi_detik":  l.duration_seconds(),
+            }
+            for l in logs
+        ]
+    }), 200
+
+
+# ─────────────────────────────────────────────
+# ENDPOINT READ — cek DB dulu, fallback ke ZAWA
+# ─────────────────────────────────────────────
+
 @api_v1_bp.get('/baseline/ping')
 @jwt_required()
 def baseline_ping():
@@ -288,7 +624,6 @@ def baseline_ping():
     return jsonify({"ok": overall_ok, "checks": results, "target": host}), 200
 
 
-# ── Provinsi list
 @api_v1_bp.get('/baseline/provinsi')
 @jwt_required()
 def baseline_provinsi_list():
@@ -299,7 +634,6 @@ def baseline_provinsi_list():
     return jsonify({"data": items}), 200
 
 
-# ── Tab Anggota
 @api_v1_bp.get('/baseline/anggota')
 @jwt_required()
 def baseline_anggota():
@@ -314,7 +648,16 @@ def baseline_anggota():
         return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
 
     if search and _is_numeric_id(search):
-        # NIK dikirim sebagai integer sesuai tipe di ZAWA spec
+        # ── 1. Cek DB lokal dulu
+        db_row = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=search.strip()).first()
+        if db_row:
+            logger.info(f"[Baseline] anggota NIK={search} ditemukan di DB lokal")
+            return _ok_payload(
+                [db_row.to_dict()], info["label"], provinsi,
+                {"searchMode": "db_cache", "source": "local_db"}
+            )
+
+        # ── 2. Fallback ke ZAWA API
         try:
             nik_int = int(search.strip())
         except ValueError:
@@ -328,7 +671,30 @@ def baseline_anggota():
             return _err_200(f"NIK {search} tidak ditemukan di data ZAWA.", info["label"], provinsi)
         if err:
             return _err_200(err, info["label"], provinsi)
+
+        # Simpan ke DB agar request berikutnya dari cache
+        if payload["items"]:
+            try:
+                _cache_anggota_to_db(payload["items"], provinsi)
+            except Exception as e:
+                logger.warning(f"[Baseline] gagal cache anggota NIK={search}: {e}")
+
         return _build_table_response(payload, info["label"], provinsi)
+
+    # ── List mode: cek DB lokal (provinsi-slug) sebelum hit ZAWA
+    if not cursor:
+        db_rows = (ZawaAnggota.query
+                   .filter_by(provinsi_slug=provinsi)
+                   .limit(ZAWA_LIMIT)
+                   .all())
+        if db_rows:
+            logger.info(f"[Baseline] anggota provinsi={provinsi} dari DB lokal ({len(db_rows)} rows)")
+            items = [r.to_dict() for r in db_rows]
+            return _ok_payload(
+                items, info["label"], provinsi,
+                {"searchMode": "db_cache", "source": "local_db",
+                 "totalItems": len(items), "limit": ZAWA_LIMIT}
+            )
 
     params = {"cursor": cursor} if cursor else {}
     payload, err = _fetch_zawa_page(f"zawa/{info['slug']}", params)
@@ -342,20 +708,33 @@ def baseline_anggota():
             if q in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
+    # Simpan halaman ini ke DB (background best-effort)
+    if payload["items"]:
+        try:
+            _cache_anggota_to_db(payload["items"], provinsi)
+        except Exception as e:
+            logger.warning(f"[Baseline] gagal cache anggota list provinsi={provinsi}: {e}")
+
     return _build_table_response(payload, info["label"], provinsi)
 
 
-# ── Tab Keluarga
 @api_v1_bp.get('/baseline/keluarga')
 @jwt_required()
 def baseline_keluarga():
     cursor = request.args.get('cursor') or None
     search = request.args.get('search', '').strip()
 
-    # Pencarian by NKK: satu-satunya endpoint ZAWA adalah 'zawa/keluarga-by-nik'
-    # dengan param 'nomor_kartu_keluarga' bertipe INTEGER (sesuai tampilan-filter.json).
-    # NKK harus di-cast ke int() sebelum dikirim — ZAWA menolak string.
     if search and _is_nkk(search):
+        # ── 1. Cek DB lokal dulu
+        db_row = ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=search.strip()).first()
+        if db_row:
+            logger.info(f"[Baseline] keluarga NKK={search} ditemukan di DB lokal")
+            return _ok_payload(
+                [db_row.to_dict()], "Keluarga", "nasional",
+                {"searchMode": "db_cache", "source": "local_db"}
+            )
+
+        # ── 2. Fallback ke ZAWA API
         try:
             nkk_int = int(search.strip())
         except ValueError:
@@ -373,8 +752,17 @@ def baseline_keluarga():
             )
         if err:
             return _err_200(err, "Keluarga", "nasional")
+
+        # Simpan ke DB
+        if payload["items"]:
+            try:
+                _cache_keluarga_to_db(payload["items"])
+            except Exception as e:
+                logger.warning(f"[Baseline] gagal cache keluarga NKK={search}: {e}")
+
         return _build_table_response(payload, "Keluarga", "nasional")
 
+    # ── List mode
     params = {"cursor": cursor} if cursor else {}
     payload, err = _fetch_zawa_page("zawa/keluarga", params)
     if err:
@@ -387,17 +775,22 @@ def baseline_keluarga():
             if q in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
+    # Simpan ke DB (best-effort)
+    if payload["items"]:
+        try:
+            _cache_keluarga_to_db(payload["items"])
+        except Exception as e:
+            logger.warning(f"[Baseline] gagal cache keluarga list: {e}")
+
     return _build_table_response(payload, "Keluarga", "nasional")
 
 
-# ── Alias lama
 @api_v1_bp.get('/baseline')
 @jwt_required()
 def baseline_data():
     return baseline_anggota()
 
 
-# ── Flush cache
 @api_v1_bp.delete('/baseline/cache')
 @jwt_required()
 def baseline_clear_cache():
