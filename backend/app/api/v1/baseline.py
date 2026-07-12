@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import time
 import requests
 from flask import request, jsonify
@@ -50,7 +51,7 @@ PROVINSI_MAP = {
 }
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
-ZAWA_TIMEOUT = 60  # dinaikkan ke 60 detik
+ZAWA_TIMEOUT = 60
 ZAWA_LIMIT   = 10
 
 _CACHE: dict = {}
@@ -67,18 +68,13 @@ def _zawa_headers() -> dict:
     return headers
 
 
-def _safe_int(val, default, min_val=1, max_val=None):
-    try:
-        result = int(str(val).strip())
-    except (ValueError, TypeError):
-        result = default
-    result = max(min_val, result)
-    if max_val is not None:
-        result = min(max_val, result)
-    return result
+def _is_numeric_id(s: str) -> bool:
+    """True jika string hanya angka dan panjang >= 10 (NIK/NKK)."""
+    return bool(re.fullmatch(r'\d{10,}', s.strip()))
 
 
 def _fetch_zawa_page(zawa_path: str, params: dict = None):
+    """Fetch satu halaman dari ZAWA (cursor-based)."""
     cache_key = f"{zawa_path}:{sorted((params or {}).items())}"
     now = time.time()
     cached = _CACHE.get(cache_key)
@@ -108,7 +104,6 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
 
     data_obj = raw.get("data", {})
     if not isinstance(data_obj, dict):
-        logger.error(f"[Baseline] unexpected data type: {type(data_obj)} path={zawa_path}")
         return None, "Format response ZAWA tidak dikenal."
 
     items = data_obj.get("items") or []
@@ -121,9 +116,60 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
         "hasPreviousPage": data_obj.get("hasPreviousPage", False),
         "nextCursor":      data_obj.get("nextCursor"),
         "limit":           data_obj.get("limit", ZAWA_LIMIT),
+        "search_mode":     "list",
     }
-
     logger.info(f"[Baseline] got {len(items)} items, total={payload['totalItems']} path={zawa_path}")
+    _CACHE[cache_key] = {"payload": payload, "ts": now}
+    return payload, None
+
+
+def _fetch_by_id(zawa_path: str, param_name: str, id_value: int, cache_prefix: str):
+    """
+    Generic fetch untuk endpoint by-nik / keluarga-by-nik.
+    Response bisa berupa: list langsung, atau dict { items/data: [...] }
+    """
+    cache_key = f"{cache_prefix}:{id_value}"
+    now = time.time()
+    cached = _CACHE.get(cache_key)
+    if cached and (now - cached["ts"]) < CACHE_TTL:
+        return cached["payload"], None
+
+    url = f"{ZAWA_BASE}/{zawa_path}"
+    logger.info(f"[Baseline] fetch {zawa_path} {param_name}={id_value}")
+    try:
+        resp = requests.get(url, params={param_name: id_value},
+                            timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
+        resp.raise_for_status()
+        raw = resp.json()
+    except requests.exceptions.Timeout:
+        return None, "Timeout saat menghubungi ZAWA."
+    except requests.exceptions.HTTPError as e:
+        return None, f"ZAWA HTTP error: {e}"
+    except Exception as e:
+        return None, f"Error: {e}"
+
+    data_obj = raw.get("data", {})
+    if isinstance(data_obj, list):
+        items = data_obj
+    elif isinstance(data_obj, dict):
+        items = data_obj.get("items") or data_obj.get("data") or []
+        # jika tidak ada nested, cek apakah data_obj sendiri adalah 1 record
+        if not items and data_obj:
+            items = [data_obj]
+    else:
+        items = []
+
+    payload = {
+        "items":           items,
+        "totalItems":      len(items),
+        "totalPages":      1,
+        "currentPage":     1,
+        "hasNextPage":     False,
+        "hasPreviousPage": False,
+        "nextCursor":      None,
+        "limit":           len(items),
+        "search_mode":     "by_id",
+    }
     _CACHE[cache_key] = {"payload": payload, "ts": now}
     return payload, None
 
@@ -144,6 +190,7 @@ def _build_table_response(payload, label, provinsi):
             "hasPreviousPage": payload["hasPreviousPage"],
             "nextCursor":      payload["nextCursor"],
             "limit":           payload["limit"],
+            "searchMode":      payload.get("search_mode", "list"),
         }
     }), 200
 
@@ -166,15 +213,16 @@ def baseline_ping():
         results["tcp_443"] = {"ok": True}
     except Exception as e:
         results["tcp_443"] = {"ok": False, "error": str(e)}
-    test_url = f"{ZAWA_BASE}/zawa/anggota"
     t0 = time.time()
     try:
-        resp = requests.get(test_url, timeout=30, headers=_zawa_headers())
+        resp = requests.get(f"{ZAWA_BASE}/zawa/anggota", timeout=30, headers=_zawa_headers())
         elapsed = round(time.time() - t0, 2)
-        results["http_get"] = {"ok": resp.status_code < 400, "status": resp.status_code, "elapsed": f"{elapsed}s", "sample": resp.text[:300]}
+        results["http_get"] = {"ok": resp.status_code < 400, "status": resp.status_code,
+                               "elapsed": f"{elapsed}s", "sample": resp.text[:300]}
     except Exception as e:
         results["http_get"] = {"ok": False, "error": str(e)}
-    results["api_key_configured"] = {"ok": bool(os.environ.get("ZAWA_API_KEY")), "set": bool(os.environ.get("ZAWA_API_KEY"))}
+    results["api_key_configured"] = {"ok": bool(os.environ.get("ZAWA_API_KEY")),
+                                      "set": bool(os.environ.get("ZAWA_API_KEY"))}
     overall_ok = all(v.get("ok") for v in results.values())
     return jsonify({"ok": overall_ok, "checks": results, "target": host}), 200 if overall_ok else 502
 
@@ -196,13 +244,23 @@ def baseline_provinsi_list():
 def baseline_anggota():
     provinsi = request.args.get('provinsi', '').lower().strip()
     cursor   = request.args.get('cursor') or None
-    search   = request.args.get('search', '').lower().strip()
+    search   = request.args.get('search', '').strip()
 
     if not provinsi:
         return jsonify({"error": "Parameter 'provinsi' wajib diisi."}), 400
     info = PROVINSI_MAP.get(provinsi)
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
+
+    # Jika search berupa NIK (angka >=10 digit) → hit anggota-by-nik
+    if search and _is_numeric_id(search):
+        payload, err = _fetch_by_id(
+            "zawa/anggota-by-nik", "nomor_induk_kependudukan",
+            int(search), "anggota-by-nik"
+        )
+        if err:
+            return jsonify({"error": err}), 502
+        return _build_table_response(payload, info["label"], provinsi)
 
     params = {}
     if cursor:
@@ -213,9 +271,10 @@ def baseline_anggota():
         return jsonify({"error": err}), 502
 
     if search:
+        q = search.lower()
         payload["items"] = [
             r for r in payload["items"]
-            if search in " ".join(str(v).lower() for v in r.values() if v)
+            if q in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
     return _build_table_response(payload, info["label"], provinsi)
@@ -226,7 +285,17 @@ def baseline_anggota():
 @jwt_required()
 def baseline_keluarga():
     cursor = request.args.get('cursor') or None
-    search = request.args.get('search', '').lower().strip()
+    search = request.args.get('search', '').strip()
+
+    # Jika search berupa NKK (angka >=10 digit) → hit keluarga-by-nik
+    if search and _is_numeric_id(search):
+        payload, err = _fetch_by_id(
+            "zawa/keluarga-by-nik", "nomor_kartu_keluarga",
+            int(search), "keluarga-by-nkk"
+        )
+        if err:
+            return jsonify({"error": err}), 502
+        return _build_table_response(payload, "Keluarga", "nasional")
 
     params = {}
     if cursor:
@@ -237,9 +306,10 @@ def baseline_keluarga():
         return jsonify({"error": err}), 502
 
     if search:
+        q = search.lower()
         payload["items"] = [
             r for r in payload["items"]
-            if search in " ".join(str(v).lower() for v in r.values() if v)
+            if q in " ".join(str(v).lower() for v in r.values() if v)
         ]
 
     return _build_table_response(payload, "Keluarga", "nasional")
