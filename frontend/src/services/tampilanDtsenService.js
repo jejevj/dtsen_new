@@ -1,20 +1,21 @@
-import apiClient from './apiClient'
+import api from './api'
 
 /**
  * Ambil semua field aktif (is_active=1) beserta referensi kodenya.
- * @returns {Promise<Array>} list TampilanDtsen
+ * baseURL di api.js sudah /api/v1, jadi cukup path relatifnya.
+ * @returns {Promise<Array>}
  */
 export async function fetchTampilanDtsen() {
-  const res = await apiClient.get('/api/v1/tampilan-dtsen')
+  const res = await api.get('/tampilan-dtsen')
   return res.data?.data ?? []
 }
 
 /**
  * Ambil hanya field yang bisa dijadikan filter (is_filter=1 & is_active=1).
  * Digunakan untuk membangun panel filter dinamis di halaman Mustahik.
- * @returns {Promise<Array>} list filter fields
+ * @returns {Promise<Array>}
  */
 export async function fetchFilterFields() {
-  const res = await apiClient.get('/api/v1/tampilan-dtsen/filter')
+  const res = await api.get('/tampilan-dtsen/filter')
   return res.data?.data ?? []
 }
