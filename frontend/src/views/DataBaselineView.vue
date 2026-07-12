@@ -32,12 +32,12 @@
 
           <!-- Search -->
           <div class="flex flex-col gap-1 flex-1 min-w-[180px]">
-            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cari</label>
+            <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cari (di halaman ini)</label>
             <InputText
               v-model="search"
               placeholder="Nama / NIK…"
               class="text-sm w-full"
-              @keyup.enter="() => load(1)"
+              @keyup.enter="() => load()"
             />
           </div>
 
@@ -49,7 +49,7 @@
               size="small"
               :disabled="!selectedProvinsi"
               :loading="tableLoading"
-              @click="() => load(1)"
+              @click="() => load()"
             />
             <Button
               label="Reset"
@@ -74,9 +74,9 @@
               {{ meta.label ? `Data Baseline · ${meta.label}` : 'Data Baseline' }}
             </span>
             <span
-              v-if="meta.total > 0"
+              v-if="meta.totalItems > 0"
               class="ml-1 px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 text-xs font-semibold rounded-full"
-            >{{ meta.total.toLocaleString('id-ID') }} data</span>
+            >{{ meta.totalItems.toLocaleString('id-ID') }} total data</span>
           </div>
         </div>
 
@@ -123,7 +123,7 @@
                 class="hover:bg-slate-50 transition-colors"
               >
                 <td class="px-4 py-2.5 text-slate-400 text-xs">
-                  {{ (meta.page - 1) * meta.per_page + i + 1 }}
+                  {{ (meta.currentPage - 1) * meta.limit + i + 1 }}
                 </td>
                 <td
                   v-for="col in columns"
@@ -142,19 +142,21 @@
           class="flex items-center justify-between px-5 py-3 border-t border-slate-100"
         >
           <span class="text-xs text-slate-400">
-            Halaman {{ meta.page }} dari {{ meta.pages }}
-            · Total {{ meta.total.toLocaleString('id-ID') }} data
+            Halaman {{ meta.currentPage }} dari {{ meta.totalPages.toLocaleString('id-ID') }}
+            · Total {{ meta.totalItems.toLocaleString('id-ID') }} data
           </span>
           <div class="flex gap-1">
             <Button
-              icon="pi pi-angle-left" text rounded size="small"
-              :disabled="meta.page <= 1"
-              @click="() => changePage(meta.page - 1)"
+              icon="pi pi-angle-left"
+              text rounded size="small"
+              :disabled="!meta.hasPreviousPage || historyStack.length === 0"
+              @click="() => prevPage()"
             />
             <Button
-              icon="pi pi-angle-right" text rounded size="small"
-              :disabled="meta.page >= meta.pages"
-              @click="() => changePage(meta.page + 1)"
+              icon="pi pi-angle-right"
+              text rounded size="small"
+              :disabled="!meta.hasNextPage"
+              @click="() => nextPage()"
             />
           </div>
         </div>
@@ -171,48 +173,51 @@ import InputText   from 'primevue/inputtext'
 import Select      from 'primevue/select'
 import { fetchBaselineProvinsi, fetchBaselineData } from '@/services/baselineService'
 
-// ── Provinsi options ────────────────────────────────────────────────────────
+// ── Provinsi ───────────────────────────────────────────────────────────────────
 const provinsiOptions = ref([])
 const provinsiLoading = ref(false)
-
 async function loadProvinsi() {
   provinsiLoading.value = true
-  try {
-    provinsiOptions.value = await fetchBaselineProvinsi()
-  } catch (e) {
-    console.error('[Baseline] gagal load provinsi:', e)
-  } finally {
-    provinsiLoading.value = false
-  }
+  try { provinsiOptions.value = await fetchBaselineProvinsi() }
+  catch (e) { console.error(e) }
+  finally { provinsiLoading.value = false }
 }
 
-// ── Filter state ─────────────────────────────────────────────────────────────
+// ── Filter ───────────────────────────────────────────────────────────────────
 const selectedProvinsi = ref('')
 const search           = ref('')
 
-// ── Tabel state ──────────────────────────────────────────────────────────────
+// ── Tabel ───────────────────────────────────────────────────────────────────
 const tableLoading = ref(false)
 const tableError   = ref('')
 const rows         = ref([])
 const columns      = ref([])
-const meta         = reactive({
-  page: 1, per_page: 20, total: 0, pages: 1, label: '', provinsi: ''
+
+// Cursor history untuk navigasi prev
+const historyStack = ref([])  // stack cursor lama
+const currentCursor = ref(null)
+
+const meta = reactive({
+  label: '', provinsi: '',
+  totalItems: 0, totalPages: 1, currentPage: 1,
+  hasNextPage: false, hasPreviousPage: false,
+  nextCursor: null, limit: 10,
 })
 
-async function load(page = 1) {
+async function load(cursor = null) {
   if (!selectedProvinsi.value) return
   tableLoading.value = true
   tableError.value   = ''
   try {
     const res = await fetchBaselineData({
       provinsi: selectedProvinsi.value,
-      page: Number(page),
-      per_page: meta.per_page,
-      search: search.value.trim() || undefined,
+      cursor:   cursor || undefined,
+      search:   search.value.trim() || undefined,
     })
     rows.value    = res.data    ?? []
     columns.value = res.columns ?? []
     Object.assign(meta, res.meta ?? {})
+    currentCursor.value = cursor
   } catch (e) {
     tableError.value = 'Gagal memuat data: ' + (e?.response?.data?.error ?? e.message)
   } finally {
@@ -220,14 +225,30 @@ async function load(page = 1) {
   }
 }
 
-function changePage(p) { load(p) }
+function nextPage() {
+  if (!meta.hasNextPage) return
+  historyStack.value.push(currentCursor.value)  // simpan cursor saat ini
+  load(meta.nextCursor)
+}
+
+function prevPage() {
+  if (historyStack.value.length === 0) return
+  const prevCursor = historyStack.value.pop()
+  load(prevCursor)
+}
 
 function reset() {
   selectedProvinsi.value = ''
   search.value           = ''
   rows.value             = []
   columns.value          = []
-  Object.assign(meta, { page: 1, per_page: 20, total: 0, pages: 1, label: '', provinsi: '' })
+  historyStack.value     = []
+  currentCursor.value    = null
+  Object.assign(meta, {
+    label: '', provinsi: '', totalItems: 0, totalPages: 1,
+    currentPage: 1, hasNextPage: false, hasPreviousPage: false,
+    nextCursor: null, limit: 10,
+  })
 }
 
 function formatColLabel(key) {
