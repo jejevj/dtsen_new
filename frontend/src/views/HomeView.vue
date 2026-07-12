@@ -137,7 +137,7 @@
 
         <div style="text-align:center;margin-bottom:48px;">
           <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:12px;font-weight:600;margin-bottom:12px;">Sebaran Wilayah</span>
-          <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 8px;">Peta Sebaran Mustahik</h2>
+          <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 8px;">Peta Sebaran Penerima Manfaat</h2>
           <p style="font-size:15px;color:#64748b;max-width:480px;margin:0 auto;">Distribusi penerima manfaat zakat per provinsi seluruh Indonesia.</p>
         </div>
 
