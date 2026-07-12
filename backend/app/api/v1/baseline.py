@@ -69,17 +69,58 @@ def _zawa_headers() -> dict:
 
 
 def _is_numeric_id(s: str) -> bool:
-    """True jika string hanya digit dan panjang >= 10 (NIK/NKK)."""
     return bool(re.fullmatch(r'\d{10,}', s.strip()))
 
 
+def _ok_payload(items, label, provinsi, meta_override=None):
+    """Bangun response 200 sukses."""
+    columns = list(items[0].keys()) if items else []
+    meta = {
+        "provinsi":        provinsi,
+        "label":           label,
+        "totalItems":      len(items),
+        "totalPages":      1,
+        "currentPage":     1,
+        "hasNextPage":     False,
+        "hasPreviousPage": False,
+        "nextCursor":      None,
+        "limit":           max(len(items), 1),
+        "searchMode":      "by_id",
+    }
+    if meta_override:
+        meta.update(meta_override)
+    return jsonify({"data": items, "columns": columns, "meta": meta}), 200
+
+
+def _err_200(message: str, label: str, provinsi: str):
+    """
+    Kembalikan HTTP 200 dengan data kosong + pesan error.
+    Cloudflare tidak akan memblokir 200.
+    """
+    return jsonify({
+        "data":    [],
+        "columns": [],
+        "meta": {
+            "provinsi":    provinsi,
+            "label":       label,
+            "totalItems":  0,
+            "totalPages":  1,
+            "currentPage": 1,
+            "hasNextPage": False,
+            "hasPreviousPage": False,
+            "nextCursor":  None,
+            "limit":       0,
+            "searchMode":  "by_id",
+            "errorMessage": message,
+        }
+    }), 200
+
+
 def _fetch_zawa_page(zawa_path: str, params: dict = None):
-    """Fetch satu halaman dari ZAWA (cursor-based)."""
     cache_key = f"{zawa_path}:{sorted((params or {}).items())}"
     now = time.time()
     cached = _CACHE.get(cache_key)
     if cached and (now - cached["ts"]) < CACHE_TTL:
-        logger.info(f"[Baseline] cache hit key={cache_key}")
         return cached["payload"], None
 
     url = f"{ZAWA_BASE}/{zawa_path}"
@@ -96,7 +137,7 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
     except requests.exceptions.Timeout:
         return None, "Timeout saat menghubungi ZAWA. Coba lagi beberapa saat."
     except requests.exceptions.HTTPError as e:
-        return None, f"ZAWA HTTP error: {e}"
+        return None, f"ZAWA error: {e}"
     except Exception as e:
         logger.error(f"[Baseline] error path={zawa_path}: {e}", exc_info=True)
         return None, f"Error tidak terduga: {e}"
@@ -124,36 +165,41 @@ def _fetch_zawa_page(zawa_path: str, params: dict = None):
 
 def _fetch_by_id(zawa_path: str, param_name: str, id_str: str, cache_prefix: str):
     """
-    Hit endpoint by-nik dengan ID dikirim sebagai STRING
-    (menghindari float/int overflow pada angka 16 digit).
+    Hit endpoint by-nik. Mengembalikan (payload|None, error_str|None, not_found: bool).
+    404 dari ZAWA = data tidak ditemukan, bukan error server.
     """
     cache_key = f"{cache_prefix}:{id_str}"
     now = time.time()
     cached = _CACHE.get(cache_key)
     if cached and (now - cached["ts"]) < CACHE_TTL:
-        return cached["payload"], None
+        return cached["payload"], None, False
 
     url = f"{ZAWA_BASE}/{zawa_path}"
-    # Kirim sebagai string — requests akan encode jadi query param tanpa konversi numerik
-    params = {param_name: id_str}
     logger.info(f"[Baseline] fetch {zawa_path} {param_name}={id_str}")
     try:
-        resp = requests.get(url, params=params, timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
+        resp = requests.get(url, params={param_name: id_str},
+                            timeout=ZAWA_TIMEOUT, headers=_zawa_headers())
         logger.info(f"[Baseline] by-id status={resp.status_code} path={zawa_path}")
+
+        # 404 = data tidak ditemukan, bukan server error
+        if resp.status_code == 404:
+            logger.info(f"[Baseline] by-id 404 (not found) path={zawa_path} id={id_str}")
+            return None, None, True  # not_found=True
+
         resp.raise_for_status()
         raw = resp.json()
+
     except requests.exceptions.Timeout:
-        return None, "Timeout saat menghubungi ZAWA."
+        return None, "Timeout saat menghubungi ZAWA.", False
     except requests.exceptions.HTTPError as e:
         status = e.response.status_code if e.response is not None else 0
         body   = e.response.text[:200] if e.response is not None else ""
         logger.error(f"[Baseline] by-id HTTP {status} path={zawa_path} body={body}")
-        return None, f"ZAWA HTTP error {status}: {body}"
+        return None, f"ZAWA error {status}: {body}", False
     except Exception as e:
-        logger.error(f"[Baseline] by-id error path={zawa_path}: {e}", exc_info=True)
-        return None, f"Error: {e}"
+        logger.error(f"[Baseline] by-id error: {e}", exc_info=True)
+        return None, f"Error: {e}", False
 
-    # Normalise berbagai bentuk response ZAWA
     data_obj = raw.get("data")
     if isinstance(data_obj, list):
         items = data_obj
@@ -163,7 +209,6 @@ def _fetch_by_id(zawa_path: str, param_name: str, id_str: str, cache_prefix: str
                                        "totalItems", "totalPages", "hasNextPage",
                                        "hasPreviousPage", "nextCursor")
                              for k in data_obj):
-            # data_obj sendiri adalah 1 record
             items = [data_obj]
     else:
         items = []
@@ -180,7 +225,7 @@ def _fetch_by_id(zawa_path: str, param_name: str, id_str: str, cache_prefix: str
         "search_mode":     "by_id",
     }
     _CACHE[cache_key] = {"payload": payload, "ts": now}
-    return payload, None
+    return payload, None, False
 
 
 def _build_table_response(payload, label, provinsi):
@@ -233,7 +278,7 @@ def baseline_ping():
     results["api_key_configured"] = {"ok": bool(os.environ.get("ZAWA_API_KEY")),
                                       "set": bool(os.environ.get("ZAWA_API_KEY"))}
     overall_ok = all(v.get("ok") for v in results.values())
-    return jsonify({"ok": overall_ok, "checks": results, "target": host}), 200 if overall_ok else 502
+    return jsonify({"ok": overall_ok, "checks": results, "target": host}), 200
 
 
 # ── Provinsi list
@@ -261,23 +306,21 @@ def baseline_anggota():
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
 
-    # NIK (angka >=10 digit) → hit anggota-by-nik langsung
     if search and _is_numeric_id(search):
-        payload, err = _fetch_by_id(
+        payload, err, not_found = _fetch_by_id(
             "zawa/anggota-by-nik", "nomor_induk_kependudukan",
             search.strip(), "anggota-by-nik"
         )
+        if not_found:
+            return _err_200(f"NIK {search} tidak ditemukan di data ZAWA.", info["label"], provinsi)
         if err:
-            return jsonify({"error": err}), 502
+            return _err_200(err, info["label"], provinsi)
         return _build_table_response(payload, info["label"], provinsi)
 
-    params = {}
-    if cursor:
-        params["cursor"] = cursor
-
+    params = {"cursor": cursor} if cursor else {}
     payload, err = _fetch_zawa_page(f"zawa/{info['slug']}", params)
     if err:
-        return jsonify({"error": err}), 502
+        return _err_200(err, info["label"], provinsi)
 
     if search:
         q = search.lower()
@@ -296,23 +339,24 @@ def baseline_keluarga():
     cursor = request.args.get('cursor') or None
     search = request.args.get('search', '').strip()
 
-    # NKK (angka >=10 digit) → hit keluarga-by-nik langsung
     if search and _is_numeric_id(search):
-        payload, err = _fetch_by_id(
+        payload, err, not_found = _fetch_by_id(
             "zawa/keluarga-by-nik", "nomor_kartu_keluarga",
             search.strip(), "keluarga-by-nkk"
         )
+        if not_found:
+            return _err_200(
+                f"Nomor KK {search} tidak ditemukan di data ZAWA.",
+                "Keluarga", "nasional"
+            )
         if err:
-            return jsonify({"error": err}), 502
+            return _err_200(err, "Keluarga", "nasional")
         return _build_table_response(payload, "Keluarga", "nasional")
 
-    params = {}
-    if cursor:
-        params["cursor"] = cursor
-
+    params = {"cursor": cursor} if cursor else {}
     payload, err = _fetch_zawa_page("zawa/keluarga", params)
     if err:
-        return jsonify({"error": err}), 502
+        return _err_200(err, "Keluarga", "nasional")
 
     if search:
         q = search.lower()
