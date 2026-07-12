@@ -84,12 +84,12 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr
-                v-for="(row, i) in rows" :key="row.id ?? i"
+                v-for="(row, i) in rows" :key="row.mustahik_id ?? i"
                 class="hover:bg-slate-50 transition-colors"
               >
                 <td class="px-5 py-3 text-slate-400">{{ (pagination.page - 1) * pagination.perPage + i + 1 }}</td>
                 <td class="px-5 py-3 font-medium text-slate-800">{{ row.nama_lengkap ?? '-' }}</td>
-                <td class="px-5 py-3 text-slate-600 font-mono text-xs">{{ row.nik ?? '-' }}</td>
+                <td class="px-5 py-3 text-slate-600 font-mono text-xs">{{ row.nik_hashed ?? '-' }}</td>
                 <td class="px-5 py-3">
                   <span
                     :class="row.jenis_kelamin === 'm' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'"
@@ -98,7 +98,7 @@
                     {{ row.jenis_kelamin === 'm' ? 'Laki-laki' : 'Perempuan' }}
                   </span>
                 </td>
-                <td class="px-5 py-3 text-slate-600">{{ row.kabkota ?? row.kab_kota ?? '-' }}</td>
+                <td class="px-5 py-3 text-slate-600">{{ row.kabkota_nama ?? '-' }}</td>
                 <td class="px-5 py-3">
                   <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700">
                     Desil {{ row.desil ?? '-' }}
@@ -109,7 +109,7 @@
                     icon="pi pi-eye"
                     text rounded size="small"
                     class="text-primary-600"
-                    @click="$router.push('/mustahik/' + (row.nik_hashed ?? row.nik))"
+                    @click="$router.push('/mustahik/' + row.nik_hashed)"
                     v-tooltip="'Lihat Detail'"
                   />
                 </td>
@@ -237,7 +237,7 @@
                 </div>
               </div>
 
-              <!-- Kosong: belum ada field filter -->
+              <!-- Kosong -->
               <div v-if="!filterFields.length" class="text-sm text-slate-400 py-4">
                 <i class="pi pi-info-circle mr-1"></i>
                 Belum ada field filter yang dikonfigurasi.
@@ -245,7 +245,7 @@
             </template>
           </div>
 
-          <!-- Footer drawer: tombol aksi -->
+          <!-- Footer drawer -->
           <div class="px-5 py-4 border-t border-slate-100 flex gap-2">
             <Button
               label="Terapkan"
@@ -281,7 +281,7 @@ import DatePicker  from 'primevue/datepicker'
 import { fetchFilterFields } from '@/services/tampilanDtsenService'
 import api                   from '@/services/api'
 
-// ── Drawer state ─────────────────────────────────────────────────────────────
+// ── Drawer state ──────────────────────────────────────────────────────────────
 const showFilter    = ref(false)
 const filterLoading = ref(false)
 const filterError   = ref('')
@@ -303,11 +303,12 @@ const groupedFilterFields = computed(() => {
   return groups
 })
 
+// Hanya load filter kategori individu untuk halaman ini
 async function loadFilterFields() {
   filterLoading.value = true
   filterError.value   = ''
   try {
-    const data = await fetchFilterFields()
+    const data = await fetchFilterFields('individu')
     filterFields.value = data
     for (const f of data) {
       if (!(f.field_key in activeFilters)) activeFilters[f.field_key] = ''
@@ -331,16 +332,16 @@ async function fetchMustahik(page = 1) {
   tableError.value   = ''
   try {
     const params = { page, per_page: pagination.perPage }
-    if (globalSearch.value.trim()) params.search = globalSearch.value.trim()
+    if (globalSearch.value.trim()) params.nama = globalSearch.value.trim()
     for (const [k, v] of Object.entries(activeFilters)) {
       if (v !== '' && v != null) params[k] = v
     }
     const res = await api.get('/mustahik', { params })
     const d   = res.data
     rows.value            = d.data        ?? d.items ?? []
-    pagination.page       = d.page        ?? page
-    pagination.total      = d.total       ?? rows.value.length
-    pagination.totalPages = d.total_pages ?? d.pages ?? 1
+    pagination.page       = d.meta?.page        ?? page
+    pagination.total      = d.meta?.total       ?? rows.value.length
+    pagination.totalPages = d.meta?.pages       ?? 1
   } catch (e) {
     tableError.value = 'Gagal memuat data mustahik: ' + (e?.response?.data?.message ?? e.message)
     console.error('[Mustahik] fetchMustahik error:', e)
@@ -350,8 +351,8 @@ async function fetchMustahik(page = 1) {
 }
 
 function applyFilter() {
-  showFilter.value  = false
-  pagination.page   = 1
+  showFilter.value = false
+  pagination.page  = 1
   fetchMustahik(1)
 }
 
@@ -364,7 +365,6 @@ function resetFilter() {
 
 function changePage(p) { fetchMustahik(p) }
 
-// Data langsung dimuat saat halaman dibuka
 onMounted(() => {
   loadFilterFields()
   fetchMustahik(1)
@@ -372,13 +372,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Backdrop */
 .fade-backdrop-enter-active,
 .fade-backdrop-leave-active { transition: opacity 0.25s ease; }
 .fade-backdrop-enter-from,
 .fade-backdrop-leave-to     { opacity: 0; }
 
-/* Drawer slide dari kanan */
 .slide-right-enter-active { transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
 .slide-right-leave-active { transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1); }
 .slide-right-enter-from   { transform: translateX(100%); }

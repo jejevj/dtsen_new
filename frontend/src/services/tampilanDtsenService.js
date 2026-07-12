@@ -2,7 +2,6 @@ import api from './api'
 
 /**
  * Ambil semua field aktif (is_active=1) beserta referensi kodenya.
- * baseURL di api.js sudah /api/v1, jadi cukup path relatifnya.
  * @returns {Promise<Array>}
  */
 export async function fetchTampilanDtsen() {
@@ -12,10 +11,11 @@ export async function fetchTampilanDtsen() {
 
 /**
  * Ambil hanya field yang bisa dijadikan filter (is_filter=1 & is_active=1).
- * Digunakan untuk membangun panel filter dinamis di halaman Mustahik.
+ * @param {string|null} kategori - 'individu' | 'keluarga' | null (semua)
  * @returns {Promise<Array>}
  */
-export async function fetchFilterFields() {
-  const res = await api.get('/tampilan-dtsen/filter')
+export async function fetchFilterFields(kategori = null) {
+  const params = kategori ? { kategori } : {}
+  const res = await api.get('/tampilan-dtsen/filter', { params })
   return res.data?.data ?? []
 }
