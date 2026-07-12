@@ -160,14 +160,12 @@
                   {{ item.val==='1'||item.val===1 ? 'Ada Hambatan' : 'Normal' }}
                 </span>
               </div>
-              <!-- Kondisi Gizi -->
               <div>
                 <p style="font-size:11px;color:#94a3b8;font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;">Kondisi Gizi</p>
                 <span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:#fef3c7;color:#b45309;">
                   {{ giziLabel(data.kondisi_gizi) }}
                 </span>
               </div>
-              <!-- Penyakit Kronis -->
               <div>
                 <p style="font-size:11px;color:#94a3b8;font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;">Penyakit Kronis</p>
                 <span :style="{
@@ -233,6 +231,10 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
+/**
+ * Cari anggota by NIK di semua provinsi yang bisa diakses.
+ * Loop satu per satu sampai ketemu agar tidak tergantung urutan provinsi.
+ */
 async function loadData() {
   loading.value = true
   data.value = null
@@ -240,22 +242,24 @@ async function loadData() {
 
   try {
     const provinsiList = await fetchBaselineProvinsi()
-    const firstProvinsi = provinsiList?.[0]?.kode
-
-    if (!firstProvinsi) {
+    if (!provinsiList.length) {
       console.error('[AnggotaDetail] Tidak ada provinsi yang dapat diakses')
       return
     }
 
-    const res = await api.get('/baseline/anggota', {
-      params: { provinsi: firstProvinsi, search: nik },
-    })
-
-    const items = res.data?.data ?? []
-    data.value = items.find(
-      r => r.nomor_induk_kependudukan === nik || r.nik === nik
-    ) ?? items[0] ?? null
-
+    for (const prov of provinsiList) {
+      const res = await api.get('/baseline/anggota', {
+        params: { provinsi: prov.kode, search: nik },
+      })
+      const items = res.data?.data ?? []
+      const found = items.find(
+        r => r.nomor_induk_kependudukan === nik || r.nik === nik
+      )
+      if (found) {
+        data.value = found
+        break
+      }
+    }
   } catch (e) {
     console.error('[AnggotaDetail] gagal load:', e)
   } finally {
@@ -284,8 +288,10 @@ const disabilitasItems = computed(() => [
 // ─── Label helpers ──────────────────────────────────────────
 function formatTanggal(v) {
   if (!v) return '-'
-  const d = new Date(v)
-  if (isNaN(d.getTime())) return v
+  // Handle format YYYY-MM-DD maupun ISO datetime
+  const str = String(v).includes('T') ? v : v + 'T00:00:00'
+  const d = new Date(str)
+  if (isNaN(d.getTime())) return String(v)
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 function statusKawinLabel(v) {
