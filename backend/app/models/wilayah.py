@@ -3,10 +3,10 @@ from ..extensions import db
 
 class Provinsi(db.Model):
     __tablename__ = 'm_provinsi'
-    provinsi_kode = db.Column(db.String(10), primary_key=True)
-    provinsi_nama = db.Column(db.String(100), nullable=False)
+    provinsi_kode  = db.Column(db.String(2), primary_key=True)
+    provinsi_nama  = db.Column(db.String(255), nullable=True)
+    provinsi_aktif = db.Column(db.String(1), nullable=True, default='y')
 
-    # Relasi ke kab/kota yang berada di provinsi ini
     kabkota_list = db.relationship(
         'KabKota',
         foreign_keys='KabKota.provinsi_kode',
@@ -17,10 +17,10 @@ class Provinsi(db.Model):
 
 class KabKota(db.Model):
     __tablename__ = 'm_kabkota'
-    kabkota_kode  = db.Column(db.String(10), primary_key=True)
-    kabkota_nama  = db.Column(db.String(100), nullable=False)
-    # Setiap kab/kota harus diketahui induk provinsinya
-    provinsi_kode = db.Column(db.String(10), db.ForeignKey('m_provinsi.provinsi_kode'), nullable=True)
+    kabkota_kode  = db.Column(db.String(4), primary_key=True)
+    kabkota_nama  = db.Column(db.String(255), nullable=True)
+    kabkota_aktif = db.Column(db.String(1), nullable=True, default='y')
+    provinsi_kode = db.Column(db.String(2), db.ForeignKey('m_provinsi.provinsi_kode'), nullable=True)
 
     kecamatan_list = db.relationship(
         'Kecamatan',
@@ -32,20 +32,14 @@ class KabKota(db.Model):
 
 class Kecamatan(db.Model):
     __tablename__ = 'm_kecamatan'
-    kecamatan_kode = db.Column(db.String(10), primary_key=True)
-    kecamatan_nama = db.Column(db.String(100), nullable=False)
-    kabkota_kode   = db.Column(db.String(10), db.ForeignKey('m_kabkota.kabkota_kode'), nullable=True)
-
-    kelurahan_list = db.relationship(
-        'Kelurahan',
-        foreign_keys='Kelurahan.kecamatan_kode',
-        backref='kecamatan',
-        lazy='dynamic'
-    )
+    kecamatan_kode  = db.Column(db.String(6), primary_key=True)
+    kecamatan_nama  = db.Column(db.String(255), nullable=True)
+    kecamatan_aktif = db.Column(db.String(1), nullable=True, default='y')
+    kabkota_kode    = db.Column(db.String(4), db.ForeignKey('m_kabkota.kabkota_kode'), nullable=True)
 
 
 class Kelurahan(db.Model):
     __tablename__ = 'm_kelurahan'
-    kelurahan_kode = db.Column(db.String(10), primary_key=True)
-    kelurahan_nama = db.Column(db.String(100), nullable=False)
-    kecamatan_kode = db.Column(db.String(10), db.ForeignKey('m_kecamatan.kecamatan_kode'), nullable=True)
+    kelurahan_kode  = db.Column(db.String(10), primary_key=True)
+    kelurahan_nama  = db.Column(db.String(255), nullable=True)
+    kecamatan_kode  = db.Column(db.String(6), db.ForeignKey('m_kecamatan.kecamatan_kode'), nullable=True)
