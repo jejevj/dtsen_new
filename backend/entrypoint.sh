@@ -13,15 +13,46 @@ echo "[entrypoint] ============================================"
 echo "[entrypoint] Starting DTSEN API container..."
 echo "[entrypoint] ============================================"
 
-# ─── Daftar 34 provinsi Indonesia (slug untuk ZAWA API) ───────────────────────
+# ─── Slug provinsi sesuai endpoint ZAWA API (dari tampilan-filter.json) ───────
 ALL_PROVINSI=(
-  aceh sumatera-utara sumatera-barat riau kepulauan-riau
-  jambi sumatera-selatan kepulauan-bangka-belitung bengkulu lampung
-  dki-jakarta jawa-barat banten jawa-tengah daerah-istimewa-yogyakarta jawa-timur
-  bali nusa-tenggara-barat nusa-tenggara-timur
-  kalimantan-barat kalimantan-tengah kalimantan-selatan kalimantan-timur kalimantan-utara
-  sulawesi-utara gorontalo sulawesi-tengah sulawesi-barat sulawesi-selatan sulawesi-tenggara
-  maluku maluku-utara papua-barat papua
+  aceh
+  sumut
+  sumbar
+  riau
+  kepriau
+  jambi
+  sumsel
+  babel
+  bengkulu
+  lampung
+  dkijakarta
+  jabar
+  banten
+  jateng
+  diy
+  jatim
+  bali
+  ntb
+  ntt
+  kalbar
+  kalteng
+  kalsel
+  kaltim
+  kaltara
+  sulut
+  gorontalo
+  sulteng
+  sulbar
+  sulsel
+  sultra
+  maluku
+  malut
+  papbar
+  papdy
+  papgu
+  papsel
+  papteng
+  papua
 )
 
 # ─── Helper: kill stale worker jika PID file ada tapi proses masih jalan ──────
@@ -45,7 +76,7 @@ SYNC_PROVINSI="${SYNC_PROVINSI:-}"
 SYNC_KELUARGA="${SYNC_KELUARGA:-true}"
 
 if [ "$SYNC_PROVINSI" = "all" ]; then
-  # Sequential — jalankan semua provinsi satu per satu dalam satu background process
+  # Sequential — semua provinsi satu per satu dalam satu background process
   PID_FILE="$LOG_DIR/worker_anggota_all.pid"
   LOG_FILE="$LOG_DIR/worker_anggota_all.log"
   _kill_stale "$PID_FILE"
@@ -63,7 +94,7 @@ if [ "$SYNC_PROVINSI" = "all" ]; then
   echo "[entrypoint] Worker sync-all dimulai (PID=$!)"
 
 elif [ -n "$SYNC_PROVINSI" ]; then
-  # Paralel — beberapa provinsi spesifik
+  # Paralel — beberapa provinsi spesifik (pisahkan dengan koma)
   IFS=',' read -ra PROV_LIST <<< "$SYNC_PROVINSI"
   for prov in "${PROV_LIST[@]}"; do
     prov=$(echo "$prov" | tr -d ' ' | tr '[:upper:]' '[:lower:]')
@@ -80,7 +111,7 @@ elif [ -n "$SYNC_PROVINSI" ]; then
   done
 else
   echo "[entrypoint] SYNC_PROVINSI tidak di-set, sync anggota di-skip."
-  echo "[entrypoint] Set SYNC_PROVINSI=all untuk semua, atau SYNC_PROVINSI=aceh,jawa-barat,..."
+  echo "[entrypoint] Set SYNC_PROVINSI=all untuk semua, atau SYNC_PROVINSI=aceh,sumut,..."
 fi
 
 if [ "$SYNC_KELUARGA" = "true" ]; then
