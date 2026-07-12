@@ -1,9 +1,7 @@
 <template>
   <LandingLayout>
 
-    <!-- ======================================================
-         HERO
-    ======================================================= -->
+    <!-- HERO -->
     <section
       id="hero"
       style="
@@ -16,7 +14,6 @@
         padding-top: 64px;
       "
     >
-      <!-- decorative circles -->
       <div style="position:absolute;top:-80px;right:-80px;width:400px;height:400px;background:rgba(245,158,11,0.12);border-radius:50%;filter:blur(60px);pointer-events:none;"></div>
       <div style="position:absolute;bottom:-100px;left:-60px;width:320px;height:320px;background:rgba(74,222,128,0.1);border-radius:50%;filter:blur(50px);pointer-events:none;"></div>
 
@@ -25,10 +22,9 @@
 
           <!-- LEFT -->
           <div>
-            <!-- badge -->
             <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:99px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);margin-bottom:20px;">
               <i class="pi pi-star-fill" style="font-size:10px;color:#f59e0b;"></i>
-              <span style="font-size:12px;font-weight:600;color:#fcd34d;"> Data Tunggal Sosial dan Ekonomi Nasional</span>
+              <span style="font-size:12px;font-weight:600;color:#fcd34d;">Data Tunggal Sosial dan Ekonomi Nasional</span>
             </div>
 
             <h1 style="font-size:clamp(2rem,4vw,3.25rem);font-weight:800;color:#fff;line-height:1.15;margin:0 0 20px;letter-spacing:-0.02em;">
@@ -44,13 +40,13 @@
 
             <div style="display:flex;flex-wrap:wrap;gap:12px;">
               <button
-                style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:#f59e0b;border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(245,158,11,0.4);transition:transform 0.15s;"
+                style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:#f59e0b;border:none;color:#fff;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(245,158,11,0.4);"
                 @click="scrollTo('#stats')"
               >
                 <i class="pi pi-chart-bar"></i> Lihat Statistik
               </button>
               <button
-                style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:transparent;border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background 0.15s;"
+                style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:10px;background:transparent;border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;"
                 @click="loginModal.open()"
               >
                 <i class="pi pi-sign-in"></i> Masuk Sistem
@@ -78,16 +74,13 @@
         </div>
       </div>
 
-      <!-- scroll hint -->
       <div style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;color:#6ee7b7;animation:bounce 2s infinite;">
         <span style="font-size:11px;">Gulir ke bawah</span>
         <i class="pi pi-angle-down" style="font-size:16px;"></i>
       </div>
     </section>
 
-    <!-- ======================================================
-         STATS
-    ======================================================= -->
+    <!-- STATS -->
     <section id="stats" style="padding:80px 0;background:#f8fafc;">
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
 
@@ -101,7 +94,7 @@
           <div
             v-for="stat in aggStats"
             :key="stat.label"
-            style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);transition:box-shadow 0.2s;"
+            style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
           >
             <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'16px' }">
               <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
@@ -129,9 +122,7 @@
       </div>
     </section>
 
-    <!-- ======================================================
-         PETA
-    ======================================================= -->
+    <!-- PETA -->
     <section id="map" style="padding:80px 0;background:white;">
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
 
@@ -180,7 +171,7 @@
                   <span style="width:20px;height:20px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ i+1 }}</span>
                   <span style="font-size:13px;font-weight:500;color:#374151;">{{ prov.provinsi_nama }}</span>
                 </div>
-                <span style="font-size:12px;color:#64748b;font-weight:600;">{{ prov.mustahik?.toLocaleString('id-ID') }}</span>
+                <span style="font-size:12px;color:#64748b;font-weight:600;">{{ formatShort(prov.mustahik) }}</span>
               </div>
               <div style="height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;">
                 <div :style="{ width: prov.pct+'%', height:'100%', background:'#3b82f6', borderRadius:'99px', transition:'width 0.5s' }"></div>
@@ -198,7 +189,7 @@
                   <span style="width:20px;height:20px;border-radius:50%;background:#dcfce7;color:#15803d;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;">{{ i+1 }}</span>
                   <span style="font-size:13px;font-weight:500;color:#374151;">{{ prov.provinsi_nama }}</span>
                 </div>
-                <span style="font-size:12px;color:#64748b;font-weight:600;">{{ formatRupiah(prov.penyaluran) }}</span>
+                <span style="font-size:12px;color:#64748b;font-weight:600;">Rp {{ formatShort(prov.penyaluran) }}</span>
               </div>
               <div style="height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;">
                 <div :style="{ width: prov.pct_penyaluran+'%', height:'100%', background:'#16a34a', borderRadius:'99px', transition:'width 0.5s' }"></div>
@@ -209,29 +200,28 @@
       </div>
     </section>
 
-    <!-- ======================================================
-         PROGRAM / BIDANG
-    ======================================================= -->
+    <!-- PROGRAM / BIDANG -->
     <section id="program" style="padding:80px 0;background:#f8fafc;">
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
 
         <div style="text-align:center;margin-bottom:48px;">
           <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#fef9c3;color:#b45309;font-size:12px;font-weight:600;margin-bottom:12px;">Kategori Penyaluran</span>
           <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 8px;">Program Bidang Zakat</h2>
-          <p style="font-size:15px;color:#64748b;max-width:480px;margin:0 auto;">Penyaluran berdasarkan kategori bidang program BAZNAS.</p>
+          <p style="font-size:15px;color:#64748b;max-width:480px;margin:0 auto;">Penyaluran berdasarkan kategori bidang program BAZNAS dan LAZ.</p>
         </div>
 
         <div class="grid-3" style="display:grid;gap:16px;">
           <div
             v-for="(bidang, i) in bidangProgram"
             :key="bidang.bidang_label"
-            style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);transition:box-shadow 0.2s;"
+            style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
           >
             <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:bidangColors[i%bidangColors.length].bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
               <i :class="bidangIcons[i%bidangIcons.length]" :style="{ color:bidangColors[i%bidangColors.length].icon, fontSize:'18px' }"></i>
             </div>
             <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 4px;">{{ bidang.bidang_label }}</h3>
-            <p style="font-size:1.3rem;font-weight:800;color:#15803d;margin:0 0 12px;">{{ formatRupiah(bidang.total_penyaluran||0) }}</p>
+            <p style="font-size:1.3rem;font-weight:800;color:#15803d;margin:0 0 4px;">Rp {{ formatShort(bidang.total_penyaluran||0) }}</p>
+            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px;">{{ bidang.laz_type || 'BAZNAS & LAZ' }}</p>
             <div>
               <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px;">
                 <span>Porsi dari total</span>
@@ -246,13 +236,10 @@
       </div>
     </section>
 
-    <!-- ======================================================
-         TENTANG — hidden sementara
-    ======================================================= -->
+    <!-- TENTANG hidden -->
     <section v-show="false" id="tentang" style="padding:80px 0;background:white;">
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
         <div class="tentang-grid">
-
           <div>
             <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;margin-bottom:16px;">Tentang Sistem</span>
             <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 14px;">Mengapa DTSEN?</h2>
@@ -272,13 +259,9 @@
               </div>
             </div>
           </div>
-
           <div class="about-cards">
-            <div
-              v-for="metric in aboutMetrics"
-              :key="metric.label"
-              style="background:linear-gradient(135deg,#14532d,#166534);border-radius:16px;padding:28px;color:white;"
-            >
+            <div v-for="metric in aboutMetrics" :key="metric.label"
+              style="background:linear-gradient(135deg,#14532d,#166534);border-radius:16px;padding:28px;color:white;">
               <i :class="metric.icon" style="font-size:22px;color:#fbbf24;display:block;margin-bottom:12px;"></i>
               <p style="font-size:2rem;font-weight:800;margin:0 0 4px;">{{ metric.value }}</p>
               <p style="font-size:13px;color:#a7f3d0;margin:0;">{{ metric.label }}</p>
@@ -297,7 +280,7 @@ import Chart         from 'primevue/chart'
 import LandingLayout from '@/components/layout/LandingLayout.vue'
 import IndonesiaMap  from '@/components/charts/IndonesiaMap.vue'
 import ReportService from '@/services/report'
-import { formatRupiah }       from '@/utils/formatter'
+import { formatShort }        from '@/utils/formatter'
 import { useLoginModalStore } from '@/stores/loginModal'
 
 const loginModal = useLoginModalStore()
@@ -332,20 +315,23 @@ onMounted(async () => {
   }
 })
 
+// ── Hero cards ──────────────────────────────────────────────
 const heroStats = computed(() => [
-  { label: 'Total Penyaluran', value: formatRupiah(summary.value?.total_penyaluran||0), icon:'pi pi-wallet',     sub:'Seluruh LAZ terdaftar' },
-  { label: 'LAZ Nasional',     value: summary.value?.nasional||0,                        icon:'pi pi-building',   sub:'Lembaga aktif' },
-  { label: 'LAZ Provinsi',     value: summary.value?.provinsi||0,                        icon:'pi pi-map-marker', sub:'Lembaga aktif' },
-  { label: 'Mustahik',         value: (summary.value?.penerima_manfaat||0).toLocaleString('id-ID'), icon:'pi pi-users', sub:'Penerima manfaat' },
+  { label: 'Total Penyaluran', value: 'Rp ' + formatShort(summary.value?.total_penyaluran||0), icon:'pi pi-wallet',     sub:'Seluruh LAZ terdaftar' },
+  { label: 'LAZ Nasional',     value: formatShort(summary.value?.nasional||0),                   icon:'pi pi-building',   sub:'Lembaga aktif' },
+  { label: 'LAZ Provinsi',     value: formatShort(summary.value?.provinsi||0),                   icon:'pi pi-map-marker', sub:'Lembaga aktif' },
+  { label: 'Mustahik',         value: formatShort(summary.value?.penerima_manfaat||0),            icon:'pi pi-users',      sub:'Penerima manfaat' },
 ])
 
+// ── Agg stats cards ─────────────────────────────────────────
 const aggStats = computed(() => [
-  { label:'Total Penyaluran',  value:formatRupiah(summary.value?.total_penyaluran||0), sub:'Akumulasi seluruh LAZ', icon:'pi pi-wallet',     iconBg:'#f0fdf4', iconColor:'#16a34a' },
-  { label:'Penerima Manfaat',  value:(summary.value?.penerima_manfaat||0).toLocaleString('id-ID'), sub:'Total mustahik unik', icon:'pi pi-users', iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'LAZ Terdaftar',     value:((summary.value?.nasional||0)+(summary.value?.provinsi||0)+(summary.value?.kabkota||0)).toLocaleString('id-ID'), sub:'Nasional + Provinsi + Kab/Kota', icon:'pi pi-building', iconBg:'#faf5ff', iconColor:'#7c3aed' },
-  { label:'Provinsi Terlibat', value:'34', sub:'Seluruh Indonesia', icon:'pi pi-map', iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Total Penyaluran',  value:'Rp ' + formatShort(summary.value?.total_penyaluran||0),   sub:'Akumulasi seluruh LAZ',          icon:'pi pi-wallet',   iconBg:'#f0fdf4', iconColor:'#16a34a' },
+  { label:'Penerima Manfaat',  value:formatShort(summary.value?.penerima_manfaat||0),             sub:'Total mustahik unik',            icon:'pi pi-users',    iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'LAZ Terdaftar',     value:formatShort((summary.value?.nasional||0)+(summary.value?.provinsi||0)+(summary.value?.kabkota||0)), sub:'Nasional + Provinsi + Kab/Kota', icon:'pi pi-building', iconBg:'#faf5ff', iconColor:'#7c3aed' },
+  { label:'Provinsi Terlibat', value:'34',                                                        sub:'Seluruh Indonesia',              icon:'pi pi-map',      iconBg:'#fff7ed', iconColor:'#ea580c' },
 ])
 
+// ── Peta top-5 ───────────────────────────────────────────────
 const topProvinces = computed(() => {
   const sorted = [...mapData.value].sort((a,b)=>(b.mustahik||0)-(a.mustahik||0)).slice(0,5)
   const max    = sorted[0]?.mustahik||1
@@ -358,11 +344,13 @@ const topProvincesByPenyaluran = computed(() => {
   return sorted.map(p=>({...p, pct_penyaluran:Math.round((p.penyaluran/max)*100)}))
 })
 
+// ── Bidang dengan pct ────────────────────────────────────────
 const bidangProgram = computed(() => {
   const total = bidangData.value.reduce((s,b)=>s+(b.total_penyaluran||0),0)||1
   return bidangData.value.map(b=>({...b, pct:((b.total_penyaluran||0)/total)*100}))
 })
 
+// ── Chart data ───────────────────────────────────────────────
 const genderChartData = computed(() => ({
   labels:['Laki-laki','Perempuan'],
   datasets:[{ data:[genderData.value?.male_count||0, genderData.value?.female_count||0], backgroundColor:['#3b82f6','#ec4899'], borderWidth:0 }]
@@ -376,9 +364,31 @@ const trendChartData = computed(() => ({
   datasets:[{ label:'Penyaluran', data:trendData.value.map(d=>(d.Bantuan_Langsung||0)+(d.Bantuan_Tidak_Langsung||0)), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.1)', fill:true, tension:0.4, pointRadius:3 }]
 }))
 
-const doughnutOpts = { plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } }, responsive:true, maintainAspectRatio:false }
-const barOpts      = { indexAxis:'y', plugins:{ legend:{ display:false } }, responsive:true, maintainAspectRatio:false, scales:{ x:{ ticks:{ font:{ size:9 } } }, y:{ ticks:{ font:{ size:10 } } } } }
-const lineOpts     = { plugins:{ legend:{ display:false } }, responsive:true, maintainAspectRatio:false, scales:{ y:{ ticks:{ font:{ size:9 } } } } }
+// ── Chart options — formatShort di axis & tooltip ────────────
+const doughnutOpts = {
+  plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
+  responsive:true, maintainAspectRatio:false
+}
+const barOpts = {
+  indexAxis:'y',
+  plugins:{
+    legend:{ display:false },
+    tooltip:{ callbacks:{ label: ctx => 'Rp ' + formatShort(ctx.raw) } }
+  },
+  responsive:true, maintainAspectRatio:false,
+  scales:{
+    x:{ ticks:{ font:{ size:9 }, callback: v => formatShort(v) } },
+    y:{ ticks:{ font:{ size:10 } } }
+  }
+}
+const lineOpts = {
+  plugins:{
+    legend:{ display:false },
+    tooltip:{ callbacks:{ label: ctx => 'Rp ' + formatShort(ctx.raw) } }
+  },
+  responsive:true, maintainAspectRatio:false,
+  scales:{ y:{ ticks:{ font:{ size:9 }, callback: v => formatShort(v) } } }
+}
 
 const bidangColors = [
   { bg:'#f0fdf4', icon:'#16a34a' },
