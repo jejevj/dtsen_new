@@ -2,6 +2,19 @@ from app.extensions import db
 from datetime import datetime
 
 
+def _parse_date(val) -> str | None:
+    """Konversi ISO datetime string ke date string YYYY-MM-DD.
+    Contoh: '2023-10-09T00:00:00Z' -> '2023-10-09'
+    """
+    if not val:
+        return None
+    s = str(val).strip()
+    if not s:
+        return None
+    # Ambil 10 karakter pertama saja (YYYY-MM-DD)
+    return s[:10] if len(s) >= 10 else s
+
+
 class ZawaAnggota(db.Model):
     __tablename__ = "zawa_anggota"
 
@@ -84,7 +97,7 @@ class ZawaAnggota(db.Model):
             nomor_kartu_keluarga            = str(item.get("nomor_kartu_keluarga") or ""),
             nama                            = item.get("nama"),
             jenis_kelamin                   = str(item.get("jenis_kelamin") or ""),
-            tanggal_lahir                   = str(item.get("tanggal_lahir") or ""),
+            tanggal_lahir                   = _parse_date(item.get("tanggal_lahir")),
             status_kawin                    = str(item.get("status_kawin") or ""),
             status_hubungan_keluarga        = str(item.get("status_hubungan_keluarga") or ""),
             alamat_ktp                      = item.get("alamat_ktp"),
@@ -270,8 +283,8 @@ class ZawaSyncLog(db.Model):
     __tablename__ = "zawa_sync_log"
 
     id             = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    sync_type      = db.Column(db.String(50),   nullable=False)   # anggota_aceh / keluarga
-    status         = db.Column(db.String(20),   nullable=False, default="pending")  # pending/running/success/failed
+    sync_type      = db.Column(db.String(50),   nullable=False)
+    status         = db.Column(db.String(20),   nullable=False, default="pending")
     total_fetched  = db.Column(db.Integer,      nullable=True, default=0)
     total_saved    = db.Column(db.Integer,      nullable=True, default=0)
     error_message  = db.Column(db.Text,         nullable=True)
