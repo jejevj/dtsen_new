@@ -24,7 +24,6 @@ import logging
 import time
 import signal
 
-# Pastikan path backend ada
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app import create_app
@@ -37,7 +36,7 @@ from app.services.zawa_sync import (
 )
 from datetime import datetime
 
-# ─── Setup logging ke file dan stdout ────────────────────────────────────────
+# ─── Setup logging ────────────────────────────────────────────────────
 log_dir = os.path.join(os.getcwd(), "logs", "sync")
 os.makedirs(log_dir, exist_ok=True)
 
@@ -45,29 +44,27 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-    ]
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger("sync_worker")
 
-# ─── Graceful shutdown ────────────────────────────────────────────────────────
+# ─── Graceful shutdown ──────────────────────────────────────────────────
 _stop = False
+
 def _handle_signal(sig, frame):
     global _stop
     logger.warning(f"Signal {sig} diterima. Menghentikan setelah batch ini...")
     _stop = True
 
 signal.signal(signal.SIGTERM, _handle_signal)
-signal.signal(signal.SIGINT,  _handle_signal)
+signal.signal(signal.SIGINT, _handle_signal)
 
 
-# ─── Worker functions ─────────────────────────────────────────────────────────
+# ─── Worker functions ──────────────────────────────────────────────────
 def run_sync_anggota(app, provinsi: str):
     job_id = f"worker_anggota_{provinsi}"
     logger.info(f"=== WORKER START: sync anggota provinsi={provinsi} ===")
 
-    # Tambahkan file handler per job
     fh = logging.FileHandler(
         os.path.join(log_dir, f"{job_id}.log"), encoding="utf-8"
     )
@@ -75,17 +72,12 @@ def run_sync_anggota(app, provinsi: str):
     logger.addHandler(fh)
 
     total_fetched = 0
-    total_saved   = 0
+    total_saved = 0
     cursor = _load_cursor(job_id)
     if cursor:
         logger.info(f"Resume dari cursor: {cursor}")
 
     with app.app_context():
-        # Cek apakah ada log yang masih running/failed untuk di-resume
-        existing = ZawaSyncLog.query.filter_by(
-            sync_type=f"anggota_{provinsi}", status="failed"
-        ).order_by(ZawaSyncLog.id.desc()).first()
-
         sync_log = ZawaSyncLog(
             sync_type=f"anggota_{provinsi}",
             status="running",
@@ -110,48 +102,64 @@ def run_sync_anggota(app, provinsi: str):
 
                 items = page_data.get("items", [])
                 if not items:
+                    logger.info("Items kosong. Selesai.")
                     break
 
+                batch_saved = 0
                 for item in items:
                     nik = str(item.get("nomor_induk_kependudukan") or "")
                     if nik and not ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first():
                         db.session.add(ZawaAnggota.from_api(item, provinsi))
+                        batch_saved += 1
 
                 db.session.commit()
 
-                batch = len(items)
-                total_fetched += batch
-                total_saved   += batch
-                cursor = page_data.get("nextCursor")
+                batch_fetched = len(items)
+                total_fetched += batch_fetched
+                total_saved += batch_saved
+
+                # ✔ FIX: Cek apakah cursor berubah — jika sama, stop untuk hindari infinite loop
+                new_cursor = page_data.get("nextCursor") or page_data.get("next_cursor")
+                if new_cursor and new_cursor == cursor:
+                    logger.warning(
+                        f"Cursor tidak berubah ({new_cursor}). "
+                        "API mungkin stuck. Menghentikan untuk mencegah infinite loop."
+                    )
+                    break
+
+                cursor = new_cursor
                 _save_cursor(job_id, cursor)
 
                 logger.info(
-                    f"Page OK | +{batch} | total={total_fetched} | cursor={cursor}"
+                    f"Page OK | fetched={batch_fetched} saved={batch_saved} | "
+                    f"total_fetched={total_fetched} total_saved={total_saved} | "
+                    f"cursor={cursor}"
                 )
 
                 if not page_data.get("hasNextPage") or not cursor:
+                    logger.info("Tidak ada halaman berikutnya. Selesai.")
                     break
 
-                time.sleep(0.1)  # jeda kecil agar tidak hammer API
+                time.sleep(0.1)
 
             status = "stopped" if _stop else "success"
-            sync_log.status        = status
+            sync_log.status = status
             sync_log.total_fetched = total_fetched
-            sync_log.total_saved   = total_saved
-            sync_log.finished_at   = datetime.utcnow()
+            sync_log.total_saved = total_saved
+            sync_log.finished_at = datetime.utcnow()
             db.session.commit()
 
             if not _stop:
                 _clear_cursor(job_id)
-            logger.info(f"=== WORKER SELESAI status={status} total={total_saved} ===")
+            logger.info(f"=== WORKER SELESAI status={status} total_saved={total_saved} ===")
 
         except Exception as exc:
             db.session.rollback()
-            sync_log.status        = "failed"
+            sync_log.status = "failed"
             sync_log.error_message = str(exc)[:1000]
             sync_log.total_fetched = total_fetched
-            sync_log.total_saved   = total_saved
-            sync_log.finished_at   = datetime.utcnow()
+            sync_log.total_saved = total_saved
+            sync_log.finished_at = datetime.utcnow()
             db.session.commit()
             logger.error(f"=== WORKER ERROR: {exc} ===")
             logger.info("Cursor disimpan. Jalankan ulang untuk resume.")
@@ -169,7 +177,7 @@ def run_sync_keluarga(app):
     logger.addHandler(fh)
 
     total_fetched = 0
-    total_saved   = 0
+    total_saved = 0
     cursor = _load_cursor(job_id)
     if cursor:
         logger.info(f"Resume dari cursor: {cursor}")
@@ -196,52 +204,70 @@ def run_sync_keluarga(app):
 
                 items = page_data.get("items", [])
                 if not items:
+                    logger.info("Items kosong. Selesai.")
                     break
 
+                batch_saved = 0
                 for item in items:
                     nkk = str(item.get("nomor_kartu_keluarga") or "")
                     if nkk and not ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=nkk).first():
                         db.session.add(ZawaKeluarga.from_api(item))
+                        batch_saved += 1
 
                 db.session.commit()
 
-                batch = len(items)
-                total_fetched += batch
-                total_saved   += batch
-                cursor = page_data.get("nextCursor")
+                batch_fetched = len(items)
+                total_fetched += batch_fetched
+                total_saved += batch_saved
+
+                # ✔ FIX: Cek apakah cursor berubah — jika sama, stop untuk hindari infinite loop
+                new_cursor = page_data.get("nextCursor") or page_data.get("next_cursor")
+                if new_cursor and new_cursor == cursor:
+                    logger.warning(
+                        f"Cursor tidak berubah ({new_cursor}). "
+                        "API mungkin stuck. Menghentikan untuk mencegah infinite loop."
+                    )
+                    break
+
+                cursor = new_cursor
                 _save_cursor(job_id, cursor)
 
-                logger.info(f"Page OK | +{batch} | total={total_fetched} | cursor={cursor}")
+                logger.info(
+                    f"Page OK | fetched={batch_fetched} saved={batch_saved} | "
+                    f"total_fetched={total_fetched} total_saved={total_saved} | "
+                    f"cursor={cursor}"
+                )
 
                 if not page_data.get("hasNextPage") or not cursor:
+                    logger.info("Tidak ada halaman berikutnya. Selesai.")
                     break
 
                 time.sleep(0.1)
 
             status = "stopped" if _stop else "success"
-            sync_log.status        = status
+            sync_log.status = status
             sync_log.total_fetched = total_fetched
-            sync_log.total_saved   = total_saved
-            sync_log.finished_at   = datetime.utcnow()
+            sync_log.total_saved = total_saved
+            sync_log.finished_at = datetime.utcnow()
             db.session.commit()
 
             if not _stop:
                 _clear_cursor(job_id)
-            logger.info(f"=== WORKER SELESAI status={status} total={total_saved} ===")
+            logger.info(f"=== WORKER SELESAI status={status} total_saved={total_saved} ===")
 
         except Exception as exc:
             db.session.rollback()
-            sync_log.status        = "failed"
+            sync_log.status = "failed"
             sync_log.error_message = str(exc)[:1000]
             sync_log.total_fetched = total_fetched
-            sync_log.total_saved   = total_saved
-            sync_log.finished_at   = datetime.utcnow()
+            sync_log.total_saved = total_saved
+            sync_log.finished_at = datetime.utcnow()
             db.session.commit()
             logger.error(f"=== WORKER ERROR: {exc} ===")
             sys.exit(1)
 
 
-# ─── Entry point ──────────────────────────────────────────────────────────────
+# ─── Entry point ─────────────────────────────────────────────────────
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage:")
