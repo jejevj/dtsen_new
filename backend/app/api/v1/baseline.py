@@ -1,9 +1,12 @@
+import logging
+import time
 import requests
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 from . import api_v1_bp
 
-# Mapping kode provinsi → slug endpoint ZAWA
+logger = logging.getLogger('app')
+
 PROVINSI_MAP = {
     "aceh":      {"label": "Aceh",               "slug": "anggota"},
     "jambi":     {"label": "Jambi",              "slug": "jambi"},
@@ -46,11 +49,14 @@ PROVINSI_MAP = {
 }
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
-ZAWA_TIMEOUT = 15
+ZAWA_TIMEOUT = 30  # naikkan dari 15 ke 30 detik
+
+# Simple in-memory cache: { slug: { "data": [...], "ts": float } }
+_CACHE: dict = {}
+CACHE_TTL = 600  # 10 menit
 
 
 def _safe_int(val, default, min_val=1, max_val=None):
-    """Parse integer dengan aman; fallback ke default jika tidak valid."""
     try:
         result = int(str(val).strip())
     except (ValueError, TypeError):
@@ -61,10 +67,57 @@ def _safe_int(val, default, min_val=1, max_val=None):
     return result
 
 
+def _fetch_zawa(slug: str):
+    """
+    Fetch data ZAWA untuk satu slug. Hasil di-cache 10 menit.
+    Return (rows: list, error: str|None)
+    """
+    now = time.time()
+    cached = _CACHE.get(slug)
+    if cached and (now - cached["ts"]) < CACHE_TTL:
+        logger.info(f"[Baseline] cache hit untuk slug={slug}")
+        return cached["data"], None
+
+    url = f"{ZAWA_BASE}/zawa/{slug}"
+    logger.info(f"[Baseline] fetch ZAWA url={url}")
+    try:
+        resp = requests.get(
+            url,
+            timeout=ZAWA_TIMEOUT,
+            headers={"Accept": "application/json"},
+            verify=True,
+        )
+        logger.info(f"[Baseline] ZAWA response status={resp.status_code} slug={slug}")
+        resp.raise_for_status()
+        raw = resp.json()
+    except requests.exceptions.SSLError as e:
+        logger.error(f"[Baseline] SSL error slug={slug}: {e}")
+        return None, f"SSL error saat menghubungi sumber data ZAWA: {e}"
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f"[Baseline] Connection error slug={slug}: {e}")
+        return None, f"Tidak dapat terhubung ke sumber data ZAWA: {e}"
+    except requests.exceptions.Timeout:
+        logger.error(f"[Baseline] Timeout slug={slug}")
+        return None, "Timeout saat menghubungi sumber data ZAWA (>30 detik)."
+    except requests.exceptions.HTTPError as e:
+        logger.error(f"[Baseline] HTTP error slug={slug}: {e}")
+        return None, f"Sumber data ZAWA mengembalikan error HTTP: {e}"
+    except Exception as e:
+        logger.error(f"[Baseline] Unexpected error slug={slug}: {e}", exc_info=True)
+        return None, f"Gagal mengambil data dari ZAWA: {e}"
+
+    rows = raw.get('data') or []
+    if not isinstance(rows, list):
+        rows = []
+
+    _CACHE[slug] = {"data": rows, "ts": now}
+    logger.info(f"[Baseline] cached {len(rows)} rows untuk slug={slug}")
+    return rows, None
+
+
 @api_v1_bp.get('/baseline/provinsi')
 @jwt_required()
 def baseline_provinsi_list():
-    """Kembalikan daftar provinsi yang tersedia beserta kodenya."""
     items = [
         {"kode": k, "label": v["label"]}
         for k, v in sorted(PROVINSI_MAP.items(), key=lambda x: x[1]["label"])
@@ -75,14 +128,6 @@ def baseline_provinsi_list():
 @api_v1_bp.get('/baseline')
 @jwt_required()
 def baseline_data():
-    """
-    Ambil data baseline ZAWA per provinsi dengan pagination & pencarian.
-    Query params:
-      - provinsi  : kode provinsi (wajib)
-      - page      : halaman (default 1)
-      - per_page  : baris per halaman (default 20, max 100)
-      - search    : pencarian bebas (nama / NIK)
-    """
     provinsi = request.args.get('provinsi', '').lower().strip()
     page     = _safe_int(request.args.get('page',     1),  default=1,  min_val=1)
     per_page = _safe_int(request.args.get('per_page', 20), default=20, min_val=1, max_val=100)
@@ -95,22 +140,10 @@ def baseline_data():
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi}' tidak dikenal."}), 400
 
-    # Fetch dari ZAWA
-    url = f"{ZAWA_BASE}/zawa/{info['slug']}"
-    try:
-        resp = requests.get(url, timeout=ZAWA_TIMEOUT)
-        resp.raise_for_status()
-        raw = resp.json()
-    except requests.exceptions.Timeout:
-        return jsonify({"error": "Timeout saat menghubungi sumber data ZAWA."}), 504
-    except Exception as e:
-        return jsonify({"error": f"Gagal mengambil data: {str(e)}"}), 502
+    rows, err = _fetch_zawa(info['slug'])
+    if err:
+        return jsonify({"error": err}), 502
 
-    rows = raw.get('data') or []
-    if not isinstance(rows, list):
-        rows = []
-
-    # Filter pencarian
     if search:
         rows = [
             r for r in rows
@@ -134,3 +167,12 @@ def baseline_data():
             "label":    info["label"],
         }
     }), 200
+
+
+@api_v1_bp.delete('/baseline/cache')
+@jwt_required()
+def baseline_clear_cache():
+    """Endpoint untuk flush cache ZAWA secara manual (admin)."""
+    _CACHE.clear()
+    logger.info("[Baseline] cache di-flush manual")
+    return jsonify({"message": "Cache berhasil dikosongkan."}), 200
