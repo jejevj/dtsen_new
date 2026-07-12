@@ -9,9 +9,12 @@
       ]"
     >
       <div class="flex items-center h-16 px-4 border-b border-primary-800 gap-3 flex-shrink-0">
-        <div class="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center flex-shrink-0">
-          <i class="pi pi-chart-bar text-white" style="font-size: 0.8rem"></i>
-        </div>
+        <img
+          src="https://simzat.kemenag.go.id/simzat/apps/assets/images/ico.png"
+          alt="DTSEN Logo"
+          class="flex-shrink-0"
+          style="width:32px;height:32px;border-radius:8px;object-fit:contain;"
+        />
         <transition name="fade">
           <div v-if="sidebarOpen" class="overflow-hidden whitespace-nowrap">
             <div class="font-bold text-white text-sm tracking-tight leading-none">DTSEN</div>
@@ -119,7 +122,7 @@
       <!-- Page content -->
       <main class="flex-1 overflow-y-auto p-5 wm-main">
 
-        <!-- ===== WATERMARK SVG PATTERN — merata di seluruh area konten ===== -->
+        <!-- ===== WATERMARK SVG PATTERN ===== -->
         <div class="wm-overlay" aria-hidden="true">
           <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -153,7 +156,6 @@
         </div>
         <!-- ===== END WATERMARK ===== -->
 
-        <!-- Slot konten halaman di z-index 1 -->
         <div class="wm-content">
           <slot />
         </div>
@@ -213,7 +215,6 @@ const loggingOut     = ref(false)
 
 const user = computed(() => authStore.user)
 
-/** Identitas untuk watermark — fallback berlapis */
 const userIdentifier = computed(() => {
   const u = user.value
   if (!u) return 'CONFIDENTIAL'
@@ -262,12 +263,8 @@ async function handleLogout() {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 
-/* Main content area — jangkar SVG watermark */
-.wm-main {
-  position: relative;
-}
+.wm-main { position: relative; }
 
-/* SVG overlay memenuhi seluruh area .wm-main */
 .wm-overlay {
   position: absolute;
   inset: 0;
@@ -275,7 +272,6 @@ async function handleLogout() {
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
-  /* Ikut scroll bersama konten agar watermark selalu ada */
   height: 100%;
   min-height: 100%;
 }
@@ -286,7 +282,6 @@ async function handleLogout() {
   min-height: 100%;
 }
 
-/* Konten slot di atas watermark */
 .wm-content {
   position: relative;
   z-index: 1;
