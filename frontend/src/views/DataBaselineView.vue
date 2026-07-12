@@ -40,33 +40,33 @@
                 placeholder="Pilih Provinsi…"
                 class="w-full text-sm" :loading="wilayahLoading"
                 filter show-clear
-                @change="onProvinsiChange"
+                @change="onAnggotaProvinsiChange"
               />
             </div>
 
-            <!-- Kabkota (muncul jika provinsi sudah dipilih) -->
-            <div v-if="showKabkota" class="flex flex-col gap-1 min-w-[220px]">
+            <!-- Kabkota -->
+            <div v-if="anggota.provinsi" class="flex flex-col gap-1 min-w-[220px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kabupaten / Kota</label>
               <Select
                 v-model="anggota.kabkota"
-                :options="kabkotaOptions"
+                :options="anggotaKabkotaOptions"
                 option-label="nama" option-value="kode"
                 placeholder="Semua Kab/Kota"
-                class="w-full text-sm" :loading="kabkotaLoading"
+                class="w-full text-sm" :loading="anggotaKabkotaLoading"
                 filter show-clear
-                @change="onKabkotaChange"
+                @change="onAnggotaKabkotaChange"
               />
             </div>
 
-            <!-- Kecamatan (muncul jika kabkota dipilih) -->
-            <div v-if="showKecamatan" class="flex flex-col gap-1 min-w-[220px]">
+            <!-- Kecamatan -->
+            <div v-if="anggota.kabkota" class="flex flex-col gap-1 min-w-[220px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kecamatan</label>
               <Select
                 v-model="anggota.kecamatan"
-                :options="kecamatanOptions"
+                :options="anggotaKecamatanOptions"
                 option-label="nama" option-value="kode"
                 placeholder="Semua Kecamatan"
-                class="w-full text-sm" :loading="kecamatanLoading"
+                class="w-full text-sm" :loading="anggotaKecamatanLoading"
                 filter show-clear
               />
             </div>
@@ -112,21 +112,80 @@
       <template v-if="activeTab === 'keluarga'">
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm px-5 py-4">
           <div class="flex flex-wrap items-end gap-4">
+
+            <!-- Provinsi -->
+            <div class="flex flex-col gap-1 min-w-[200px]">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Provinsi</label>
+              <Select
+                v-model="keluarga.provinsi"
+                :options="provinsiOptions"
+                option-label="label" option-value="kode"
+                placeholder="Pilih Provinsi…"
+                class="w-full text-sm" :loading="wilayahLoading"
+                filter show-clear
+                @change="onKeluargaProvinsiChange"
+              />
+            </div>
+
+            <!-- Kabkota -->
+            <div v-if="keluarga.provinsi" class="flex flex-col gap-1 min-w-[220px]">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kabupaten / Kota</label>
+              <Select
+                v-model="keluarga.kabkota"
+                :options="keluargaKabkotaOptions"
+                option-label="nama" option-value="kode"
+                placeholder="Semua Kab/Kota"
+                class="w-full text-sm" :loading="keluargaKabkotaLoading"
+                filter show-clear
+                @change="onKeluargaKabkotaChange"
+              />
+            </div>
+
+            <!-- Kecamatan -->
+            <div v-if="keluarga.kabkota" class="flex flex-col gap-1 min-w-[220px]">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kecamatan</label>
+              <Select
+                v-model="keluarga.kecamatan"
+                :options="keluargaKecamatanOptions"
+                option-label="nama" option-value="kode"
+                placeholder="Semua Kecamatan"
+                class="w-full text-sm" :loading="keluargaKecamatanLoading"
+                filter show-clear
+              />
+            </div>
+
+            <!-- Search -->
             <div class="flex flex-col gap-1 flex-1 min-w-[180px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cari (halaman ini)</label>
-              <InputText v-model="keluarga.search" placeholder="No. KK / Nama…" class="text-sm w-full" @keyup.enter="loadKeluarga()" />
+              <InputText
+                v-model="keluarga.search"
+                placeholder="No. KK / Nama…"
+                class="text-sm w-full"
+                @keyup.enter="loadKeluarga()"
+              />
             </div>
+
+            <!-- Tombol -->
             <div class="flex gap-2 pb-0.5">
-              <Button label="Cari" icon="pi pi-search" size="small" :loading="keluarga.loading" @click="loadKeluarga()" />
-              <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined @click="resetKeluarga" />
+              <Button
+                label="Tampilkan" icon="pi pi-search" size="small"
+                :loading="keluarga.loading"
+                @click="loadKeluarga()"
+              />
+              <Button
+                label="Reset" icon="pi pi-times" size="small"
+                severity="secondary" outlined
+                @click="resetKeluarga"
+              />
             </div>
           </div>
         </div>
+
         <BaselineTable
           :loading="keluarga.loading" :error="keluarga.error"
           :rows="keluarga.rows" :columns="keluarga.columns"
           :meta="keluarga.meta" :history-stack="keluarga.historyStack"
-          empty-hint="Memuat data keluarga…"
+          empty-hint="Pilih provinsi atau masukkan kata kunci untuk menampilkan data keluarga."
           title="Data Keluarga"
           @next="nextKeluarga" @prev="prevKeluarga"
         />
@@ -137,7 +196,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import AppLayout     from '@/components/layout/AppLayout.vue'
 import BaselineTable from '@/components/baseline/BaselineTable.vue'
 import Button        from 'primevue/button'
@@ -157,40 +216,22 @@ const tabs = [
   { key: 'keluarga', label: 'Keluarga', icon: 'pi pi-home' },
 ]
 const activeTab = ref('anggota')
-const keluargaLoaded = ref(false)
 function switchTab(key) {
   activeTab.value = key
-  if (key === 'keluarga' && !keluargaLoaded.value) {
-    keluargaLoaded.value = true
-    loadKeluarga()
-  }
 }
 
-// ── Wilayah dropdown state ──────────────────────────────
-const wilayahLoading   = ref(false)
-const kabkotaLoading   = ref(false)
-const kecamatanLoading = ref(false)
+// ── Provinsi (shared) ────────────────────────────────────
+const wilayahLoading  = ref(false)
+const provinsiOptions = ref([])  // [{ kode, label, slug }]
 
-const provinsiOptions  = ref([])  // [{ kode, label, slug }] dari /baseline/provinsi
-const kabkotaOptions   = ref([])  // [{ kode, nama }]
-const kecamatanOptions = ref([])  // [{ kode, nama }]
-
-const showKabkota   = computed(() => !!anggota.provinsi)
-const showKecamatan = computed(() => !!anggota.kabkota)
-
-// ── Load provinsi saat mount — pakai /baseline/provinsi ────────
 async function loadWilayah() {
   wilayahLoading.value = true
   try {
-    // fetchBaselineProvinsi() → GET /baseline/provinsi
-    // Return: [{ kode, label, slug }] sesuai akses user
     const list = await fetchBaselineProvinsi()
     provinsiOptions.value = list
-
-    // Auto-select jika hanya 1 pilihan
     if (list.length === 1) {
       anggota.provinsi = list[0].kode
-      onProvinsiChange()
+      onAnggotaProvinsiChange()
     }
   } catch (e) {
     console.error('[Wilayah] gagal load provinsi:', e)
@@ -199,43 +240,79 @@ async function loadWilayah() {
   }
 }
 
-// ── Saat provinsi dipilih → load kabkota ────────────────────
-async function onProvinsiChange() {
-  anggota.kabkota    = ''
-  anggota.kecamatan  = ''
-  kabkotaOptions.value   = []
-  kecamatanOptions.value = []
+// ── Wilayah state — Anggota ──────────────────────────────
+const anggotaKabkotaOptions   = ref([])
+const anggotaKecamatanOptions = ref([])
+const anggotaKabkotaLoading   = ref(false)
+const anggotaKecamatanLoading = ref(false)
 
-  if (!anggota.provinsi) return
-
-  kabkotaLoading.value = true
-  try {
-    kabkotaOptions.value = await fetchKabkota(anggota.provinsi)
-  } catch (e) {
-    console.error('[Wilayah] gagal load kabkota:', e)
-  } finally {
-    kabkotaLoading.value = false
-  }
-}
-
-// ── Saat kabkota dipilih → load kecamatan ─────────────────
-async function onKabkotaChange() {
+async function onAnggotaProvinsiChange() {
+  anggota.kabkota   = ''
   anggota.kecamatan = ''
-  kecamatanOptions.value = []
-
-  if (!anggota.kabkota) return
-
-  kecamatanLoading.value = true
+  anggotaKabkotaOptions.value   = []
+  anggotaKecamatanOptions.value = []
+  if (!anggota.provinsi) return
+  anggotaKabkotaLoading.value = true
   try {
-    kecamatanOptions.value = await fetchKecamatan(anggota.kabkota)
+    anggotaKabkotaOptions.value = await fetchKabkota(anggota.provinsi)
   } catch (e) {
-    console.error('[Wilayah] gagal load kecamatan:', e)
+    console.error('[Wilayah] gagal load kabkota anggota:', e)
   } finally {
-    kecamatanLoading.value = false
+    anggotaKabkotaLoading.value = false
   }
 }
 
-// ── Table state factory ──────────────────────────────────
+async function onAnggotaKabkotaChange() {
+  anggota.kecamatan = ''
+  anggotaKecamatanOptions.value = []
+  if (!anggota.kabkota) return
+  anggotaKecamatanLoading.value = true
+  try {
+    anggotaKecamatanOptions.value = await fetchKecamatan(anggota.kabkota)
+  } catch (e) {
+    console.error('[Wilayah] gagal load kecamatan anggota:', e)
+  } finally {
+    anggotaKecamatanLoading.value = false
+  }
+}
+
+// ── Wilayah state — Keluarga ─────────────────────────────
+const keluargaKabkotaOptions   = ref([])
+const keluargaKecamatanOptions = ref([])
+const keluargaKabkotaLoading   = ref(false)
+const keluargaKecamatanLoading = ref(false)
+
+async function onKeluargaProvinsiChange() {
+  keluarga.kabkota   = ''
+  keluarga.kecamatan = ''
+  keluargaKabkotaOptions.value   = []
+  keluargaKecamatanOptions.value = []
+  if (!keluarga.provinsi) return
+  keluargaKabkotaLoading.value = true
+  try {
+    keluargaKabkotaOptions.value = await fetchKabkota(keluarga.provinsi)
+  } catch (e) {
+    console.error('[Wilayah] gagal load kabkota keluarga:', e)
+  } finally {
+    keluargaKabkotaLoading.value = false
+  }
+}
+
+async function onKeluargaKabkotaChange() {
+  keluarga.kecamatan = ''
+  keluargaKecamatanOptions.value = []
+  if (!keluarga.kabkota) return
+  keluargaKecamatanLoading.value = true
+  try {
+    keluargaKecamatanOptions.value = await fetchKecamatan(keluarga.kabkota)
+  } catch (e) {
+    console.error('[Wilayah] gagal load kecamatan keluarga:', e)
+  } finally {
+    keluargaKecamatanLoading.value = false
+  }
+}
+
+// ── Table state factory ───────────────────────────────────
 function makeTableState() {
   return reactive({
     loading: false, error: '',
@@ -255,7 +332,7 @@ function makeTableState() {
 const anggota  = makeTableState()
 const keluarga = makeTableState()
 
-// ── Anggota ───────────────────────────────────────────
+// ── Anggota ───────────────────────────────────────────────
 async function loadAnggota(cursor = null) {
   if (!anggota.provinsi) return
   anggota.loading = true; anggota.error = ''
@@ -267,7 +344,6 @@ async function loadAnggota(cursor = null) {
     }
     if (anggota.kabkota)   params.kabkota_kode   = anggota.kabkota
     if (anggota.kecamatan) params.kecamatan_kode = anggota.kecamatan
-
     const res = await fetchBaselineAnggota(params)
     anggota.rows = res.data ?? []; anggota.columns = res.columns ?? []
     Object.assign(anggota.meta, res.meta ?? {})
@@ -290,22 +366,26 @@ function resetAnggota() {
   anggota.search    = ''
   anggota.rows = []; anggota.columns = []
   anggota.historyStack = []; anggota.currentCursor = null
-  kabkotaOptions.value   = []
-  kecamatanOptions.value = []
+  anggotaKabkotaOptions.value   = []
+  anggotaKecamatanOptions.value = []
   Object.assign(anggota.meta, {
     label:'', totalItems:0, totalPages:1, currentPage:1,
     hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
   })
 }
 
-// ── Keluarga ─────────────────────────────────────────
+// ── Keluarga ──────────────────────────────────────────────
 async function loadKeluarga(cursor = null) {
   keluarga.loading = true; keluarga.error = ''
   try {
-    const res = await fetchBaselineKeluarga({
+    const params = {
       cursor: cursor || undefined,
       search: keluarga.search.trim() || undefined,
-    })
+    }
+    if (keluarga.provinsi)  params.provinsi       = keluarga.provinsi
+    if (keluarga.kabkota)   params.kabkota_kode   = keluarga.kabkota
+    if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
+    const res = await fetchBaselineKeluarga(params)
     keluarga.rows = res.data ?? []; keluarga.columns = res.columns ?? []
     Object.assign(keluarga.meta, res.meta ?? {})
     keluarga.currentCursor = cursor
@@ -321,10 +401,14 @@ function prevKeluarga() {
   if (keluarga.historyStack.length) loadKeluarga(keluarga.historyStack.pop())
 }
 function resetKeluarga() {
-  keluarga.search = ''
+  keluarga.provinsi  = ''
+  keluarga.kabkota   = ''
+  keluarga.kecamatan = ''
+  keluarga.search    = ''
   keluarga.rows = []; keluarga.columns = []
   keluarga.historyStack = []; keluarga.currentCursor = null
-  keluargaLoaded.value = false
+  keluargaKabkotaOptions.value   = []
+  keluargaKecamatanOptions.value = []
   Object.assign(keluarga.meta, {
     label:'', totalItems:0, totalPages:1, currentPage:1,
     hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
