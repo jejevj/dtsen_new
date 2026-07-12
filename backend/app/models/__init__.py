@@ -5,6 +5,7 @@ from .program import Program
 from .mustahik import Mustahik
 from .tuser import TUser
 from .t_dtsen_akses import TDtsenAkses
+from .tampilan_dtsen import TampilanDtsen, TampilanDtsenRef
 
 __all__ = [
     'User', 'UserWilayah',
@@ -12,4 +13,5 @@ __all__ = [
     'Laz', 'Program', 'Mustahik',
     'TUser',
     'TDtsenAkses',
+    'TampilanDtsen', 'TampilanDtsenRef',
 ]

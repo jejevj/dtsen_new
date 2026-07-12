@@ -1,267 +1,372 @@
 <template>
   <AppLayout>
-    <div style="display:flex;flex-direction:column;gap:20px;">
+    <div class="space-y-5">
 
       <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 style="font-size:1.4rem;font-weight:800;color:#1e293b;margin:0 0 2px;">Data Mustahik</h2>
-          <p style="font-size:12px;color:#94a3b8;margin:0;">Menampilkan desil 1–4 · {{ filtered.length }} data</p>
+          <h2 class="text-xl font-bold text-slate-800">Data Mustahik</h2>
+          <p class="text-sm text-slate-500 mt-0.5">Daftar penerima manfaat zakat · Desil 1–4</p>
         </div>
-        <!-- Export CSV: hidden sementara -->
-        <button v-show="false" @click="exportCSV" style="display:flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid #e2e8f0;border-radius:8px;background:white;font-size:13px;font-weight:600;cursor:pointer;color:#374151;">
-          <i class="pi pi-download"></i> Export CSV
-        </button>
+        <Button
+          :icon="showFilter ? 'pi pi-filter-slash' : 'pi pi-filter'"
+          :label="showFilter ? 'Sembunyikan Filter' : 'Tampilkan Filter'"
+          :severity="showFilter ? 'secondary' : 'primary'"
+          outlined
+          size="small"
+          @click="showFilter = !showFilter"
+        />
       </div>
 
-      <!-- Filter bar -->
-      <div style="background:white;border-radius:14px;border:1px solid #f1f5f9;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.04);">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
-          <div>
-            <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Cari Nama / NIK</label>
-            <input v-model="q" type="text" placeholder="Nama atau NIK..." style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;"/>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Desil</label>
-            <select v-model="filterDesil" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;background:white;">
-              <option value="">Semua Desil</option>
-              <option value="1">Desil 1</option>
-              <option value="2">Desil 2</option>
-              <option value="3">Desil 3</option>
-              <option value="4">Desil 4</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Jenis Kelamin</label>
-            <select v-model="filterGender" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;background:white;">
-              <option value="">Semua</option>
-              <option value="m">Laki-laki</option>
-              <option value="f">Perempuan</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Provinsi</label>
-            <select v-model="filterProvinsi" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;background:white;">
-              <option value="">Semua</option>
-              <option v-for="p in provinsiList" :key="p" :value="p">{{ p }}</option>
-            </select>
-          </div>
-          <div style="display:flex;align-items:flex-end;">
-            <button @click="resetFilter" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;background:#f8fafc;cursor:pointer;color:#64748b;font-weight:600;">Reset</button>
-          </div>
-        </div>
-      </div>
+      <!-- ===== PANEL FILTER DINAMIS ===== -->
+      <transition name="slide-down">
+        <div v-if="showFilter" class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
 
-      <!-- Table dengan watermark di background -->
-      <div class="table-wrapper">
-
-        <!-- ===== WATERMARK TABEL ===== -->
-        <div class="wm-overlay" aria-hidden="true">
-          <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="wm-pattern" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
-                <text x="10" y="40"
-                  font-family="Inter, sans-serif"
-                  font-size="11"
-                  font-weight="700"
-                  letter-spacing="2"
-                  fill="rgba(15,23,42,0.09)"
-                  text-anchor="start"
-                  text-transform="uppercase"
-                >DO NOT COPY</text>
-                <text x="10" y="70"
-                  font-family="Inter, sans-serif"
-                  font-size="10"
-                  font-weight="600"
-                  letter-spacing="1"
-                  fill="rgba(15,23,42,0.07)"
-                  text-anchor="start"
-                >{{ userIdentifier }}</text>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#wm-pattern)" />
-          </svg>
-        </div>
-        <!-- ===== END WATERMARK ===== -->
-
-        <!-- Konten tabel di z-index 1 -->
-        <div style="position:relative;z-index:1;">
-          <div style="overflow-x:auto;">
-            <table style="width:100%;border-collapse:collapse;font-size:13px;">
-              <thead>
-                <tr style="background:#f8fafc;border-bottom:1px solid #e2e8f0;">
-                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">#</th>
-                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Nama</th>
-                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Desil</th>
-                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Gender</th>
-                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Kecamatan</th>
-                  <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Provinsi</th>
-                  <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Tanggungan</th>
-                  <th style="padding:10px 14px;text-align:right;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Nominal</th>
-                  <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="paginated.length===0">
-                  <td colspan="9" style="padding:40px;text-align:center;color:#94a3b8;font-size:13px;">Tidak ada data yang sesuai filter</td>
-                </tr>
-                <tr
-                  v-for="(row,i) in paginated" :key="row.id"
-                  class="tbl-row"
-                  :class="{ 'tbl-row--hover': hoveredRow===row.id }"
-                  @mouseenter="hoveredRow=row.id"
-                  @mouseleave="hoveredRow=null"
-                >
-                  <td style="padding:10px 14px;color:#94a3b8;">{{ (currentPage-1)*perPage+i+1 }}</td>
-                  <td style="padding:10px 14px;">
-                    <router-link :to="`/mustahik/${row.nik_hashed}`" style="color:#2563eb;font-weight:600;text-decoration:none;"
-                      @mouseover="e=>e.target.style.textDecoration='underline'"
-                      @mouseout="e=>e.target.style.textDecoration='none'">{{ row.nama }}</router-link>
-                  </td>
-                  <td style="padding:10px 14px;">
-                    <span style="padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700;"
-                      :style="{ background:DESIL_COLORS[row.desil].bg, color:DESIL_COLORS[row.desil].text }">
-                      Desil {{ row.desil }}
-                    </span>
-                  </td>
-                  <td style="padding:10px 14px;">
-                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;"
-                      :style="{ color: row.jenis_kelamin==='m' ? '#2563eb' : '#db2777' }">
-                      <i :class="row.jenis_kelamin==='m' ? 'pi pi-mars' : 'pi pi-venus'" style="font-size:11px;"></i>
-                      {{ row.jenis_kelamin==='m' ? 'L' : 'P' }}
-                    </span>
-                  </td>
-                  <td style="padding:10px 14px;color:#374151;">{{ row.kecamatan }}</td>
-                  <td style="padding:10px 14px;color:#374151;">{{ row.provinsi }}</td>
-                  <td style="padding:10px 14px;text-align:right;color:#374151;">{{ row.jumlah_tanggungan }} jiwa</td>
-                  <td style="padding:10px 14px;text-align:right;font-weight:700;color:#15803d;">{{ formatRupiah(row.nominal) }}</td>
-                  <td style="padding:10px 14px;text-align:center;">
-                    <button @click="$router.push(`/mustahik/${row.nik_hashed}`)"
-                      style="padding:5px 12px;border:1px solid #e2e8f0;border-radius:7px;background:white;font-size:12px;cursor:pointer;color:#374151;font-weight:600;display:inline-flex;align-items:center;gap:5px;">
-                      <i class="pi pi-eye" style="font-size:11px;"></i> Detail
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- Loading state -->
+          <div v-if="filterLoading" class="flex items-center gap-2 text-slate-400 text-sm py-2">
+            <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi filter…
           </div>
 
-          <!-- Pagination -->
-          <div style="padding:12px 16px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-            <p style="font-size:12px;color:#64748b;margin:0;">Menampilkan {{ (currentPage-1)*perPage+1 }}–{{ Math.min(currentPage*perPage,filtered.length) }} dari {{ filtered.length }} data</p>
-            <div style="display:flex;gap:4px;">
-              <button v-for="p in totalPages" :key="p" @click="currentPage=p"
-                style="width:30px;height:30px;border-radius:7px;border:1px solid #e2e8f0;font-size:12px;font-weight:600;cursor:pointer;"
-                :style="{ background: p===currentPage ? '#2563eb' : 'white', color: p===currentPage ? 'white' : '#374151', borderColor: p===currentPage ? '#2563eb' : '#e2e8f0' }">
-                {{ p }}
-              </button>
+          <!-- Error state -->
+          <div v-else-if="filterError" class="text-sm text-red-500 py-2">
+            <i class="pi pi-exclamation-triangle mr-1"></i> {{ filterError }}
+          </div>
+
+          <!-- Filter fields -->
+          <div v-else-if="filterFields.length" class="space-y-4">
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              Filter Pencarian
+            </p>
+
+            <!-- Kelompokkan per field_group -->
+            <div
+              v-for="(groupFields, groupName) in groupedFilterFields"
+              :key="groupName"
+              class="space-y-2"
+            >
+              <p v-if="groupName" class="text-xs font-medium text-slate-400">{{ groupName }}</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div v-for="field in groupFields" :key="field.field_key">
+                  <label class="block text-xs font-medium text-slate-600 mb-1">{{ field.field_label }}</label>
+
+                  <!-- Dropdown jika ada referensi kode (String kode) -->
+                  <Select
+                    v-if="field.refs && field.refs.length"
+                    v-model="activeFilters[field.field_key]"
+                    :options="[{ ref_value: '', ref_label: 'Semua' }, ...field.refs]"
+                    option-label="ref_label"
+                    option-value="ref_value"
+                    :placeholder="'Semua ' + field.field_label"
+                    class="w-full text-sm"
+                    show-clear
+                  />
+
+                  <!-- Input angka -->
+                  <InputNumber
+                    v-else-if="field.field_type === 'Integer' || field.field_type === 'Float'"
+                    v-model="activeFilters[field.field_key]"
+                    :placeholder="field.field_label"
+                    class="w-full"
+                    :min-fraction-digits="field.field_type === 'Float' ? 2 : 0"
+                    :max-fraction-digits="field.field_type === 'Float' ? 2 : 0"
+                  />
+
+                  <!-- Input tanggal -->
+                  <DatePicker
+                    v-else-if="field.field_type === 'Date'"
+                    v-model="activeFilters[field.field_key]"
+                    :placeholder="field.field_label"
+                    date-format="dd/mm/yy"
+                    class="w-full"
+                    show-button-bar
+                  />
+
+                  <!-- Input teks default -->
+                  <InputText
+                    v-else
+                    v-model="activeFilters[field.field_key]"
+                    :placeholder="'Cari ' + field.field_label"
+                    class="w-full text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Tombol aksi filter -->
+            <div class="flex gap-2 pt-2 border-t border-slate-100">
+              <Button
+                label="Terapkan Filter"
+                icon="pi pi-search"
+                size="small"
+                @click="applyFilter"
+              />
+              <Button
+                label="Reset"
+                icon="pi pi-times"
+                size="small"
+                severity="secondary"
+                outlined
+                @click="resetFilter"
+              />
             </div>
           </div>
-        </div>
-        <!-- end z-index:1 -->
 
+          <!-- Kosong: belum ada field filter dikonfigurasi -->
+          <div v-else class="text-sm text-slate-400 py-2">
+            <i class="pi pi-info-circle mr-1"></i>
+            Belum ada field filter yang dikonfigurasi di master tampilan.
+          </div>
+        </div>
+      </transition>
+
+      <!-- ===== TABEL DATA MUSTAHIK ===== -->
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+
+        <!-- Toolbar tabel: search global + info -->
+        <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100">
+          <div class="flex items-center gap-2">
+            <i class="pi pi-users text-slate-400"></i>
+            <span class="text-sm font-semibold text-slate-700">Daftar Mustahik</span>
+            <span
+              v-if="Object.values(activeFilters).some(v => v !== '' && v != null)"
+              class="ml-1 px-2 py-0.5 bg-primary-100 text-primary-700 text-xs font-semibold rounded-full"
+            >Filter aktif</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">Cari:</span>
+            <InputText
+              v-model="globalSearch"
+              placeholder="Nama / NIK"
+              class="text-sm"
+              style="width:200px"
+              @keyup.enter="applyFilter"
+            />
+          </div>
+        </div>
+
+        <!-- Loading tabel -->
+        <div v-if="tableLoading" class="flex justify-center items-center py-16 text-slate-400">
+          <i class="pi pi-spin pi-spinner mr-2"></i> Memuat data…
+        </div>
+
+        <!-- Error tabel -->
+        <div v-else-if="tableError" class="py-12 text-center text-red-500 text-sm">
+          <i class="pi pi-exclamation-circle text-2xl mb-2 block"></i>
+          {{ tableError }}
+        </div>
+
+        <!-- Placeholder: data belum dimuat (sebelum filter diterapkan pertama kali) -->
+        <div v-else-if="!tableFetched" class="py-16 text-center text-slate-400 text-sm">
+          <i class="pi pi-filter text-3xl mb-3 block opacity-30"></i>
+          Gunakan filter di atas lalu klik <strong>Terapkan Filter</strong> untuk menampilkan data.
+        </div>
+
+        <!-- Kosong -->
+        <div v-else-if="rows.length === 0" class="py-16 text-center text-slate-400 text-sm">
+          <i class="pi pi-inbox text-3xl mb-3 block opacity-30"></i>
+          Tidak ada data mustahik yang sesuai filter.
+        </div>
+
+        <!-- Tabel -->
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <tr>
+                <th class="px-5 py-3 text-left">No</th>
+                <th class="px-5 py-3 text-left">Nama Lengkap</th>
+                <th class="px-5 py-3 text-left">NIK</th>
+                <th class="px-5 py-3 text-left">Jenis Kelamin</th>
+                <th class="px-5 py-3 text-left">Kab/Kota</th>
+                <th class="px-5 py-3 text-left">Desil</th>
+                <th class="px-5 py-3 text-left">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr
+                v-for="(row, i) in rows" :key="row.id ?? i"
+                class="hover:bg-slate-50 transition-colors"
+              >
+                <td class="px-5 py-3 text-slate-400">{{ (pagination.page - 1) * pagination.perPage + i + 1 }}</td>
+                <td class="px-5 py-3 font-medium text-slate-800">{{ row.nama_lengkap ?? '-' }}</td>
+                <td class="px-5 py-3 text-slate-600 font-mono text-xs">{{ row.nik ?? '-' }}</td>
+                <td class="px-5 py-3">
+                  <span
+                    :class="row.jenis_kelamin === 'm'
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'bg-pink-50 text-pink-700'"
+                    class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                  >
+                    {{ row.jenis_kelamin === 'm' ? 'Laki-laki' : 'Perempuan' }}
+                  </span>
+                </td>
+                <td class="px-5 py-3 text-slate-600">{{ row.kabkota ?? row.kab_kota ?? '-' }}</td>
+                <td class="px-5 py-3">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-green-50 text-green-700">
+                    Desil {{ row.desil ?? '-' }}
+                  </span>
+                </td>
+                <td class="px-5 py-3">
+                  <Button
+                    icon="pi pi-eye"
+                    text
+                    rounded
+                    size="small"
+                    class="text-primary-600"
+                    @click="$router.push('/mustahik/' + (row.nik_hashed ?? row.nik))"
+                    v-tooltip="'Lihat Detail'"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div
+          v-if="tableFetched && rows.length > 0"
+          class="flex items-center justify-between px-5 py-3 border-t border-slate-100"
+        >
+          <span class="text-xs text-slate-400">
+            Halaman {{ pagination.page }} dari {{ pagination.totalPages }}
+            · Total {{ pagination.total.toLocaleString('id-ID') }} data
+          </span>
+          <div class="flex gap-1">
+            <Button
+              icon="pi pi-angle-left"
+              text rounded size="small"
+              :disabled="pagination.page <= 1"
+              @click="changePage(pagination.page - 1)"
+            />
+            <Button
+              icon="pi pi-angle-right"
+              text rounded size="small"
+              :disabled="pagination.page >= pagination.totalPages"
+              @click="changePage(pagination.page + 1)"
+            />
+          </div>
+        </div>
       </div>
-      <!-- end table-wrapper -->
 
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import AppLayout from '@/components/layout/AppLayout.vue'
-import { MOCK_MUSTAHIK, DESIL_COLORS } from '@/data/mockMustahik'
-import { formatRupiah } from '@/utils/formatter'
-import { useAuthStore } from '@/stores/auth'
+import { ref, reactive, computed, onMounted } from 'vue'
+import AppLayout   from '@/components/layout/AppLayout.vue'
+import Button      from 'primevue/button'
+import InputText   from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
+import Select      from 'primevue/select'
+import DatePicker  from 'primevue/datepicker'
+import { fetchFilterFields } from '@/services/tampilanDtsenService'
+import apiClient             from '@/services/apiClient'
 
-const authStore = useAuthStore()
+// ── Filter panel state ────────────────────────────────────────────────────────
+const showFilter   = ref(false)
+const filterLoading = ref(false)
+const filterError   = ref('')
+const filterFields  = ref([])      // field yang is_filter=1 dari backend
+const activeFilters = reactive({}) // { field_key: value }
+const globalSearch  = ref('')
 
-const userIdentifier = computed(() => {
-  const u = authStore.user
-  if (!u) return 'CONFIDENTIAL'
-  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
-})
-
-const q              = ref('')
-const filterDesil    = ref('')
-const filterGender   = ref('')
-const filterProvinsi = ref('')
-const hoveredRow     = ref(null)
-const currentPage    = ref(1)
-const perPage        = 10
-
-const provinsiList = computed(() => [...new Set(MOCK_MUSTAHIK.map(m=>m.provinsi))].sort())
-
-const filtered = computed(() => {
-  let data = MOCK_MUSTAHIK
-  if (q.value) {
-    const s = q.value.toLowerCase()
-    data = data.filter(m => m.nama.toLowerCase().includes(s) || m.nik.includes(s))
+// Kelompokkan field per field_group untuk tampilan lebih rapi
+const groupedFilterFields = computed(() => {
+  const groups = {}
+  for (const f of filterFields.value) {
+    const g = f.field_group || ''
+    if (!groups[g]) groups[g] = []
+    groups[g].push(f)
   }
-  if (filterDesil.value)    data = data.filter(m => m.desil === Number(filterDesil.value))
-  if (filterGender.value)   data = data.filter(m => m.jenis_kelamin === filterGender.value)
-  if (filterProvinsi.value) data = data.filter(m => m.provinsi === filterProvinsi.value)
-  return data
+  return groups
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / perPage)))
-const paginated  = computed(() => {
-  const start = (currentPage.value - 1) * perPage
-  return filtered.value.slice(start, start + perPage)
+async function loadFilterFields() {
+  filterLoading.value = true
+  filterError.value   = ''
+  try {
+    const data = await fetchFilterFields()
+    filterFields.value = data
+    // Inisialisasi activeFilters dengan value kosong
+    for (const f of data) {
+      if (!(f.field_key in activeFilters)) {
+        activeFilters[f.field_key] = ''
+      }
+    }
+  } catch (e) {
+    filterError.value = 'Gagal memuat konfigurasi filter. Pastikan koneksi ke server aktif.'
+    console.error('[TampilanDtsen] fetchFilterFields error:', e)
+  } finally {
+    filterLoading.value = false
+  }
+}
+
+// ── Tabel state ───────────────────────────────────────────────────────────────
+const tableLoading = ref(false)
+const tableError   = ref('')
+const tableFetched = ref(false)
+const rows         = ref([])
+const pagination   = reactive({
+  page:       1,
+  perPage:    20,
+  total:      0,
+  totalPages: 1,
 })
+
+async function fetchMustahik(page = 1) {
+  tableLoading.value = true
+  tableError.value   = ''
+  try {
+    // Bangun query params: gabungkan activeFilters + globalSearch + pagination
+    const params = { page, per_page: pagination.perPage }
+    if (globalSearch.value.trim()) params.search = globalSearch.value.trim()
+    for (const [k, v] of Object.entries(activeFilters)) {
+      if (v !== '' && v != null) params[k] = v
+    }
+
+    const res = await apiClient.get('/api/v1/mustahik', { params })
+    const d   = res.data
+
+    rows.value         = d.data   ?? d.items ?? []
+    pagination.page       = d.page       ?? page
+    pagination.total      = d.total      ?? rows.value.length
+    pagination.totalPages = d.total_pages ?? d.pages ?? 1
+    tableFetched.value = true
+  } catch (e) {
+    tableError.value = 'Gagal memuat data mustahik: ' + (e?.response?.data?.message ?? e.message)
+    console.error('[Mustahik] fetchMustahik error:', e)
+  } finally {
+    tableLoading.value = false
+  }
+}
+
+function applyFilter() {
+  pagination.page = 1
+  fetchMustahik(1)
+}
 
 function resetFilter() {
-  q.value = ''; filterDesil.value = ''; filterGender.value = ''; filterProvinsi.value = ''
-  currentPage.value = 1
+  for (const k of Object.keys(activeFilters)) {
+    activeFilters[k] = ''
+  }
+  globalSearch.value = ''
+  tableFetched.value = false
+  rows.value         = []
 }
 
-function exportCSV() {
-  const headers = ['Nama','NIK','Desil','Gender','Kecamatan','Kelurahan','Kab/Kota','Provinsi','Tanggungan','Nominal','Pekerjaan','Status Nikah']
-  const rows = filtered.value.map(m => [
-    m.nama, m.nik, m.desil,
-    m.jenis_kelamin==='m'?'Laki-laki':'Perempuan',
-    m.kecamatan, m.kelurahan, m.kab_kota, m.provinsi,
-    m.jumlah_tanggungan, m.nominal, m.pekerjaan, m.status_pernikahan
-  ])
-  const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
-  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' })
-  const url  = URL.createObjectURL(blob)
-  const a    = document.createElement('a'); a.href=url; a.download='mustahik_desil1-4.csv'; a.click()
-  URL.revokeObjectURL(url)
+function changePage(p) {
+  fetchMustahik(p)
 }
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+onMounted(() => {
+  loadFilterFields()
+})
 </script>
 
 <style scoped>
-.table-wrapper {
-  position: relative;
-  background: white;
-  border-radius: 14px;
-  border: 1px solid #f1f5f9;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  overflow: hidden;
-}
-
-.wm-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.wm-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.tbl-row {
-  border-bottom: 1px solid #f1f5f9;
-  transition: background 0.15s;
-  background: transparent;
-}
-.tbl-row--hover {
-  background: rgba(240, 249, 255, 0.85) !important;
-}
+.slide-down-enter-active { transition: all 0.25s ease; }
+.slide-down-enter-from   { opacity: 0; transform: translateY(-8px); }
+.slide-down-leave-active { transition: all 0.2s ease; }
+.slide-down-leave-to     { opacity: 0; transform: translateY(-6px); }
 </style>
