@@ -292,7 +292,7 @@ const trendData  = ref([])
 const summary    = ref({ total_penyaluran: 0, penerima_manfaat: 0, nasional: 0, provinsi: 0, kabkota: 0 })
 
 const metricOptions = [
-  { label: 'Jumlah Mustahik',  value: 'mustahik'   },
+  { label: 'Jumlah Penerima Manfaat',  value: 'mustahik'   },
   { label: 'Total Penyaluran', value: 'penyaluran' },
 ]
 
@@ -320,7 +320,7 @@ const heroStats = computed(() => [
   { label: 'Total Penyaluran', value: 'Rp ' + formatShort(summary.value?.total_penyaluran||0), icon:'pi pi-wallet',     sub:'Seluruh LAZ terdaftar' },
   { label: 'LAZ Nasional',     value: formatShort(summary.value?.nasional||0),                   icon:'pi pi-building',   sub:'Lembaga aktif' },
   { label: 'LAZ Provinsi',     value: formatShort(summary.value?.provinsi||0),                   icon:'pi pi-map-marker', sub:'Lembaga aktif' },
-  { label: 'Mustahik',         value: formatShort(summary.value?.penerima_manfaat||0),            icon:'pi pi-users',      sub:'Penerima manfaat' },
+  { label: 'Penerima Manfaat',         value: formatShort(summary.value?.penerima_manfaat||0),            icon:'pi pi-users',      sub:'Penerima manfaat' },
 ])
 
 // ── Agg stats cards ─────────────────────────────────────────
@@ -404,7 +404,7 @@ const features = [
   { icon:'pi pi-shield',     title:'Data Terverifikasi',       desc:'Terintegrasi langsung dengan DTSEN.' },
   { icon:'pi pi-map',        title:'Pemetaan Wilayah',         desc:'Sebaran mustahik hingga tingkat kelurahan di seluruh Indonesia.' },
   { icon:'pi pi-chart-line', title:'Analitik Real-time',       desc:'Dashboard interaktif dengan filter multidimensi dan ekspor data.' },
-  { icon:'pi pi-users',      title:'Profil Mustahik Lengkap',  desc:'Data sosiodemografi penerima termasuk desil kemiskinan.' },
+  { icon:'pi pi-users',      title:'Profil Penerima Manfaat Lengkap',  desc:'Data sosiodemografi penerima termasuk desil kemiskinan.' },
 ]
 
 const aboutMetrics = [
