@@ -1,29 +1,38 @@
 import api from './api'
 
+// Provinsi list (sesuai akses)
 export async function fetchBaselineProvinsi() {
   const res = await api.get('/baseline/provinsi')
   return res.data?.data ?? []
 }
 
-/**
- * Tab Anggota — per provinsi, cursor-based
- * params: { provinsi, cursor?, search? }
- */
+// Dropdown wilayah: provinsi + kabkota + kecamatan sesuai skala LAZ
+// params: { provinsi_kode?, kabkota_kode? }
+export async function fetchWilayahDropdown(params = {}) {
+  const res = await api.get('/wilayah/dropdown', { params })
+  return res.data
+}
+
+// Kabkota by provinsi
+export async function fetchKabkota(provinsi_kode) {
+  const res = await api.get('/wilayah/kabkota', { params: { provinsi_kode } })
+  return res.data?.data ?? []
+}
+
+// Kecamatan by kabkota
+export async function fetchKecamatan(kabkota_kode) {
+  const res = await api.get('/wilayah/kecamatan', { params: { kabkota_kode } })
+  return res.data?.data ?? []
+}
+
+// Anggota
 export async function fetchBaselineAnggota(params = {}) {
   const res = await api.get('/baseline/anggota', { params })
   return res.data
 }
 
-/**
- * Tab Keluarga — global, cursor-based
- * params: { cursor?, search? }
- */
+// Keluarga
 export async function fetchBaselineKeluarga(params = {}) {
   const res = await api.get('/baseline/keluarga', { params })
   return res.data
-}
-
-// Alias lama agar komponen lain tidak breaking
-export async function fetchBaselineData(params = {}) {
-  return fetchBaselineAnggota(params)
 }
