@@ -12,8 +12,12 @@ import requests
 ZAWA_BASE_URL  = "https://spl-satudata.kemenag.go.id/core/api/zawa"
 ZAWA_API_KEY   = os.getenv("ZAWA_API_KEY", "prod-53a81004-085d-426b-a5a0-c6ef6cdf18e1")
 ZAWA_PAGE_SIZE = 100
-MAX_ANGGOTA_PER_PROVINSI = 10_000
-MAX_KELUARGA_TOTAL       = 50_000
+
+# Data ZAWA sangat besar: keluarga ~61 juta, anggota ~4.6 juta
+# Set limit sesuai kebutuhan, atau 0 untuk unlimited
+MAX_ANGGOTA_PER_PROVINSI = int(os.getenv("MAX_ANGGOTA_PER_PROVINSI", "500000"))
+MAX_KELUARGA_TOTAL       = int(os.getenv("MAX_KELUARGA_TOTAL", "5000000"))
+
 RETRY_MAX   = 3
 RETRY_DELAY = 5
 
@@ -121,7 +125,7 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
 
         try:
             while True:
-                if total_fetched >= MAX_ANGGOTA_PER_PROVINSI:
+                if MAX_ANGGOTA_PER_PROVINSI > 0 and total_fetched >= MAX_ANGGOTA_PER_PROVINSI:
                     logger.info(f"Batas {MAX_ANGGOTA_PER_PROVINSI} baris tercapai.")
                     break
 
@@ -139,7 +143,6 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
                     logger.info("Items kosong. Selesai.")
                     break
 
-                # ✔ FIX: Hitung batch_saved secara akurat (hanya yang benar-benar di-insert)
                 batch_saved = 0
                 for item in items:
                     nik = str(item.get("nomor_induk_kependudukan") or "")
@@ -153,7 +156,6 @@ def _sync_anggota_provinsi(app, provinsi: str, sync_log_id: int):
                 total_fetched += batch_fetched
                 total_saved   += batch_saved
 
-                # ✔ FIX: Guard cursor tidak berubah — cegah infinite loop
                 new_cursor = _get_next_cursor(page_data)
                 if new_cursor and new_cursor == cursor:
                     logger.warning(
@@ -217,7 +219,7 @@ def _sync_keluarga(app, sync_log_id: int):
 
         try:
             while True:
-                if total_fetched >= MAX_KELUARGA_TOTAL:
+                if MAX_KELUARGA_TOTAL > 0 and total_fetched >= MAX_KELUARGA_TOTAL:
                     logger.info(f"Batas {MAX_KELUARGA_TOTAL} baris tercapai.")
                     break
 
@@ -235,7 +237,6 @@ def _sync_keluarga(app, sync_log_id: int):
                     logger.info("Items kosong. Selesai.")
                     break
 
-                # ✔ FIX: Hitung batch_saved secara akurat
                 batch_saved = 0
                 for item in items:
                     nkk = str(item.get("nomor_kartu_keluarga") or "")
@@ -249,7 +250,6 @@ def _sync_keluarga(app, sync_log_id: int):
                 total_fetched += batch_fetched
                 total_saved   += batch_saved
 
-                # ✔ FIX: Guard cursor tidak berubah — cegah infinite loop
                 new_cursor = _get_next_cursor(page_data)
                 if new_cursor and new_cursor == cursor:
                     logger.warning(

@@ -3,18 +3,13 @@
 Detached sync worker — jalankan di luar Flask untuk full background sync.
 
 Cara pakai:
-  # Sync anggota provinsi Aceh (detach, log ke file)
   nohup python scripts/sync_worker.py anggota aceh >> logs/sync/worker.log 2>&1 &
   echo $! > logs/sync/worker.pid
 
-  # Sync keluarga
   nohup python scripts/sync_worker.py keluarga >> logs/sync/worker_keluarga.log 2>&1 &
   echo $! > logs/sync/worker_keluarga.pid
 
-  # Cek apakah masih berjalan
   kill -0 $(cat logs/sync/worker.pid) && echo 'RUNNING' || echo 'STOPPED'
-
-  # Stop manual
   kill $(cat logs/sync/worker.pid)
 """
 
@@ -30,7 +25,7 @@ from app import create_app
 from app.extensions import db
 from app.models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 from app.services.zawa_sync import (
-    _fetch_page, _save_cursor, _load_cursor, _clear_cursor,
+    _fetch_page, _save_cursor, _load_cursor, _clear_cursor, _get_next_cursor,
     ZAWA_BASE_URL, ZAWA_PAGE_SIZE,
     MAX_ANGGOTA_PER_PROVINSI, MAX_KELUARGA_TOTAL,
 )
@@ -78,16 +73,13 @@ def run_sync_anggota(app, provinsi: str):
         logger.info(f"Resume dari cursor: {cursor}")
 
     with app.app_context():
-        sync_log = ZawaSyncLog(
-            sync_type=f"anggota_{provinsi}",
-            status="running",
-        )
+        sync_log = ZawaSyncLog(sync_type=f"anggota_{provinsi}", status="running")
         db.session.add(sync_log)
         db.session.commit()
 
         try:
             while not _stop:
-                if total_fetched >= MAX_ANGGOTA_PER_PROVINSI:
+                if MAX_ANGGOTA_PER_PROVINSI > 0 and total_fetched >= MAX_ANGGOTA_PER_PROVINSI:
                     logger.info(f"Batas {MAX_ANGGOTA_PER_PROVINSI} tercapai.")
                     break
 
@@ -96,7 +88,6 @@ def run_sync_anggota(app, provinsi: str):
                     params["cursor"] = cursor
 
                 page_data = _fetch_page(f"{ZAWA_BASE_URL}/anggota", params, logger)
-
                 if page_data is None:
                     raise RuntimeError("Gagal fetch halaman setelah semua retry.")
 
@@ -111,20 +102,15 @@ def run_sync_anggota(app, provinsi: str):
                     if nik and not ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first():
                         db.session.add(ZawaAnggota.from_api(item, provinsi))
                         batch_saved += 1
-
                 db.session.commit()
 
                 batch_fetched = len(items)
                 total_fetched += batch_fetched
                 total_saved += batch_saved
 
-                # ✔ FIX: Cek apakah cursor berubah — jika sama, stop untuk hindari infinite loop
-                new_cursor = page_data.get("nextCursor") or page_data.get("next_cursor")
+                new_cursor = _get_next_cursor(page_data)
                 if new_cursor and new_cursor == cursor:
-                    logger.warning(
-                        f"Cursor tidak berubah ({new_cursor}). "
-                        "API mungkin stuck. Menghentikan untuk mencegah infinite loop."
-                    )
+                    logger.warning(f"Cursor tidak berubah ({new_cursor}). Stop.")
                     break
 
                 cursor = new_cursor
@@ -148,7 +134,6 @@ def run_sync_anggota(app, provinsi: str):
             sync_log.total_saved = total_saved
             sync_log.finished_at = datetime.utcnow()
             db.session.commit()
-
             if not _stop:
                 _clear_cursor(job_id)
             logger.info(f"=== WORKER SELESAI status={status} total_saved={total_saved} ===")
@@ -162,7 +147,6 @@ def run_sync_anggota(app, provinsi: str):
             sync_log.finished_at = datetime.utcnow()
             db.session.commit()
             logger.error(f"=== WORKER ERROR: {exc} ===")
-            logger.info("Cursor disimpan. Jalankan ulang untuk resume.")
             sys.exit(1)
 
 
@@ -189,7 +173,7 @@ def run_sync_keluarga(app):
 
         try:
             while not _stop:
-                if total_fetched >= MAX_KELUARGA_TOTAL:
+                if MAX_KELUARGA_TOTAL > 0 and total_fetched >= MAX_KELUARGA_TOTAL:
                     logger.info(f"Batas {MAX_KELUARGA_TOTAL} tercapai.")
                     break
 
@@ -198,7 +182,6 @@ def run_sync_keluarga(app):
                     params["cursor"] = cursor
 
                 page_data = _fetch_page(f"{ZAWA_BASE_URL}/keluarga", params, logger)
-
                 if page_data is None:
                     raise RuntimeError("Gagal fetch halaman setelah semua retry.")
 
@@ -213,20 +196,15 @@ def run_sync_keluarga(app):
                     if nkk and not ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=nkk).first():
                         db.session.add(ZawaKeluarga.from_api(item))
                         batch_saved += 1
-
                 db.session.commit()
 
                 batch_fetched = len(items)
                 total_fetched += batch_fetched
                 total_saved += batch_saved
 
-                # ✔ FIX: Cek apakah cursor berubah — jika sama, stop untuk hindari infinite loop
-                new_cursor = page_data.get("nextCursor") or page_data.get("next_cursor")
+                new_cursor = _get_next_cursor(page_data)
                 if new_cursor and new_cursor == cursor:
-                    logger.warning(
-                        f"Cursor tidak berubah ({new_cursor}). "
-                        "API mungkin stuck. Menghentikan untuk mencegah infinite loop."
-                    )
+                    logger.warning(f"Cursor tidak berubah ({new_cursor}). Stop.")
                     break
 
                 cursor = new_cursor
@@ -250,7 +228,6 @@ def run_sync_keluarga(app):
             sync_log.total_saved = total_saved
             sync_log.finished_at = datetime.utcnow()
             db.session.commit()
-
             if not _stop:
                 _clear_cursor(job_id)
             logger.info(f"=== WORKER SELESAI status={status} total_saved={total_saved} ===")
