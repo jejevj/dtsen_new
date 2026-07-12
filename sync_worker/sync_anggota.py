@@ -6,14 +6,15 @@ lalu insert ke tabel zawa_anggota.
 Provinsi di-ambil dari tampilan-filter.json (semua path zawa/<slug>)
 kecuali Aceh (slug: anggota) dan endpoint non-provinsi lainnya.
 
-Batas per provinsi: MAX_PAGES halaman (default=2) x ~50 data = ~100 data.
+Batas per provinsi: LIMIT_PER_PROVINSI data (default=100).
+API mengembalikan array langsung (bukan cursor/pagination).
 
 Environment variables yang dibutuhkan:
-  DATABASE_URL   - MySQL connection string
-  ZAWA_API_KEY   - API key ZAWA Kemenag
-  MAX_PAGES      - (opsional) max halaman per provinsi, default=2
-  SLEEP_BETWEEN  - (opsional) jeda antar request detik, default=0.3
-  PROVINSI       - (opsional) jalankan untuk 1 provinsi saja, misal: jambi
+  DATABASE_URL          - MySQL connection string
+  ZAWA_API_KEY          - API key ZAWA Kemenag
+  LIMIT_PER_PROVINSI    - (opsional) max data per provinsi, default=100 (0=semua)
+  SLEEP_BETWEEN         - (opsional) jeda antar provinsi detik, default=0.3
+  PROVINSI              - (opsional) jalankan untuk 1 provinsi saja, misal: jambi
 """
 
 import os
@@ -42,79 +43,77 @@ logging.basicConfig(
 logger = logging.getLogger("sync_anggota")
 
 # ─── Config ────────────────────────────────────────────────────
-DATABASE_URL  = os.environ["DATABASE_URL"]
-ZAWA_API_KEY  = os.environ.get("ZAWA_API_KEY", "")
-ZAWA_BASE     = "https://spl-satudata.kemenag.go.id/core/api"
-ZAWA_TIMEOUT  = 60
-MAX_PAGES     = int(os.environ.get("MAX_PAGES", "2"))       # max 2 halaman = ~100 data
-SLEEP_BETWEEN = float(os.environ.get("SLEEP_BETWEEN", "0.3"))
-ONLY_PROVINSI = os.environ.get("PROVINSI", "").strip().lower()  # opsional: jalankan 1 provinsi
+DATABASE_URL       = os.environ["DATABASE_URL"]
+ZAWA_API_KEY       = os.environ.get("ZAWA_API_KEY", "")
+ZAWA_BASE          = "https://spl-satudata.kemenag.go.id/core/api"
+ZAWA_TIMEOUT       = 60
+LIMIT_PER_PROVINSI = int(os.environ.get("LIMIT_PER_PROVINSI", "100"))  # 0 = semua data
+SLEEP_BETWEEN      = float(os.environ.get("SLEEP_BETWEEN", "0.3"))
+ONLY_PROVINSI      = os.environ.get("PROVINSI", "").strip().lower()
 
 if not ZAWA_API_KEY:
     logger.warning("ZAWA_API_KEY tidak di-set! Request ke API mungkin ditolak.")
 
 # ─── Daftar provinsi (dari tampilan-filter.json, skip Aceh) ───
-# Key = slug (dipakai sebagai provinsi_slug di DB dan path API)
-# Value = label nama provinsi
 PROVINSI_LIST = {
-    "jambi":     "Jambi",
-    "sumbar":    "Sumatera Barat",
-    "riau":      "Riau",
-    "sumut":     "Sumatera Utara",
-    "kepriau":   "Kepulauan Riau",
-    "babel":     "Bangka Belitung",
-    "lampung":   "Lampung",
-    "bengkulu":  "Bengkulu",
-    "sumsel":    "Sumatera Selatan",
-    "dkijakarta":"DKI Jakarta",
-    "jabar":     "Jawa Barat",
-    "jateng":    "Jawa Tengah",
-    "diy":       "DI Yogyakarta",
-    "jatim":     "Jawa Timur",
-    "banten":    "Banten",
-    "bali":      "Bali",
-    "ntb":       "Nusa Tenggara Barat",
-    "ntt":       "Nusa Tenggara Timur",
-    "kalbar":    "Kalimantan Barat",
-    "kalteng":   "Kalimantan Tengah",
-    "kalsel":    "Kalimantan Selatan",
-    "kaltim":    "Kalimantan Timur",
-    "kaltara":   "Kalimantan Utara",
-    "sulut":     "Sulawesi Utara",
-    "sulteng":   "Sulawesi Tengah",
-    "sulsel":    "Sulawesi Selatan",
-    "sultra":    "Sulawesi Tenggara",
-    "gorontalo": "Gorontalo",
-    "sulbar":    "Sulawesi Barat",
-    "maluku":    "Maluku",
-    "malut":     "Maluku Utara",
-    "papbar":    "Papua Barat",
-    "papua":     "Papua",
-    "papsel":    "Papua Selatan",
-    "papteng":   "Papua Tengah",
-    "papgu":     "Papua Pegunungan",
-    "papdy":     "Papua Barat Daya",
+    "jambi":      "Jambi",
+    "sumbar":     "Sumatera Barat",
+    "riau":       "Riau",
+    "sumut":      "Sumatera Utara",
+    "kepriau":    "Kepulauan Riau",
+    "babel":      "Bangka Belitung",
+    "lampung":    "Lampung",
+    "bengkulu":   "Bengkulu",
+    "sumsel":     "Sumatera Selatan",
+    "dkijakarta": "DKI Jakarta",
+    "jabar":      "Jawa Barat",
+    "jateng":     "Jawa Tengah",
+    "diy":        "DI Yogyakarta",
+    "jatim":      "Jawa Timur",
+    "banten":     "Banten",
+    "bali":       "Bali",
+    "ntb":        "Nusa Tenggara Barat",
+    "ntt":        "Nusa Tenggara Timur",
+    "kalbar":     "Kalimantan Barat",
+    "kalteng":    "Kalimantan Tengah",
+    "kalsel":     "Kalimantan Selatan",
+    "kaltim":     "Kalimantan Timur",
+    "kaltara":    "Kalimantan Utara",
+    "sulut":      "Sulawesi Utara",
+    "sulteng":    "Sulawesi Tengah",
+    "sulsel":     "Sulawesi Selatan",
+    "sultra":     "Sulawesi Tenggara",
+    "gorontalo":  "Gorontalo",
+    "sulbar":     "Sulawesi Barat",
+    "maluku":     "Maluku",
+    "malut":      "Maluku Utara",
+    "papbar":     "Papua Barat",
+    "papua":      "Papua",
+    "papsel":     "Papua Selatan",
+    "papteng":    "Papua Tengah",
+    "papgu":      "Papua Pegunungan",
+    "papdy":      "Papua Barat Daya",
 }
 
-# BPS kode per slug (untuk menentukan correct_slug dari kode KTP)
+# BPS kode -> slug (untuk auto-repair provinsi_slug dari kode KTP)
 BPS_MAP = {
-    "jambi":     "15", "sumbar":    "13", "riau":      "14", "sumut":     "12",
-    "kepriau":   "21", "babel":     "19", "lampung":   "18", "bengkulu":  "17",
-    "sumsel":    "16", "dkijakarta":"31", "jabar":     "32", "jateng":    "33",
-    "diy":       "34", "jatim":     "35", "banten":    "36", "bali":      "51",
-    "ntb":       "52", "ntt":       "53", "kalbar":    "61", "kalteng":   "62",
-    "kalsel":    "63", "kaltim":    "64", "kaltara":   "65", "sulut":     "71",
-    "sulteng":   "72", "sulsel":    "73", "sultra":    "74", "gorontalo": "75",
-    "sulbar":    "76", "maluku":    "81", "malut":     "82", "papbar":    "91",
-    "papua":     "94", "papsel":    "95", "papteng":   "96", "papgu":     "97",
-    "papdy":     "92",
+    "jambi":      "15", "sumbar":     "13", "riau":       "14", "sumut":      "12",
+    "kepriau":    "21", "babel":      "19", "lampung":    "18", "bengkulu":   "17",
+    "sumsel":     "16", "dkijakarta": "31", "jabar":      "32", "jateng":     "33",
+    "diy":        "34", "jatim":      "35", "banten":     "36", "bali":       "51",
+    "ntb":        "52", "ntt":        "53", "kalbar":     "61", "kalteng":    "62",
+    "kalsel":     "63", "kaltim":     "64", "kaltara":    "65", "sulut":      "71",
+    "sulteng":    "72", "sulsel":     "73", "sultra":     "74", "gorontalo":  "75",
+    "sulbar":     "76", "maluku":     "81", "malut":      "82", "papbar":     "91",
+    "papua":      "94", "papsel":     "95", "papteng":    "96", "papgu":      "97",
+    "papdy":      "92",
 }
 _BPS_TO_SLUG = {v: k for k, v in BPS_MAP.items()}
 
 # ─── SQLAlchemy standalone ─────────────────────────────────────
 from sqlalchemy import (
     create_engine, select, String, Integer, Text, DateTime,
-    JSON, Numeric, BigInteger, Index
+    JSON, Numeric, BigInteger,
 )
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, mapped_column
 from decimal import Decimal, InvalidOperation
@@ -257,17 +256,17 @@ class ZawaAnggota(Base):
 
 class ZawaSyncLog(Base):
     __tablename__ = "zawa_sync_log"
-    id            = mapped_column(Integer,   primary_key=True, autoincrement=True)
+    id            = mapped_column(Integer,    primary_key=True, autoincrement=True)
     sync_type     = mapped_column(String(50), nullable=False)
     provinsi_slug = mapped_column(String(20), nullable=True)
     status        = mapped_column(String(20), nullable=False, default="pending")
-    total_fetched = mapped_column(Integer,   nullable=True, default=0)
-    total_saved   = mapped_column(Integer,   nullable=True, default=0)
-    total_skipped = mapped_column(Integer,   nullable=True, default=0)
-    total_error   = mapped_column(Integer,   nullable=True, default=0)
-    error_message = mapped_column(Text,      nullable=True)
-    started_at    = mapped_column(DateTime,  nullable=False, default=dt.utcnow)
-    finished_at   = mapped_column(DateTime,  nullable=True)
+    total_fetched = mapped_column(Integer,    nullable=True, default=0)
+    total_saved   = mapped_column(Integer,    nullable=True, default=0)
+    total_skipped = mapped_column(Integer,    nullable=True, default=0)
+    total_error   = mapped_column(Integer,    nullable=True, default=0)
+    error_message = mapped_column(Text,       nullable=True)
+    started_at    = mapped_column(DateTime,   nullable=False, default=dt.utcnow)
+    finished_at   = mapped_column(DateTime,   nullable=True)
 
 
 # ─── ZAWA fetch helpers ────────────────────────────────────────
@@ -279,36 +278,42 @@ def _headers():
     return h
 
 
-def fetch_page(slug: str, cursor: str = None):
+def fetch_anggota(slug: str):
     """
-    Fetch satu halaman anggota dari endpoint zawa/<slug>.
-    Return: (items list, next_cursor | None, error_str | None)
+    Fetch semua data anggota dari endpoint zawa/<slug>.
+    API mengembalikan: { "success": true, "data": [ {...}, ... ] }
+    data adalah array langsung, BUKAN cursor-based pagination.
+
+    Return: (items list, error_str | None)
     """
-    url    = f"{ZAWA_BASE}/zawa/{slug}"
-    params = {"cursor": cursor} if cursor else {}
+    url = f"{ZAWA_BASE}/zawa/{slug}"
     try:
-        resp = requests.get(url, params=params, timeout=ZAWA_TIMEOUT, headers=_headers())
+        resp = requests.get(url, timeout=ZAWA_TIMEOUT, headers=_headers())
         resp.raise_for_status()
         raw = resp.json()
     except requests.exceptions.Timeout:
-        return [], None, "Timeout"
+        return [], "Timeout"
     except requests.exceptions.HTTPError as e:
-        return [], None, f"HTTP {e.response.status_code if e.response else '?'}"
+        code = e.response.status_code if e.response else "?"
+        return [], f"HTTP {code}"
     except Exception as e:
-        return [], None, str(e)
+        return [], str(e)
 
-    data = raw.get("data", {})
-    if not isinstance(data, dict):
-        return [], None, "Format response tidak dikenal"
+    # ✔️ data adalah list langsung
+    data = raw.get("data", [])
+    if isinstance(data, list):
+        return data, None
 
-    items      = data.get("items") or []
-    has_next   = data.get("hasNextPage", False)
-    next_cur   = data.get("nextCursor") if has_next else None
-    return items, next_cur, None
+    # Fallback: jika ternyata wrapped dalam dict (antisipasi perubahan API)
+    if isinstance(data, dict):
+        items = data.get("items") or data.get("data") or []
+        return items, None
+
+    return [], f"Format response tidak dikenal: {type(data)}"
 
 
 def correct_slug_from_item(item: dict, fallback_slug: str) -> str:
-    """Tentukan provinsi_slug yang benar dari kode_provinsi_ktp item."""
+    """Tentukan provinsi_slug yang benar dari kode_provinsi_ktp."""
     kode = str(item.get("kode_provinsi_ktp") or "").strip().zfill(2)
     return _BPS_TO_SLUG.get(kode) or fallback_slug
 
@@ -316,10 +321,9 @@ def correct_slug_from_item(item: dict, fallback_slug: str) -> str:
 # ─── Sync satu provinsi ────────────────────────────────────────
 
 def sync_provinsi(session, slug: str, label: str) -> dict:
-    logger.info(f"  ┌─ [{slug}] {label} — mulai")
+    logger.info(f"  ┌─ [{slug}] {label} — mulai fetch")
     started   = dt.utcnow()
-    saved = skipped = error = fetched = 0
-    cursor    = None
+    saved = skipped = error = 0
     error_msg = None
 
     sync_log = ZawaSyncLog(
@@ -331,82 +335,80 @@ def sync_provinsi(session, slug: str, label: str) -> dict:
     session.add(sync_log)
     session.commit()
 
-    for page_num in range(1, MAX_PAGES + 1):
-        items, next_cursor, err = fetch_page(slug, cursor)
+    # ─ Fetch semua data dari API (satu request, array langsung)
+    all_items, err = fetch_anggota(slug)
 
-        if err:
-            logger.warning(f"  │  [{slug}] page {page_num} ERROR: {err}")
-            error_msg = err
-            error += 1
-            break
+    if err:
+        logger.warning(f"  │  [{slug}] FETCH ERROR: {err}")
+        error_msg = err
+        sync_log.status        = "failed"
+        sync_log.error_message = error_msg
+        sync_log.total_error   = 1
+        sync_log.finished_at   = dt.utcnow()
+        session.commit()
+        return {"slug": slug, "label": label, "fetched": 0,
+                "saved": 0, "skipped": 0, "error": 1,
+                "status": "failed", "durasi": 0}
 
-        if not items:
-            logger.info(f"  │  [{slug}] page {page_num} — kosong, berhenti")
-            break
+    total_api = len(all_items)
+    # Potong sesuai LIMIT_PER_PROVINSI
+    items = all_items[:LIMIT_PER_PROVINSI] if LIMIT_PER_PROVINSI > 0 else all_items
+    logger.info(f"  │  [{slug}] API returned {total_api} rows, processing {len(items)} (limit={LIMIT_PER_PROVINSI or 'semua'})")
 
-        fetched += len(items)
-        logger.info(f"  │  [{slug}] page {page_num} — {len(items)} item diterima")
+    for item in items:
+        nik = str(item.get("nomor_induk_kependudukan") or "").strip()
+        if not nik:
+            skipped += 1
+            continue
 
-        for item in items:
-            nik = str(item.get("nomor_induk_kependudukan") or "").strip()
-            if not nik:
-                skipped += 1
-                continue
+        # Cek duplikat NIK
+        exists = session.execute(
+            select(ZawaAnggota.id).where(
+                ZawaAnggota.nomor_induk_kependudukan == nik
+            )
+        ).first()
 
-            # Cek duplikat
-            exists = session.execute(
-                select(ZawaAnggota.id).where(
+        if exists:
+            # Auto-repair provinsi_slug jika salah
+            correct = correct_slug_from_item(item, slug)
+            row = session.execute(
+                select(ZawaAnggota).where(
                     ZawaAnggota.nomor_induk_kependudukan == nik
                 )
-            ).first()
-
-            if exists:
-                # Auto-repair provinsi_slug jika salah
-                correct = correct_slug_from_item(item, slug)
-                row = session.execute(
-                    select(ZawaAnggota).where(
-                        ZawaAnggota.nomor_induk_kependudukan == nik
-                    )
-                ).scalars().first()
-                if row and row.provinsi_slug != correct:
-                    row.provinsi_slug = correct
-                    session.commit()
-                skipped += 1
-                continue
-
-            try:
-                correct = correct_slug_from_item(item, slug)
-                obj = ZawaAnggota.from_api(item, correct)
-                session.add(obj)
+            ).scalars().first()
+            if row and row.provinsi_slug != correct:
+                row.provinsi_slug = correct
                 session.commit()
-                saved += 1
-            except Exception as e:
-                session.rollback()
-                logger.warning(f"  │  [{slug}] INSERT ERR NIK={nik}: {e}")
-                error += 1
+            skipped += 1
+            continue
 
-        if not next_cursor:
-            break
-        cursor = next_cursor
-        time.sleep(SLEEP_BETWEEN)
+        try:
+            correct = correct_slug_from_item(item, slug)
+            obj = ZawaAnggota.from_api(item, correct)
+            session.add(obj)
+            session.commit()
+            saved += 1
+        except Exception as e:
+            session.rollback()
+            logger.warning(f"  │  [{slug}] INSERT ERR NIK={nik}: {e}")
+            error += 1
 
-    duration = round((dt.utcnow() - started).total_seconds(), 1)
-    status   = "success" if not error_msg else "failed"
+    duration  = round((dt.utcnow() - started).total_seconds(), 1)
+    status    = "failed" if error_msg else "success"
 
     sync_log.status        = status
-    sync_log.total_fetched = fetched
+    sync_log.total_fetched = len(items)
     sync_log.total_saved   = saved
     sync_log.total_skipped = skipped
     sync_log.total_error   = error
-    sync_log.error_message = error_msg
     sync_log.finished_at   = dt.utcnow()
     session.commit()
 
     logger.info(
-        f"  └─ [{slug}] selesai: fetched={fetched} saved={saved} "
-        f"skipped={skipped} error={error} ({duration}s)"
+        f"  └─ [{slug}] selesai: api={total_api} processed={len(items)} "
+        f"saved={saved} skipped={skipped} error={error} ({duration}s)"
     )
-    return {"slug": slug, "label": label, "fetched": fetched,
+    return {"slug": slug, "label": label, "fetched": len(items),
             "saved": saved, "skipped": skipped, "error": error,
             "status": status, "durasi": duration}
 
@@ -417,22 +419,25 @@ def main():
     targets = PROVINSI_LIST
     if ONLY_PROVINSI:
         if ONLY_PROVINSI not in PROVINSI_LIST:
-            logger.error(f"Provinsi '{ONLY_PROVINSI}' tidak dikenal. Pilihan: {', '.join(PROVINSI_LIST)}")
+            logger.error(
+                f"Provinsi '{ONLY_PROVINSI}' tidak dikenal. "
+                f"Pilihan: {', '.join(PROVINSI_LIST)}"
+            )
             sys.exit(1)
         targets = {ONLY_PROVINSI: PROVINSI_LIST[ONLY_PROVINSI]}
 
     logger.info("=" * 65)
     logger.info("SYNC ANGGOTA — START")
-    logger.info(f"DATABASE  : {DATABASE_URL.split('@')[-1]}")
-    logger.info(f"MAX_PAGES : {MAX_PAGES} (~{MAX_PAGES * 50} data/provinsi)")
-    logger.info(f"SLEEP     : {SLEEP_BETWEEN}s")
-    logger.info(f"PROVINSI  : {ONLY_PROVINSI or 'semua (' + str(len(targets)) + ' provinsi)'}")
-    logger.info(f"SKIP ACEH : ya (gunakan sync backend untuk Aceh)")
+    logger.info(f"DATABASE          : {DATABASE_URL.split('@')[-1]}")
+    logger.info(f"LIMIT/PROVINSI    : {LIMIT_PER_PROVINSI or 'semua data'}")
+    logger.info(f"SLEEP ANTAR PROV  : {SLEEP_BETWEEN}s")
+    logger.info(f"TARGET PROVINSI   : {ONLY_PROVINSI or 'semua (' + str(len(targets)) + ' provinsi)'}")
+    logger.info(f"SKIP ACEH         : ya")
     logger.info("=" * 65)
 
-    session  = Session()
-    started  = dt.utcnow()
-    results  = []
+    session = Session()
+    started = dt.utcnow()
+    results = []
     grand_saved = grand_skip = grand_err = 0
 
     try:
@@ -454,14 +459,13 @@ def main():
 
     duration = round((dt.utcnow() - started).total_seconds())
     logger.info("=" * 65)
-    logger.info(f"SELESAI   provinsi={len(results)}")
-    logger.info(f"TOTAL     saved={grand_saved}  skipped={grand_skip}  error={grand_err}")
-    logger.info(f"DURASI    {duration}s ({round(duration / 60, 1)} menit)")
+    logger.info(f"SELESAI     provinsi={len(results)}")
+    logger.info(f"TOTAL       saved={grand_saved}  skipped={grand_skip}  error={grand_err}")
+    logger.info(f"DURASI      {duration}s ({round(duration / 60, 1)} menit)")
     logger.info("=" * 65)
 
-    # Ringkasan per provinsi
     logger.info("\nRINGKASAN PER PROVINSI:")
-    logger.info(f"{'Slug':<12} {'Label':<25} {'Fetched':>8} {'Saved':>7} {'Skip':>6} {'Err':>5} {'Status'}")
+    logger.info(f"{'Slug':<12} {'Label':<25} {'Fetched':>8} {'Saved':>7} {'Skip':>6} {'Err':>5}  {'Status'}")
     logger.info("-" * 75)
     for r in results:
         logger.info(
