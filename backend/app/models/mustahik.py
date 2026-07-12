@@ -5,8 +5,8 @@ from datetime import datetime
 class Mustahik(db.Model):
     __tablename__ = 't_mustahik'
 
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-    nik = db.Column(db.BigInteger, nullable=False, index=True)
+    # PK sesuai struktur tabel DB — tidak ada kolom 'id'
+    nik = db.Column(db.BigInteger, primary_key=True, nullable=False)
     kk = db.Column(db.String(20), nullable=True)
     nama_lengkap = db.Column(db.String(255), nullable=False)
     jenis_kelamin = db.Column(db.Enum('m', 'f'), nullable=False)
@@ -16,7 +16,7 @@ class Mustahik(db.Model):
     # LAZ & Program
     laz_kode = db.Column(db.String(50), db.ForeignKey('t_laz.laz_kode'), nullable=False)
     program_kode = db.Column(db.String(50), db.ForeignKey('t_program.program_kode'), nullable=False)
-    tipe_penerimaan = db.Column(db.Enum('pml', 'pmtl'), nullable=False)  # pml=langsung, pmtl=tidak langsung
+    tipe_penerimaan = db.Column(db.Enum('pml', 'pmtl'), nullable=False)
     rupiah = db.Column(db.Numeric(15, 2), nullable=False)
     tanggal_terima = db.Column(db.Date, nullable=True)
 
@@ -41,7 +41,6 @@ class Mustahik(db.Model):
     # --- Relationships ---
     program = db.relationship('Program', backref='mustahik_list', lazy='joined', foreign_keys=[program_kode])
 
-    # Wilayah domisili
     provinsi = db.relationship(
         'Provinsi', backref='mustahik_domisili', lazy='joined',
         primaryjoin='Mustahik.provinsi_kode == Provinsi.provinsi_kode', foreign_keys=[provinsi_kode]
@@ -59,7 +58,6 @@ class Mustahik(db.Model):
         primaryjoin='Mustahik.kelurahan_kode == Kelurahan.kelurahan_kode', foreign_keys=[kelurahan_kode]
     )
 
-    # Wilayah KTP
     ktp_provinsi = db.relationship(
         'Provinsi', backref='mustahik_ktp', lazy='joined',
         primaryjoin='Mustahik.ktp_provinsi_kode == Provinsi.provinsi_kode', foreign_keys=[ktp_provinsi_kode]
