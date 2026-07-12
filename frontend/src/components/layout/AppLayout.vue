@@ -231,15 +231,17 @@ const userInitials = computed(() =>
 )
 
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard',         icon: 'pi pi-home' },
-  { to: '/mustahik',  label: 'Data Penerima Manfaat',     icon: 'pi pi-users' },
-  { to: '/report',    label: 'Pemeriksaan DTSEN', icon: 'pi pi-chart-line' },
+  { to: '/dashboard',     label: 'Dashboard',              icon: 'pi pi-home'       },
+  { to: '/mustahik',      label: 'Data Penerima Manfaat',  icon: 'pi pi-users'      },
+  { to: '/data-baseline', label: 'Data Baseline',          icon: 'pi pi-database'   },
+  { to: '/report',        label: 'Pemeriksaan DTSEN',      icon: 'pi pi-chart-line' },
 ]
 
 const pageLabels = {
-  '/dashboard': 'Dashboard',
-  '/mustahik':  'Data Mustahik',
-  '/report':    'Pemeriksaan DTSEN',
+  '/dashboard':     'Dashboard',
+  '/mustahik':      'Data Mustahik',
+  '/data-baseline': 'Data Baseline',
+  '/report':        'Pemeriksaan DTSEN',
 }
 const currentPageLabel = computed(() => pageLabels[route.path] || 'Halaman')
 

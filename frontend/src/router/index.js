@@ -6,7 +6,6 @@ const routes = [
   { path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
 
   {
-    // /login tidak punya halaman — LoginView akan redirect ke / dan buka modal
     path: '/login',
     name: 'login',
     component: () => import('@/views/LoginView.vue')
@@ -16,7 +15,6 @@ const routes = [
     path: '/verify-otp',
     name: 'verify-otp',
     component: () => import('@/views/OtpVerificationView.vue'),
-    // requiresOtp: hanya butuh pendingOtpKey di store, bukan accessToken
     meta: { requiresOtp: true }
   },
   {
@@ -35,6 +33,12 @@ const routes = [
     path: '/mustahik/:nikHashed',
     name: 'mustahik-detail',
     component: () => import('@/views/MustahikDetailView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/data-baseline',
+    name: 'data-baseline',
+    component: () => import('@/views/DataBaselineView.vue'),
     meta: { requiresAuth: true }
   },
   {
@@ -62,25 +66,20 @@ router.beforeEach(async (to, _from, next) => {
   const auth       = useAuthStore()
   const loginModal = useLoginModalStore()
 
-  // ── 1. Halaman OTP: cukup ada pendingOtpKey, tidak perlu accessToken ──────
   if (to.meta.requiresOtp) {
     if (!auth.pendingOtpKey) {
-      // Tidak ada sesi OTP aktif — kembali ke home tanpa buka modal
       return next({ name: 'home' })
     }
     return next()
   }
 
-  // ── 2. Halaman publik (home, login, dsb) ─────────────────────────────────
   if (!to.meta.requiresAuth) return next()
 
-  // ── 3. Halaman privat: wajib accessToken ─────────────────────────────────
   if (!auth.accessToken) {
     loginModal.open()
     return next({ name: 'home' })
   }
 
-  // Ada token tapi user belum di-fetch (reload browser)
   if (!auth.user) {
     const ok = await auth.fetchMe()
     if (!ok) {
