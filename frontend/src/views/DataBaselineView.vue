@@ -421,13 +421,16 @@ function resetAnggota() {
 
 // ── Keluarga
 async function loadKeluarga(cursor = null) {
+  // Guard: jangan load jika provinsi belum dipilih
+  if (!keluarga.provinsi) return
   keluarga.loading = true; keluarga.error = ''
   try {
+    // provinsi selalu dikirim sebagai required param (bukan conditional)
     const params = {
-      cursor: cursor || undefined,
-      search: keluarga.search.trim() || undefined,
+      provinsi: keluarga.provinsi,
+      cursor:   cursor || undefined,
+      search:   keluarga.search.trim() || undefined,
     }
-    if (keluarga.provinsi)  params.provinsi       = keluarga.provinsi
     if (keluarga.kabkota)   params.kabkota_kode   = keluarga.kabkota
     if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
     const res = await fetchBaselineKeluarga(params)
