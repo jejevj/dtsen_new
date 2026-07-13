@@ -79,8 +79,8 @@
               </div>
             </template>
 
-            <!-- Disabilitas group: tabel kompak 2-kolom -->
-            <template v-else-if="rowPair.some(g => isDisabilitasGroup(g.group))">
+            <!-- Disabilitas group: tabel 2-kolom (deteksi partial case-insensitive) -->
+            <template v-else-if="rowPair.some(g => isDisabilitasGroup(g))">
               <div>
                 <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
                   <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
@@ -95,7 +95,7 @@
                       </thead>
                       <tbody>
                         <tr v-for="field in group.fields" :key="field.field_key" class="disab-tr">
-                          <td class="disab-td-aspek">{{ field.field_label.replace(/^Disabilitas:\s*/i,'') }}</td>
+                          <td class="disab-td-aspek">{{ stripDisabPrefix(field.field_label) }}</td>
                           <td class="disab-td-status">
                             <span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
                           </td>
@@ -142,8 +142,6 @@
         </div>
 
         <!-- ===== KARTU KELUARGA SECTION ===== -->
-
-        <!-- Banner Desil Nasional -->
         <div v-if="loadingKK" style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">
           <i class="pi pi-spin pi-spinner"></i> Memuat data keluarga…
         </div>
@@ -248,7 +246,7 @@ const detailGroups   = ref([])
 const keluargaGroups = ref([])
 const loadingKK      = ref(false)
 const kkMembers      = ref([])
-const kkDetail       = ref(null)   // ZawaKeluarga data
+const kkDetail       = ref(null)
 
 const { resolveValue, getDetailFields } = useBaselineRefs()
 
@@ -258,15 +256,40 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
+// Kunci field disabilitas — dipakai juga untuk deteksi group
+const DISAB_KEYS = new Set([
+  'penglihatan', 'pendengaran', 'berbicara_komunikasi',
+  'berjalan_atau_naik_tangga', 'menggunakan_tangan_jari',
+  'mengingat_berkonsentrasi', 'mengurus_diri',
+  'belajar_kemampuan_intelektual', 'pengendalian_perilaku', 'kesedihan_depresi',
+])
+
+/**
+ * Sebuah group dianggap "disabilitas" jika:
+ *   (a) nama group mengandung kata "disabilitas" (case-insensitive), ATAU
+ *   (b) mayoritas field-nya adalah field disabilitas
+ */
+function isDisabilitasGroup(group) {
+  if (!group) return false
+  const nameLower = (group.group ?? '').toLowerCase()
+  if (nameLower.includes('disabilitas')) return true
+  const fields = group.fields ?? []
+  if (!fields.length) return false
+  const disabCount = fields.filter(f => DISAB_KEYS.has(f.field_key)).length
+  return disabCount / fields.length >= 0.5
+}
+
+/** Hapus prefix "Disabilitas: " atau "Disabilitas " dari label */
+function stripDisabPrefix(label) {
+  return String(label ?? '').replace(/^disabilitas[:\s]+/i, '').trim() || label
+}
+
 function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
 const STAT_GROUPS = new Set(['Sosial Ekonomi', 'Lainnya', 'Bansos'])
 function isStatGroup(g) { return STAT_GROUPS.has(g) }
-
-const DISABILITAS_GROUPS = new Set(['Disabilitas', 'Kesehatan & Disabilitas'])
-function isDisabilitasGroup(g) { return DISABILITAS_GROUPS.has(g) }
 
 function statBoxBg(key, val) {
   if (key === 'pbi_nas')          return { background: val==='1' ? '#fefce8' : '#f8fafc' }
@@ -275,12 +298,11 @@ function statBoxBg(key, val) {
   return { background: '#f8fafc' }
 }
 
-// Disabilitas level badge
 const DISAB_LEVELS = {
-  '0': { label: 'Tidak ada',           bg: '#f0fdf4', color: '#15803d' },
-  '1': { label: 'Sedikit kesulitan',   bg: '#fefce8', color: '#a16207' },
-  '2': { label: 'Banyak kesulitan',    bg: '#fff7ed', color: '#c2410c' },
-  '3': { label: 'Tidak bisa',          bg: '#fef2f2', color: '#b91c1c' },
+  '0': { label: 'Tidak mengalami kesulitan', bg: '#f0fdf4', color: '#15803d' },
+  '1': { label: 'Ya, sedikit kesulitan',     bg: '#fefce8', color: '#a16207' },
+  '2': { label: 'Ya, banyak kesulitan',      bg: '#fff7ed', color: '#c2410c' },
+  '3': { label: 'Tidak bisa sama sekali',    bg: '#fef2f2', color: '#b91c1c' },
 }
 function disabBadgeLabel(v) {
   const s = String(v ?? '').trim()
@@ -291,12 +313,13 @@ function disabBadgeStyle(v) {
   const lvl = DISAB_LEVELS[s] ?? DISAB_LEVELS['0']
   return {
     background: lvl.bg, color: lvl.color,
-    padding: '1px 8px', borderRadius: '99px',
+    padding: '2px 10px', borderRadius: '99px',
     fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap',
+    display: 'inline-block',
   }
 }
 
-// Desil banner helpers
+// Desil banner
 const DESIL_COLORS = [
   null,
   { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'Sangat Miskin' },
@@ -352,7 +375,11 @@ const GROUP_ICONS = {
   'Ternak': 'pi pi-star', 'Info Keluarga': 'pi pi-users',
   'Alamat': 'pi pi-map-marker',
 }
-function groupIcon(g) { return GROUP_ICONS[g] ?? 'pi pi-list' }
+function groupIcon(g) {
+  const lower = (g ?? '').toLowerCase()
+  if (lower.includes('disabilitas')) return 'pi pi-accessibility'
+  return GROUP_ICONS[g] ?? 'pi pi-list'
+}
 
 function goToMember(nik) {
   if (!nik || nik === data.value?.nomor_induk_kependudukan) return
@@ -371,7 +398,6 @@ async function loadData() {
   } catch (e) { console.error('[AnggotaDetail] gagal load:', e) }
 }
 
-// Fetch anggota KK + detail keluarga secara paralel
 async function loadKKData(nkk) {
   if (!nkk) return
   loadingKK.value = true
@@ -434,13 +460,14 @@ onMounted(async () => {
 .stat-box  { border-radius:10px; padding:16px; }
 .stat-label { font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin:0 0 4px; }
 .stat-val   { font-size:1.25rem; font-weight:900; margin:0; }
-/* ---- Disabilitas tabel kompak ---- */
+/* ---- Disabilitas tabel ---- */
 .disab-table { width:100%; border-collapse:collapse; }
-.disab-th { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.4px; padding:5px 4px 7px; border-bottom:1px solid #f1f5f9; }
-.disab-tr { border-bottom:1px solid #f8fafc; }
+.disab-th { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.4px; padding:6px 8px 8px; border-bottom:2px solid #f1f5f9; }
+.disab-tr { border-bottom:1px solid #f8fafc; transition:background .15s; }
 .disab-tr:last-child { border-bottom:none; }
-.disab-td-aspek  { font-size:12px; color:#374151; font-weight:500; padding:7px 4px; width:55%; }
-.disab-td-status { font-size:12px; padding:7px 4px; text-align:right; }
+.disab-tr:hover { background:#f8fafc; }
+.disab-td-aspek  { font-size:12px; color:#374151; font-weight:500; padding:9px 8px; width:55%; }
+.disab-td-status { font-size:12px; padding:9px 8px; text-align:right; }
 /* ---- Desil banner ---- */
 .desil-banner { border-radius:14px; padding:18px 22px; }
 /* ---- KK table ---- */
