@@ -400,12 +400,22 @@ def _upsert_keluarga_from_api_item(item: dict) -> str:
         return 'error'
 
 
+def _dedupe_by_nik(items: list) -> list:
+    """Hapus duplikat berdasarkan nomor_induk_kependudukan, pertahankan kemunculan pertama."""
+    seen: set = set()
+    result = []
+    for item in items or []:
+        nik = str(item.get("nomor_induk_kependudukan") or "").strip()
+        if not nik or nik in seen:
+            continue
+        seen.add(nik)
+        result.append(item)
+    return result
+
+
 # ---------------------------------------------------------------------------
-# NEW: GET /baseline/anggota/by-nkk?nkk=<16-digit>
-# Ambil semua anggota dalam satu Kartu Keluarga.
-# Alur: 1) cari di DB lokal by nomor_kartu_keluarga
-#        2) jika kosong, fetch dari ZAWA endpoint anggota provinsi yg sama
-#           (deteksi provinsi dari 2 digit pertama NKK)
+# GET /baseline/anggota/by-nkk?nkk=<16-digit>
+# Ambil semua anggota dalam satu Kartu Keluarga, unik per NIK.
 # ---------------------------------------------------------------------------
 @api_v1_bp.get('/baseline/anggota/by-nkk')
 @jwt_required()
@@ -416,10 +426,10 @@ def baseline_anggota_by_nkk():
     if not _is_nkk(nkk):
         return jsonify({"error": "Format NKK tidak valid (harus 16 digit angka)."}), 400
 
-    # 1. Cari di DB lokal
+    # 1. Cari di DB lokal, dedup by NIK
     db_rows = ZawaAnggota.query.filter_by(nomor_kartu_keluarga=nkk).all()
     if db_rows:
-        items = [_row_to_dict(r) for r in db_rows]
+        items = _dedupe_by_nik([_row_to_dict(r) for r in db_rows])
         return jsonify({
             "data": items,
             "meta": {"totalItems": len(items), "source": "local_db", "nkk": nkk}
@@ -436,10 +446,9 @@ def baseline_anggota_by_nkk():
 
     prov_info = PROVINSI_MAP[prov_slug]
 
-    # Fetch halaman demi halaman dari ZAWA sampai ketemu NKK atau habis
     found_items = []
     cursor = None
-    MAX_PAGES = 20  # batasi agar tidak infinite loop
+    MAX_PAGES = 20
     for _ in range(MAX_PAGES):
         params = {"cursor": cursor} if cursor else {}
         payload, err = _fetch_zawa_page(f"zawa/{prov_info['slug']}", params)
@@ -448,15 +457,15 @@ def baseline_anggota_by_nkk():
         for item in payload["items"]:
             if str(item.get("nomor_kartu_keluarga") or "").strip() == nkk:
                 found_items.append(item)
-        # Kalau sudah ada hasil dan halaman selanjutnya tidak ada, stop
         if found_items and not payload.get("hasNextPage"):
             break
-        # Kalau belum ketemu dan masih ada halaman, lanjut
         if not payload.get("hasNextPage") or not payload.get("nextCursor"):
             break
         cursor = payload["nextCursor"]
 
-    # Simpan ke DB lokal
+    # Dedup by NIK sebelum cache dan return
+    found_items = _dedupe_by_nik(found_items)
+
     if found_items:
         try:
             _cache_anggota_to_db(found_items, prov_slug)
