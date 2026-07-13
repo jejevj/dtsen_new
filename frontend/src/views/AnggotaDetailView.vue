@@ -57,122 +57,170 @@
 
         <!-- ===== FIELD GROUPS DARI DB ===== -->
         <template v-if="detailGroups.length">
-          <div
-            v-for="(rowPair, ri) in pairedGroups"
-            :key="ri"
-            :class="rowPair.length === 2 ? 'grid-2' : ''"
-          >
-            <div
-              v-for="group in rowPair"
-              :key="group.group"
-              class="detail-card wm-card"
-            >
-              <!-- Watermark -->
-              <div class="wm-overlay" aria-hidden="true">
-                <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <pattern
-                      :id="'wm-' + slugGroup(group.group)"
-                      x="0" y="0" width="320" height="120"
-                      patternUnits="userSpaceOnUse"
-                      patternTransform="rotate(-35)"
-                    >
-                      <text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
-                      <text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" :fill="'url(#wm-' + slugGroup(group.group) + ')'" />
-                </svg>
-              </div>
+          <template v-for="(rowPair, ri) in pairedGroups" :key="ri">
 
-              <div style="position:relative;z-index:1;">
-                <p class="section-title">
-                  <i :class="groupIcon(group.group)"></i> {{ group.group }}
-                </p>
-
-                <!-- ── Stat-box layout: untuk group Sosial Ekonomi & Lainnya ── -->
-                <template v-if="isStatGroup(group.group)">
-                  <div class="grid-stat">
-                    <div
-                      v-for="field in group.fields"
-                      :key="field.field_key"
-                      class="stat-box"
-                      :style="statBoxBg(field.field_key, data[field.field_key])"
-                    >
-                      <p class="stat-label">{{ field.field_label }}</p>
-                      <!-- ID Pelanggan PLN: monospace -->
-                      <template v-if="field.field_key === 'id_pelanggan_pln'">
-                        <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;"
-                           :style="{ color: data[field.field_key] ? '#15803d' : '#94a3b8' }">
-                          {{ data[field.field_key] ?? 'Tidak ada' }}
-                        </p>
-                      </template>
-                      <!-- pbi_nas -->
-                      <template v-else-if="field.field_key === 'pbi_nas'">
-                        <p class="stat-val" :style="{ color: data[field.field_key]==='1' ? '#b45309' : '#94a3b8' }">
-                          {{ data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}
-                        </p>
-                      </template>
-                      <!-- pbi_pemda -->
-                      <template v-else-if="field.field_key === 'pbi_pemda'">
-                        <p class="stat-val" :style="{ color: data[field.field_key]==='1' ? '#6d28d9' : '#94a3b8' }">
-                          {{ data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}
-                        </p>
-                      </template>
-                      <!-- field stat lainnya: resolve via refs -->
-                      <template v-else>
-                        <p class="stat-val" style="color:#374151;">
-                          {{ resolveValue(field.field_key, data[field.field_key]) }}
-                        </p>
-                      </template>
+            <!-- ── Baris yang mengandung stat-group: layout col-6 + col-6 (KK table) ── -->
+            <template v-if="rowPair.some(g => isStatGroup(g.group))">
+              <div class="grid-2">
+                <!-- Kiri: stat-group cards (satu atau dua) -->
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                  <div
+                    v-for="group in rowPair"
+                    :key="group.group"
+                    class="detail-card wm-card"
+                  >
+                    <div class="wm-overlay" aria-hidden="true">
+                      <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <pattern :id="'wm-' + slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                            <text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                            <text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                          </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" :fill="'url(#wm-' + slugGroup(group.group) + ')'" />
+                      </svg>
                     </div>
-                  </div>
-                </template>
-
-                <!-- ── Tabel biasa: semua group selain stat ── -->
-                <template v-else>
-                  <table class="info-table">
-                    <tbody>
-                      <tr v-for="field in group.fields" :key="field.field_key">
-                        <td class="td-label">{{ field.field_label }}</td>
-                        <td class="td-value">
-                          <template v-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">
-                            {{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}
+                    <div style="position:relative;z-index:1;">
+                      <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
+                      <div class="grid-stat">
+                        <div v-for="field in group.fields" :key="field.field_key" class="stat-box" :style="statBoxBg(field.field_key, data[field.field_key])">
+                          <p class="stat-label">{{ field.field_label }}</p>
+                          <template v-if="field.field_key === 'id_pelanggan_pln'">
+                            <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;" :style="{ color: data[field.field_key] ? '#15803d' : '#94a3b8' }">{{ data[field.field_key] ?? 'Tidak ada' }}</p>
                           </template>
-                          <template v-else-if="field.field_key === 'tanggal_lahir'">
-                            {{ formatTanggal(data[field.field_key]) }}
+                          <template v-else-if="field.field_key === 'pbi_nas'">
+                            <p class="stat-val" :style="{ color: data[field.field_key]==='1' ? '#b45309' : '#94a3b8' }">{{ data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}</p>
                           </template>
-                          <template v-else-if="field.field_key === 'omzet_usaha_utama'">
-                            {{ data[field.field_key] ? formatRupiah(data[field.field_key]) : '-' }}
-                          </template>
-                          <template v-else-if="field.field_key === 'jumlah_usaha'">
-                            {{ data[field.field_key] != null ? data[field.field_key] + ' usaha' : '-' }}
-                          </template>
-                          <template v-else-if="field.field_key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama'">
-                            {{ data[field.field_key] ?? '-' }} orang
-                          </template>
-                          <template v-else-if="isDisabilitas(field.field_key)">
-                            <span :style="{
-                              display:'inline-block', padding:'2px 8px', borderRadius:'99px',
-                              fontSize:'11px', fontWeight:'700',
-                              background: isVal1(data[field.field_key]) ? '#fef2f2' : '#f0fdf4',
-                              color:      isVal1(data[field.field_key]) ? '#dc2626'  : '#15803d'
-                            }">
-                              {{ isVal1(data[field.field_key]) ? 'Ada Hambatan' : 'Normal' }}
-                            </span>
+                          <template v-else-if="field.field_key === 'pbi_pemda'">
+                            <p class="stat-val" :style="{ color: data[field.field_key]==='1' ? '#6d28d9' : '#94a3b8' }">{{ data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}</p>
                           </template>
                           <template v-else>
-                            {{ resolveValue(field.field_key, data[field.field_key]) }}
+                            <p class="stat-val" style="color:#374151;">{{ resolveValue(field.field_key, data[field.field_key]) }}</p>
                           </template>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </template>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
+                <!-- Kanan: Daftar Anggota KK -->
+                <div class="detail-card" style="display:flex;flex-direction:column;">
+                  <p class="section-title"><i class="pi pi-users"></i> Anggota dalam KK
+                    <span style="margin-left:auto;font-size:11px;font-weight:500;color:#94a3b8;font-family:monospace;">{{ data.nomor_kartu_keluarga ?? '-' }}</span>
+                  </p>
+
+                  <!-- Loading KK -->
+                  <div v-if="loadingKK" style="text-align:center;padding:30px;">
+                    <i class="pi pi-spin pi-spinner" style="color:#cbd5e1;"></i>
+                    <p style="color:#94a3b8;font-size:12px;margin-top:8px;">Memuat anggota KK…</p>
+                  </div>
+
+                  <!-- Tabel anggota -->
+                  <template v-else-if="kkMembers.length">
+                    <div style="overflow-x:auto;">
+                      <table class="kk-table">
+                        <thead>
+                          <tr>
+                            <th>Nama</th>
+                            <th>NIK</th>
+                            <th>Hub. Keluarga</th>
+                            <th>L/P</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr
+                            v-for="m in kkMembers"
+                            :key="m.nomor_induk_kependudukan"
+                            :class="{ 'kk-active-row': m.nomor_induk_kependudukan === data.nomor_induk_kependudukan }"
+                            style="cursor:pointer;"
+                            @click="goToMember(m.nomor_induk_kependudukan)"
+                          >
+                            <td>
+                              <span v-if="m.nomor_induk_kependudukan === data.nomor_induk_kependudukan" class="kk-you-badge">Ini</span>
+                              {{ m.nama ?? '-' }}
+                            </td>
+                            <td style="font-family:monospace;font-size:11px;">{{ m.nomor_induk_kependudukan ?? '-' }}</td>
+                            <td>{{ resolveValue('status_hubungan_keluarga', m.status_hubungan_keluarga) }}</td>
+                            <td>
+                              <span :style="{
+                                padding:'2px 7px', borderRadius:'99px', fontSize:'10px', fontWeight:'700',
+                                background: isLakiVal(m.jenis_kelamin) ? '#eff6ff' : '#fdf2f8',
+                                color:      isLakiVal(m.jenis_kelamin) ? '#2563eb' : '#db2777'
+                              }">{{ isLakiVal(m.jenis_kelamin) ? 'L' : 'P' }}</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </template>
+
+                  <!-- Kosong -->
+                  <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
+                    <i class="pi pi-users" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+                    Data anggota KK tidak ditemukan
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </template>
+
+            <!-- ── Baris normal (non-stat): tabel biasa, grid-2 jika ada 2 group ── -->
+            <template v-else>
+              <div :class="rowPair.length === 2 ? 'grid-2' : ''">
+                <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
+                  <div class="wm-overlay" aria-hidden="true">
+                    <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern :id="'wm-' + slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                          <text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                          <text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                        </pattern>
+                      </defs>
+                      <rect width="100%" height="100%" :fill="'url(#wm-' + slugGroup(group.group) + ')'" />
+                    </svg>
+                  </div>
+                  <div style="position:relative;z-index:1;">
+                    <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
+                    <table class="info-table">
+                      <tbody>
+                        <tr v-for="field in group.fields" :key="field.field_key">
+                          <td class="td-label">{{ field.field_label }}</td>
+                          <td class="td-value">
+                            <template v-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">
+                              {{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}
+                            </template>
+                            <template v-else-if="field.field_key === 'tanggal_lahir'">
+                              {{ formatTanggal(data[field.field_key]) }}
+                            </template>
+                            <template v-else-if="field.field_key === 'omzet_usaha_utama'">
+                              {{ data[field.field_key] ? formatRupiah(data[field.field_key]) : '-' }}
+                            </template>
+                            <template v-else-if="field.field_key === 'jumlah_usaha'">
+                              {{ data[field.field_key] != null ? data[field.field_key] + ' usaha' : '-' }}
+                            </template>
+                            <template v-else-if="field.field_key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama'">
+                              {{ data[field.field_key] ?? '-' }} orang
+                            </template>
+                            <template v-else-if="isDisabilitas(field.field_key)">
+                              <span :style="{
+                                display:'inline-block', padding:'2px 8px', borderRadius:'99px',
+                                fontSize:'11px', fontWeight:'700',
+                                background: isVal1(data[field.field_key]) ? '#fef2f2' : '#f0fdf4',
+                                color:      isVal1(data[field.field_key]) ? '#dc2626'  : '#15803d'
+                              }">{{ isVal1(data[field.field_key]) ? 'Ada Hambatan' : 'Normal' }}</span>
+                            </template>
+                            <template v-else>
+                              {{ resolveValue(field.field_key, data[field.field_key]) }}
+                            </template>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+          </template>
         </template>
 
         <!-- Fallback loading groups -->
@@ -187,7 +235,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
@@ -195,11 +243,14 @@ import { fetchBaselineProvinsi } from '@/services/baselineService'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 
 const route     = useRoute()
+const router    = useRouter()
 const authStore = useAuthStore()
 
 const loading      = ref(true)
 const data         = ref(null)
 const detailGroups = ref([])
+const loadingKK    = ref(false)
+const kkMembers    = ref([])
 
 const { resolveValue, getDetailFields } = useBaselineRefs()
 
@@ -209,24 +260,20 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
-// Slug aman untuk id SVG (tanpa spasi)
 function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-// Group yang pakai layout stat-box (bukan tabel)
 const STAT_GROUPS = new Set(['Sosial Ekonomi', 'Lainnya', 'Bansos'])
 function isStatGroup(g) { return STAT_GROUPS.has(g) }
 
-// Background stat-box per field
 function statBoxBg(key, val) {
-  if (key === 'pbi_nas')       return { background: val === '1' ? '#fefce8' : '#f8fafc' }
-  if (key === 'pbi_pemda')     return { background: val === '1' ? '#ede9fe' : '#f8fafc' }
+  if (key === 'pbi_nas')          return { background: val === '1' ? '#fefce8' : '#f8fafc' }
+  if (key === 'pbi_pemda')        return { background: val === '1' ? '#ede9fe' : '#f8fafc' }
   if (key === 'id_pelanggan_pln') return { background: val ? '#f0fdf4' : '#f8fafc' }
   return { background: '#f8fafc' }
 }
 
-// Pasangkan groups 2 per baris
 const pairedGroups = computed(() => {
   const result = []
   for (let i = 0; i < detailGroups.value.length; i += 2) {
@@ -235,10 +282,11 @@ const pairedGroups = computed(() => {
   return result
 })
 
-const isLaki = computed(() => {
-  const v = (data.value?.jenis_kelamin ?? '').toString()
-  return v === '1' || v.toLowerCase() === 'l' || v.toLowerCase() === 'laki-laki'
-})
+const isLaki = computed(() => isLakiVal(data.value?.jenis_kelamin))
+function isLakiVal(v) {
+  const s = (v ?? '').toString()
+  return s === '1' || s.toLowerCase() === 'l' || s.toLowerCase() === 'laki-laki'
+}
 
 const DISABILITAS_KEYS = new Set([
   'penglihatan','pendengaran','berjalan_atau_naik_tangga','menggunakan_tangan_jari',
@@ -249,20 +297,26 @@ function isDisabilitas(key) { return DISABILITAS_KEYS.has(key) }
 function isVal1(v) { return v === '1' || v === 1 }
 
 const GROUP_ICONS = {
-  'Data Pribadi':              'pi pi-id-card',
-  'Alamat KTP':                'pi pi-map-marker',
-  'Alamat Domisili':           'pi pi-map',
-  'Pendidikan':                'pi pi-book',
-  'Pekerjaan':                 'pi pi-briefcase',
-  'Pekerjaan & Usaha':         'pi pi-briefcase',
-  'Kesehatan':                 'pi pi-heart',
-  'Disabilitas':               'pi pi-accessibility',
-  'Kesehatan & Disabilitas':   'pi pi-heart',
-  'Sosial Ekonomi':            'pi pi-wallet',
-  'Bansos':                    'pi pi-wallet',
-  'Lainnya':                   'pi pi-list',
+  'Data Pribadi':            'pi pi-id-card',
+  'Alamat KTP':              'pi pi-map-marker',
+  'Alamat Domisili':         'pi pi-map',
+  'Pendidikan':              'pi pi-book',
+  'Pekerjaan':               'pi pi-briefcase',
+  'Pekerjaan & Usaha':       'pi pi-briefcase',
+  'Kesehatan':               'pi pi-heart',
+  'Disabilitas':             'pi pi-accessibility',
+  'Kesehatan & Disabilitas': 'pi pi-heart',
+  'Sosial Ekonomi':          'pi pi-wallet',
+  'Bansos':                  'pi pi-wallet',
+  'Lainnya':                 'pi pi-list',
 }
 function groupIcon(g) { return GROUP_ICONS[g] ?? 'pi pi-list' }
+
+// Navigasi ke detail anggota lain dalam KK yang sama
+function goToMember(nik) {
+  if (!nik || nik === data.value?.nomor_induk_kependudukan) return
+  router.push({ name: 'AnggotaDetail', params: { nik } })
+}
 
 async function loadData() {
   const nik = route.params.nik
@@ -279,6 +333,32 @@ async function loadData() {
     }
   } catch (e) {
     console.error('[AnggotaDetail] gagal load:', e)
+  }
+}
+
+// Fetch semua anggota dengan NKK yang sama
+async function loadKKMembers(nkk) {
+  if (!nkk) return
+  loadingKK.value = true
+  kkMembers.value = []
+  try {
+    const provinsiList = await fetchBaselineProvinsi()
+    for (const prov of provinsiList) {
+      const res = await api.get('/baseline/anggota', {
+        params: { provinsi: prov.kode, search: nkk },
+      })
+      const items = res.data?.data ?? []
+      // Filter: hanya yang NKK-nya cocok (search bisa return hasil lain)
+      const matched = items.filter(r => r.nomor_kartu_keluarga === nkk)
+      if (matched.length) {
+        kkMembers.value = matched
+        break
+      }
+    }
+  } catch (e) {
+    console.error('[AnggotaDetail] gagal load KK:', e)
+  } finally {
+    loadingKK.value = false
   }
 }
 
@@ -301,11 +381,16 @@ onMounted(async () => {
   ])
   detailGroups.value = groups
   loading.value = false
+
+  // Load anggota KK setelah data utama selesai
+  if (data.value?.nomor_kartu_keluarga) {
+    loadKKMembers(data.value.nomor_kartu_keluarga)
+  }
 })
 </script>
 
 <style scoped>
-.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid-2    { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .grid-stat { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
 @media(max-width:768px) {
   .grid-2    { grid-template-columns:1fr; }
@@ -326,8 +411,22 @@ onMounted(async () => {
 .info-table tr { border-bottom:1px solid #f8fafc; }
 .info-table tr:last-child { border-bottom:none; }
 .td-label { font-size:12px; color:#94a3b8; font-weight:500; padding:9px 4px; width:45%; vertical-align:top; }
-.td-value { font-size:13px; color:#374151; font-weight:600; padding:9px 4px; text-align:right; }
-.stat-box { border-radius:10px; padding:16px; }
+.td-value  { font-size:13px; color:#374151; font-weight:600; padding:9px 4px; text-align:right; }
+.stat-box  { border-radius:10px; padding:16px; }
 .stat-label { font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin:0 0 4px; }
-.stat-val { font-size:1.25rem; font-weight:900; margin:0; }
+.stat-val   { font-size:1.25rem; font-weight:900; margin:0; }
+
+/* Tabel KK */
+.kk-table { width:100%; border-collapse:collapse; font-size:12px; }
+.kk-table thead tr { background:#f8fafc; }
+.kk-table th { padding:8px 10px; text-align:left; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid #f1f5f9; }
+.kk-table td { padding:9px 10px; border-bottom:1px solid #f8fafc; color:#374151; font-weight:500; vertical-align:middle; }
+.kk-table tr:last-child td { border-bottom:none; }
+.kk-table tbody tr:hover td { background:#f8fafc; }
+.kk-active-row td { background:#eff6ff !important; }
+.kk-you-badge {
+  display:inline-block; padding:1px 6px; border-radius:99px;
+  font-size:10px; font-weight:700; background:#2563eb; color:white;
+  margin-right:5px; vertical-align:middle;
+}
 </style>
