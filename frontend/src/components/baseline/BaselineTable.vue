@@ -49,8 +49,26 @@
             <td
               v-for="col in displayColumns" :key="col"
               class="px-4 py-2.5 text-slate-700 max-w-[220px] truncate"
-              :title="String(row[col] ?? '')"
-            >{{ row[col] ?? '-' }}</td>
+              :title="displayValue(col, row[col])"
+            >
+              <!-- Badge untuk jenis_kelamin -->
+              <template v-if="col === 'jenis_kelamin'">
+                <span
+                  :class="[
+                    'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold',
+                    genderClass(row[col])
+                  ]"
+                >
+                  <i :class="genderIcon(row[col])"></i>
+                  {{ displayValue(col, row[col]) }}
+                </span>
+              </template>
+
+              <!-- Nilai biasa dengan ref lookup -->
+              <template v-else>
+                {{ displayValue(col, row[col]) }}
+              </template>
+            </td>
             <td class="px-4 py-2.5 text-center">
               <Button
                 icon="pi pi-eye" size="small" text rounded
@@ -87,8 +105,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import Button from 'primevue/button'
+import { useBaselineRefs } from '@/composables/useBaselineRefs'
 
 const props = defineProps({
   loading:      { type: Boolean, default: false },
@@ -104,6 +123,44 @@ const props = defineProps({
 })
 defineEmits(['next', 'prev', 'detail'])
 
+// ── Refs resolver
+const { ready, init, resolveValue, hasRefs } = useBaselineRefs()
+onMounted(() => init())
+
+/**
+ * Tampilkan nilai kolom:
+ * - Jika ada mapping di tampilan-dtsen → gunakan label
+ * - Jika tidak ada → tampilkan raw
+ */
+function displayValue(col, rawValue) {
+  if (!ready.value) {
+    // Belum siap: fallback sementara untuk jenis_kelamin
+    if (col === 'jenis_kelamin') {
+      const fallback = { '1': 'Laki-laki', '2': 'Perempuan' }
+      return fallback[String(rawValue)] ?? (rawValue ?? '-')
+    }
+    return rawValue ?? '-'
+  }
+  if (hasRefs(col)) {
+    return resolveValue(col, rawValue)
+  }
+  return rawValue ?? '-'
+}
+
+// Badge styling jenis_kelamin
+function genderClass(val) {
+  const v = String(val)
+  if (v === '1') return 'bg-blue-50 text-blue-700 border border-blue-200'
+  if (v === '2') return 'bg-pink-50 text-pink-700 border border-pink-200'
+  return 'bg-slate-100 text-slate-500'
+}
+function genderIcon(val) {
+  const v = String(val)
+  if (v === '1') return 'pi pi-mars'
+  if (v === '2') return 'pi pi-venus'
+  return 'pi pi-question-circle'
+}
+
 // Kolom prioritas per tipe tabel
 const ANGGOTA_COLS  = ['nama', 'nomor_induk_kependudukan', 'jenis_kelamin', 'kabupaten_kota_ktp', 'provinsi_ktp']
 const KELUARGA_COLS = ['nomor_kartu_keluarga', 'nama_anggota_keluarga', 'jumlah_anggota_keluarga', 'kabupaten_kota', 'provinsi']
@@ -111,9 +168,7 @@ const KELUARGA_COLS = ['nomor_kartu_keluarga', 'nama_anggota_keluarga', 'jumlah_
 const displayColumns = computed(() => {
   const preferred = props.type === 'keluarga' ? KELUARGA_COLS : ANGGOTA_COLS
   const available = props.columns
-  // Ambil kolom yang tersedia sesuai urutan preferred
   const picked = preferred.filter(c => available.includes(c))
-  // Jika kurang dari 4 kolom cocok, tambahkan dari kolom tersedia (max 5)
   if (picked.length < 4) {
     for (const c of available) {
       if (!picked.includes(c)) picked.push(c)
