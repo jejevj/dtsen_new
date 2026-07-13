@@ -42,7 +42,7 @@
                   {{ isLaki ? 'Laki-laki' : 'Perempuan' }}
                 </span>
                 <span v-if="data.status_kawin" style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#f0fdf4;color:#15803d;">
-                  {{ statusKawinLabel(data.status_kawin) }}
+                  {{ ref('status_kawin', data.status_kawin) }}
                 </span>
               </div>
               <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ data.nomor_induk_kependudukan ?? '-' }}</strong></p>
@@ -76,8 +76,8 @@
                 <tbody>
                   <tr><td class="td-label">Tanggal Lahir</td><td class="td-value">{{ formatTanggal(data.tanggal_lahir) }}</td></tr>
                   <tr><td class="td-label">Jenis Kelamin</td><td class="td-value">{{ isLaki ? 'Laki-laki' : 'Perempuan' }}</td></tr>
-                  <tr><td class="td-label">Status Kawin</td><td class="td-value">{{ statusKawinLabel(data.status_kawin) }}</td></tr>
-                  <tr><td class="td-label">Hub. Keluarga</td><td class="td-value">{{ hubunganLabel(data.status_hubungan_keluarga) }}</td></tr>
+                  <tr><td class="td-label">Status Kawin</td><td class="td-value">{{ ref('status_kawin', data.status_kawin) }}</td></tr>
+                  <tr><td class="td-label">Hub. Keluarga</td><td class="td-value">{{ ref('status_hubungan_keluarga', data.status_hubungan_keluarga) }}</td></tr>
                   <tr><td class="td-label">No. KK</td><td class="td-value" style="font-family:monospace;font-size:12px;">{{ data.nomor_kartu_keluarga ?? '-' }}</td></tr>
                 </tbody>
               </table>
@@ -114,10 +114,10 @@
               <p class="section-title"><i class="pi pi-book"></i> Pendidikan</p>
               <table class="info-table">
                 <tbody>
-                  <tr><td class="td-label">Partisipasi Sekolah</td><td class="td-value">{{ partisipasiLabel(data.partisipasi_sekolah) }}</td></tr>
-                  <tr><td class="td-label">Jenjang Tertinggi</td><td class="td-value">{{ jenjangLabel(data.jenjang_tertinggi_yang_diduduki) }}</td></tr>
+                  <tr><td class="td-label">Partisipasi Sekolah</td><td class="td-value">{{ ref('partisipasi_sekolah', data.partisipasi_sekolah) }}</td></tr>
+                  <tr><td class="td-label">Jenjang Tertinggi</td><td class="td-value">{{ ref('jenjang_tertinggi_yang_diduduki', data.jenjang_tertinggi_yang_diduduki) }}</td></tr>
                   <tr><td class="td-label">Kelas Tertinggi</td><td class="td-value">{{ data.kelas_tertinggi_yang_diduduki != null ? 'Kelas ' + data.kelas_tertinggi_yang_diduduki : '-' }}</td></tr>
-                  <tr><td class="td-label">Ijazah Tertinggi</td><td class="td-value">{{ ijazahLabel(data.ijazah_tertinggi_yang_dimiliki) }}</td></tr>
+                  <tr><td class="td-label">Ijazah Tertinggi</td><td class="td-value">{{ ref('ijazah_tertinggi_yang_dimiliki', data.ijazah_tertinggi_yang_dimiliki) }}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -130,10 +130,10 @@
               <p class="section-title"><i class="pi pi-briefcase"></i> Pekerjaan &amp; Usaha</p>
               <table class="info-table">
                 <tbody>
-                  <tr><td class="td-label">Status Bekerja</td><td class="td-value">{{ statusBekerjaLabel(data.status_bekerja) }}</td></tr>
-                  <tr><td class="td-label">Status dlm Pekerjaan</td><td class="td-value">{{ statusDalamPekerjaanLabel(data.status_dalam_pekerjaan_utama) }}</td></tr>
-                  <tr><td class="td-label">Lapangan Usaha</td><td class="td-value">{{ lapanganUsahaLabel(data.lapangan_usaha_dari_pekerjaan_utama) }}</td></tr>
-                  <tr><td class="td-label">Kepemilikan Usaha</td><td class="td-value">{{ kepemilikanUsahaLabel(data.kepemilikan_usaha) }}</td></tr>
+                  <tr><td class="td-label">Status Bekerja</td><td class="td-value">{{ ref('status_bekerja', data.status_bekerja) }}</td></tr>
+                  <tr><td class="td-label">Status dlm Pekerjaan</td><td class="td-value">{{ ref('status_dalam_pekerjaan_utama', data.status_dalam_pekerjaan_utama) }}</td></tr>
+                  <tr><td class="td-label">Lapangan Usaha</td><td class="td-value">{{ ref('lapangan_usaha_dari_pekerjaan_utama', data.lapangan_usaha_dari_pekerjaan_utama) }}</td></tr>
+                  <tr><td class="td-label">Kepemilikan Usaha</td><td class="td-value">{{ ref('kepemilikan_usaha', data.kepemilikan_usaha) }}</td></tr>
                   <tr><td class="td-label">Jumlah Usaha</td><td class="td-value">{{ data.jumlah_usaha != null ? data.jumlah_usaha + ' usaha' : '-' }}</td></tr>
                   <tr><td class="td-label">Omzet Usaha/Bln</td><td class="td-value">{{ data.omzet_usaha_utama ? formatRupiah(data.omzet_usaha_utama) : '-' }}</td></tr>
                   <tr><td class="td-label">Pekerja Dibayar</td><td class="td-value">{{ data.jumlah_pekerja_yang_dibayar_dari_usaha_utama ?? '-' }} orang</td></tr>
@@ -163,7 +163,7 @@
               <div>
                 <p style="font-size:11px;color:#94a3b8;font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;">Kondisi Gizi</p>
                 <span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:#fef3c7;color:#b45309;">
-                  {{ giziLabel(data.kondisi_gizi) }}
+                  {{ ref('kondisi_gizi', data.kondisi_gizi) }}
                 </span>
               </div>
               <div>
@@ -174,7 +174,7 @@
                   background: data.penyakit_kronis ? '#fef2f2' : '#f0fdf4',
                   color:       data.penyakit_kronis ? '#dc2626'  : '#15803d'
                 }">
-                  {{ penyakitKronisLabel(data.penyakit_kronis) }}
+                  {{ ref('penyakit_kronis', data.penyakit_kronis) }}
                 </span>
               </div>
             </div>
@@ -212,18 +212,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref as vueRef, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import { fetchBaselineProvinsi } from '@/services/baselineService'
+import { useBaselineRefs } from '@/composables/useBaselineRefs'
 
 const route     = useRoute()
 const authStore = useAuthStore()
 
-const loading = ref(true)
-const data    = ref(null)
+const loading = vueRef(true)
+const data    = vueRef(null)
+
+// ── Refs resolver dari m_tampilan_dtsen_ref
+const { ready, init, resolveValue } = useBaselineRefs()
+
+/**
+ * Shorthand untuk resolve nilai field ke label.
+ * Jika refs belum siap atau tidak ada mapping → kembalikan raw value.
+ */
+function ref(fieldKey, rawValue) {
+  return resolveValue(fieldKey, rawValue)
+}
 
 const userIdentifier = computed(() => {
   const u = authStore.user
@@ -231,10 +243,6 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
-/**
- * Cari anggota by NIK di semua provinsi yang bisa diakses.
- * Loop satu per satu sampai ketemu agar tidak tergantung urutan provinsi.
- */
 async function loadData() {
   loading.value = true
   data.value = null
@@ -285,74 +293,23 @@ const disabilitasItems = computed(() => [
   { label: 'Kesedihan',         val: data.value?.kesedihan_depresi },
 ])
 
-// ─── Label helpers ──────────────────────────────────────────
+// ─── Helper non-ref ──────────────────────────────────────────
 function formatTanggal(v) {
   if (!v) return '-'
-  // Handle format YYYY-MM-DD maupun ISO datetime
   const str = String(v).includes('T') ? v : v + 'T00:00:00'
   const d = new Date(str)
   if (isNaN(d.getTime())) return String(v)
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
 }
-function statusKawinLabel(v) {
-  return { '1':'Belum Kawin','2':'Kawin','3':'Cerai Hidup','4':'Cerai Mati' }[String(v)] ?? v ?? '-'
-}
-function hubunganLabel(v) {
-  return {
-    '1':'Kepala Keluarga','2':'Istri/Suami','3':'Anak',
-    '4':'Menantu','5':'Cucu','6':'Orang Tua','7':'Mertua',
-    '8':'Famili Lain','9':'Pembantu','10':'Lainnya'
-  }[String(v)] ?? v ?? '-'
-}
-function partisipasiLabel(v) {
-  return { '1':'Tidak/Belum Sekolah','2':'Masih Sekolah','3':'Tidak Sekolah Lagi' }[String(v)] ?? v ?? '-'
-}
-function jenjangLabel(v) {
-  return {
-    '0':'Tidak/Belum Sekolah','1':'SD/MI','2':'SMP/MTs','3':'SMA/MA/SMK',
-    '4':'D1/D2/D3','5':'D4/S1','6':'S2','7':'S3'
-  }[String(v)] ?? v ?? '-'
-}
-function ijazahLabel(v) {
-  return {
-    '0':'Tidak Ada Ijazah','1':'SD/MI','2':'SMP/MTs','3':'SMA/MA/SMK',
-    '4':'D1/D2/D3','5':'D4/S1','6':'S2','7':'S3'
-  }[String(v)] ?? v ?? '-'
-}
-function statusBekerjaLabel(v) {
-  return {
-    '1':'Bekerja','2':'Tidak Bekerja','3':'Ibu Rumah Tangga','4':'Sekolah','5':'Lainnya'
-  }[String(v)] ?? v ?? '-'
-}
-function statusDalamPekerjaanLabel(v) {
-  return {
-    '1':'Berusaha Sendiri','2':'Berusaha Dibantu',
-    '3':'Buruh/Karyawan','4':'Pekerja Bebas','5':'Pekerja Tak Dibayar'
-  }[String(v)] ?? v ?? '-'
-}
-function lapanganUsahaLabel(v) {
-  return {
-    '1':'Pertanian','2':'Pertambangan','3':'Industri Pengolahan',
-    '4':'Listrik/Gas/Air','5':'Konstruksi','6':'Perdagangan',
-    '7':'Transportasi','8':'Keuangan','9':'Jasa'
-  }[String(v)] ?? v ?? '-'
-}
-function kepemilikanUsahaLabel(v) {
-  return { '1':'Milik Sendiri','2':'Bukan Milik Sendiri' }[String(v)] ?? v ?? '-'
-}
-function giziLabel(v) {
-  return { '1':'Baik','2':'Kurang','3':'Buruk' }[String(v)] ?? v ?? '-'
-}
-function penyakitKronisLabel(v) {
-  if (!v && v !== 0) return '-'
-  return { '0':'Tidak Ada','1':'Satu Jenis','2':'Dua Jenis atau Lebih' }[String(v)] ?? 'Ada'
-}
 function formatRupiah(n) {
   if (!n && n !== 0) return '-'
-  return 'Rp ' + Number(n).toLocaleString('id-ID')
+  return 'Rp ' + Number(n).toLocaleString('id-ID')
 }
 
-onMounted(() => loadData())
+onMounted(async () => {
+  // Jalankan paralel: fetch data anggota + fetch refs
+  await Promise.all([loadData(), init()])
+})
 </script>
 
 <style scoped>
