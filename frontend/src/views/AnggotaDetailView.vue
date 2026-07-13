@@ -55,8 +55,7 @@
           </div>
         </div>
 
-        <!-- ===== FIELD GROUPS DINAMIS (is_detail=1, kategori=individu) ===== -->
-        <!-- Render 2 group per baris -->
+        <!-- ===== FIELD GROUPS DARI DB (is_detail=1, kategori=individu) ===== -->
         <template v-if="detailGroups.length">
           <div
             v-for="(rowPair, ri) in pairedGroups"
@@ -68,16 +67,21 @@
               :key="group.group"
               class="detail-card wm-card"
             >
-              <!-- Watermark -->
+              <!-- Watermark: gunakan slug agar id SVG valid (tanpa spasi) -->
               <div class="wm-overlay" aria-hidden="true">
                 <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                   <defs>
-                    <pattern :id="'wm-g-' + group.group" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                    <pattern
+                      :id="'wm-' + slugGroup(group.group)"
+                      x="0" y="0" width="320" height="120"
+                      patternUnits="userSpaceOnUse"
+                      patternTransform="rotate(-35)"
+                    >
                       <text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
                       <text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                     </pattern>
                   </defs>
-                  <rect width="100%" height="100%" :fill="'url(#wm-g-' + group.group + ')'" />
+                  <rect width="100%" height="100%" :fill="'url(#wm-' + slugGroup(group.group) + ')'" />
                 </svg>
               </div>
 
@@ -90,7 +94,6 @@
                     <tr v-for="field in group.fields" :key="field.field_key">
                       <td class="td-label">{{ field.field_label }}</td>
                       <td class="td-value">
-                        <!-- Nilai khusus: tidak di-resolve via ref -->
                         <template v-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">
                           {{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}
                         </template>
@@ -106,8 +109,7 @@
                         <template v-else-if="field.field_key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama'">
                           {{ data[field.field_key] ?? '-' }} orang
                         </template>
-                        <!-- Disabilitas: badge Ada Hambatan / Normal -->
-                        <template v-else-if="field.field_type === 'Boolean' || isDisabilitas(field.field_key)">
+                        <template v-else-if="isDisabilitas(field.field_key)">
                           <span :style="{
                             display:'inline-block', padding:'2px 8px', borderRadius:'99px',
                             fontSize:'11px', fontWeight:'700',
@@ -117,7 +119,6 @@
                             {{ isVal1(data[field.field_key]) ? 'Ada Hambatan' : 'Normal' }}
                           </span>
                         </template>
-                        <!-- Default: resolve via refs -->
                         <template v-else>
                           {{ resolveValue(field.field_key, data[field.field_key]) }}
                         </template>
@@ -130,30 +131,9 @@
           </div>
         </template>
 
-        <!-- Fallback jika detailGroups belum siap -->
+        <!-- Fallback loading groups -->
         <div v-else-if="!loading" style="text-align:center;padding:40px;color:#94a3b8;font-size:13px;">
           <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi tampilan…
-        </div>
-
-        <!-- ===== RINGKASAN BANSOS (selalu tampil) ===== -->
-        <div class="detail-card">
-          <p class="section-title"><i class="pi pi-wallet"></i> Status Bantuan Sosial</p>
-          <div class="grid-3">
-            <div class="stat-box" :style="{ background: data.pbi_nas==='1' ? '#fefce8' : '#f8fafc' }">
-              <p class="stat-label">PBI Nasional</p>
-              <p class="stat-val" :style="{ color: data.pbi_nas==='1' ? '#b45309' : '#94a3b8' }">{{ data.pbi_nas === '1' ? 'Terdaftar' : 'Tidak' }}</p>
-            </div>
-            <div class="stat-box" :style="{ background: data.pbi_pemda==='1' ? '#ede9fe' : '#f8fafc' }">
-              <p class="stat-label">PBI Pemda</p>
-              <p class="stat-val" :style="{ color: data.pbi_pemda==='1' ? '#6d28d9' : '#94a3b8' }">{{ data.pbi_pemda === '1' ? 'Terdaftar' : 'Tidak' }}</p>
-            </div>
-            <div class="stat-box" :style="{ background: data.id_pelanggan_pln ? '#f0fdf4' : '#f8fafc' }">
-              <p class="stat-label">ID Pelanggan PLN</p>
-              <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;" :style="{ color: data.id_pelanggan_pln ? '#15803d' : '#94a3b8' }">
-                {{ data.id_pelanggan_pln ?? 'Tidak ada' }}
-              </p>
-            </div>
-          </div>
         </div>
 
       </template>
@@ -175,7 +155,7 @@ const authStore = useAuthStore()
 
 const loading      = ref(true)
 const data         = ref(null)
-const detailGroups = ref([])   // [{ group, fields[] }]
+const detailGroups = ref([])
 
 const { resolveValue, getDetailFields } = useBaselineRefs()
 
@@ -185,7 +165,12 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
-// Pasangkan groups 2 per baris untuk layout grid-2
+// Konversi nama group ke slug valid untuk id SVG (tanpa spasi/karakter aneh)
+function slugGroup(g) {
+  return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+// Pasangkan groups 2 per baris
 const pairedGroups = computed(() => {
   const result = []
   for (let i = 0; i < detailGroups.value.length; i += 2) {
@@ -199,7 +184,6 @@ const isLaki = computed(() => {
   return v === '1' || v.toLowerCase() === 'l' || v.toLowerCase() === 'laki-laki'
 })
 
-// Daftar field_key disabilitas yang butuh badge Ada Hambatan / Normal
 const DISABILITAS_KEYS = new Set([
   'penglihatan','pendengaran','berjalan_atau_naik_tangga','menggunakan_tangan_jari',
   'mengingat_berkonsentrasi','mengurus_diri','berbicara_komunikasi',
@@ -208,18 +192,19 @@ const DISABILITAS_KEYS = new Set([
 function isDisabilitas(key) { return DISABILITAS_KEYS.has(key) }
 function isVal1(v) { return v === '1' || v === 1 }
 
-// Icon per group
 const GROUP_ICONS = {
-  'Data Pribadi': 'pi pi-id-card',
-  'Alamat KTP':   'pi pi-map-marker',
-  'Alamat Domisili': 'pi pi-map',
-  'Pendidikan':   'pi pi-book',
-  'Pekerjaan':    'pi pi-briefcase',
-  'Pekerjaan & Usaha': 'pi pi-briefcase',
-  'Kesehatan':    'pi pi-heart',
-  'Disabilitas':  'pi pi-accessibility',
-  'Kesehatan & Disabilitas': 'pi pi-heart',
-  'Bansos':       'pi pi-wallet',
+  'Data Pribadi':              'pi pi-id-card',
+  'Alamat KTP':                'pi pi-map-marker',
+  'Alamat Domisili':           'pi pi-map',
+  'Pendidikan':                'pi pi-book',
+  'Pekerjaan':                 'pi pi-briefcase',
+  'Pekerjaan & Usaha':         'pi pi-briefcase',
+  'Kesehatan':                 'pi pi-heart',
+  'Disabilitas':               'pi pi-accessibility',
+  'Kesehatan & Disabilitas':   'pi pi-heart',
+  'Sosial Ekonomi':            'pi pi-wallet',
+  'Bansos':                    'pi pi-wallet',
+  'Lainnya':                   'pi pi-list',
 }
 function groupIcon(g) { return GROUP_ICONS[g] ?? 'pi pi-list' }
 
