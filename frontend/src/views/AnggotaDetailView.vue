@@ -50,7 +50,7 @@
         <template v-if="detailGroups.length">
           <template v-for="(rowPair, ri) in pairedGroups" :key="ri">
 
-            <!-- Stat-group: full width satu kolom (KK card sudah di luar loop ini) -->
+            <!-- Stat-group -->
             <template v-if="rowPair.some(g => isStatGroup(g.group))">
               <div style="display:flex;flex-direction:column;gap:16px;">
                 <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
@@ -79,30 +79,25 @@
               </div>
             </template>
 
-            <!-- Disabilitas group: tabel 2-kolom Aspek | Status -->
+            <!-- Disabilitas group: badge kompak per baris -->
             <template v-else-if="rowPair.some(g => isDisabilitasGroup(g.group))">
               <div>
                 <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
                   <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
                   <div style="position:relative;z-index:1;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
-                    <table class="disab-table">
-                      <thead><tr><th class="disab-th-aspek">Aspek</th><th class="disab-th-status">Status</th></tr></thead>
-                      <tbody>
-                        <tr v-for="field in group.fields" :key="field.field_key">
-                          <td class="disab-td-aspek">{{ field.field_label }}</td>
-                          <td class="disab-td-status" :style="{ color: isVal1(data[field.field_key])?'#dc2626':'#15803d' }">
-                            {{ isVal1(data[field.field_key]) ? 'Ada Hambatan' : 'Tidak mengalami kesulitan' }}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div class="disab-list">
+                      <div v-for="field in group.fields" :key="field.field_key" class="disab-row">
+                        <span class="disab-aspek">{{ field.field_label.replace(/^Disabilitas:\s*/i,'') }}</span>
+                        <span class="disab-badge" :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </template>
 
-            <!-- Normal group: info-table, grid-2 jika 2 group -->
+            <!-- Normal group -->
             <template v-else>
               <div :class="rowPair.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
@@ -220,6 +215,38 @@ function statBoxBg(key, val) {
   return { background: '#f8fafc' }
 }
 
+// Level disabilitas ZAWA:
+// 0 / null / ''  = tidak ada kesulitan
+// 1              = sedikit kesulitan, tidak butuh bantuan
+// 2              = banyak kesulitan
+// 3              = tidak bisa sama sekali
+// Nilai string dari resolveValue juga ditangani
+const DISAB_LEVELS = {
+  '0': { label: 'Tidak ada kesulitan',             bg: '#f0fdf4', color: '#15803d' },
+  '1': { label: 'Sedikit kesulitan',               bg: '#fefce8', color: '#a16207' },
+  '2': { label: 'Banyak kesulitan',                bg: '#fff7ed', color: '#c2410c' },
+  '3': { label: 'Tidak bisa sama sekali',          bg: '#fef2f2', color: '#b91c1c' },
+}
+
+function disabBadgeLabel(v) {
+  const s = String(v ?? '').trim()
+  return (DISAB_LEVELS[s] ?? DISAB_LEVELS['0']).label
+}
+function disabBadgeStyle(v) {
+  const s = String(v ?? '').trim()
+  const lvl = DISAB_LEVELS[s] ?? DISAB_LEVELS['0']
+  return {
+    background: lvl.bg,
+    color:      lvl.color,
+    padding:    '2px 9px',
+    borderRadius: '99px',
+    fontSize:   '11px',
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+    flexShrink: '0',
+  }
+}
+
 const pairedGroups = computed(() => {
   const result = []
   for (let i = 0; i < detailGroups.value.length; i += 2) {
@@ -263,7 +290,6 @@ async function loadData() {
   } catch (e) { console.error('[AnggotaDetail] gagal load:', e) }
 }
 
-// Fetch anggota KK via endpoint baru /baseline/anggota/by-nkk
 async function loadKKMembers(nkk) {
   if (!nkk) return
   loadingKK.value = true
@@ -315,13 +341,13 @@ onMounted(async () => {
 .stat-box  { border-radius:10px; padding:16px; }
 .stat-label { font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin:0 0 4px; }
 .stat-val   { font-size:1.25rem; font-weight:900; margin:0; }
-.disab-table { width:100%; border-collapse:collapse; }
-.disab-table tr { border-bottom:1px solid #f8fafc; }
-.disab-table tr:last-child { border-bottom:none; }
-.disab-th-aspek  { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; padding:8px 6px; text-align:left; border-bottom:2px solid #f1f5f9; width:60%; }
-.disab-th-status { font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; padding:8px 6px; text-align:right; border-bottom:2px solid #f1f5f9; }
-.disab-td-aspek  { font-size:12px; color:#374151; font-weight:500; padding:10px 6px; vertical-align:middle; }
-.disab-td-status { font-size:12px; font-weight:700; padding:10px 6px; text-align:right; vertical-align:middle; }
+/* ---- Disabilitas badge list ---- */
+.disab-list { display:flex; flex-direction:column; gap:6px; }
+.disab-row  { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:5px 0; border-bottom:1px solid #f8fafc; }
+.disab-row:last-child { border-bottom:none; }
+.disab-aspek { font-size:12px; color:#374151; font-weight:500; flex:1; min-width:0; }
+.disab-badge { /* styled inline via disabBadgeStyle() */ }
+/* ---- KK table ---- */
 .kk-table { width:100%; border-collapse:collapse; font-size:12px; }
 .kk-table thead tr { background:#f8fafc; }
 .kk-table th { padding:8px 10px; text-align:left; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid #f1f5f9; }
