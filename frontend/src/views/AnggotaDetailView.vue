@@ -46,14 +46,40 @@
           </div>
         </div>
 
-        <!-- ===== FIELD GROUPS (individu) ===== -->
+        <!-- ===== FIELD GROUPS (individu) — render per-group ===== -->
         <template v-if="detailGroups.length">
-          <template v-for="(rowPair, ri) in pairedGroups" :key="ri">
+          <template v-for="(slot, si) in groupSlots" :key="si">
 
-            <!-- Stat-group -->
-            <template v-if="rowPair.some(g => isStatGroup(g.group))">
+            <!-- Disabilitas: selalu tabel penuh, tidak dipasangkan -->
+            <template v-if="slot.type === 'disab'">
+              <div class="detail-card wm-card">
+                <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(slot.groups[0].group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(slot.groups[0].group)+')'" /></svg></div>
+                <div style="position:relative;z-index:1;">
+                  <p class="section-title"><i :class="groupIcon(slot.groups[0].group)"></i> {{ slot.groups[0].group }}</p>
+                  <table class="disab-table">
+                    <thead>
+                      <tr>
+                        <th class="disab-th">Aspek</th>
+                        <th class="disab-th" style="text-align:right;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="field in slot.groups[0].fields" :key="field.field_key" class="disab-tr">
+                        <td class="disab-td-aspek">{{ stripDisabPrefix(field.field_label) }}</td>
+                        <td class="disab-td-status">
+                          <span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+            <!-- Stat group -->
+            <template v-else-if="slot.type === 'stat'">
               <div style="display:flex;flex-direction:column;gap:16px;">
-                <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
+                <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
                   <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
                   <div style="position:relative;z-index:1;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
@@ -79,38 +105,10 @@
               </div>
             </template>
 
-            <!-- Disabilitas group: tabel 2-kolom (deteksi partial case-insensitive) -->
-            <template v-else-if="rowPair.some(g => isDisabilitasGroup(g))">
-              <div>
-                <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
-                  <div style="position:relative;z-index:1;">
-                    <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
-                    <table class="disab-table">
-                      <thead>
-                        <tr>
-                          <th class="disab-th">Aspek</th>
-                          <th class="disab-th" style="text-align:right;">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="field in group.fields" :key="field.field_key" class="disab-tr">
-                          <td class="disab-td-aspek">{{ stripDisabPrefix(field.field_label) }}</td>
-                          <td class="disab-td-status">
-                            <span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </template>
-
-            <!-- Normal group -->
+            <!-- Normal: bisa 1 atau 2 kolom -->
             <template v-else>
-              <div :class="rowPair.length === 2 ? 'grid-2' : ''">
-                <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
+              <div :class="slot.groups.length === 2 ? 'grid-2' : ''">
+                <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
                   <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
                   <div style="position:relative;z-index:1;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
@@ -256,30 +254,61 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
-// Kunci field disabilitas — dipakai juga untuk deteksi group
+// ---- Tipe group ----
 const DISAB_KEYS = new Set([
   'penglihatan', 'pendengaran', 'berbicara_komunikasi',
   'berjalan_atau_naik_tangga', 'menggunakan_tangan_jari',
   'mengingat_berkonsentrasi', 'mengurus_diri',
   'belajar_kemampuan_intelektual', 'pengendalian_perilaku', 'kesedihan_depresi',
 ])
+const STAT_GROUPS = new Set(['Sosial Ekonomi', 'Lainnya', 'Bansos'])
 
-/**
- * Sebuah group dianggap "disabilitas" jika:
- *   (a) nama group mengandung kata "disabilitas" (case-insensitive), ATAU
- *   (b) mayoritas field-nya adalah field disabilitas
- */
-function isDisabilitasGroup(group) {
-  if (!group) return false
-  const nameLower = (group.group ?? '').toLowerCase()
-  if (nameLower.includes('disabilitas')) return true
+function groupType(group) {
+  const name = (group.group ?? '').toLowerCase()
+  if (name.includes('disabilitas')) return 'disab'
   const fields = group.fields ?? []
-  if (!fields.length) return false
-  const disabCount = fields.filter(f => DISAB_KEYS.has(f.field_key)).length
-  return disabCount / fields.length >= 0.5
+  if (fields.length && fields.filter(f => DISAB_KEYS.has(f.field_key)).length / fields.length >= 0.5) return 'disab'
+  if (STAT_GROUPS.has(group.group)) return 'stat'
+  return 'normal'
 }
 
-/** Hapus prefix "Disabilitas: " atau "Disabilitas " dari label */
+/**
+ * Buat slot render:
+ * - group disabilitas → slot sendiri (type:'disab', groups:[g])
+ * - group stat        → dikumpulkan berurutan jadi satu slot (type:'stat')
+ * - group normal      → dipasangkan 2-2 (type:'normal', groups:[g1,g2?])
+ */
+const groupSlots = computed(() => {
+  const slots = []
+  const normals = []
+
+  function flushNormals() {
+    while (normals.length) slots.push({ type: 'normal', groups: normals.splice(0, 2) })
+  }
+
+  let statBuf = []
+  function flushStat() {
+    if (statBuf.length) { slots.push({ type: 'stat', groups: [...statBuf] }); statBuf = [] }
+  }
+
+  for (const g of detailGroups.value) {
+    const t = groupType(g)
+    if (t === 'disab') {
+      flushNormals(); flushStat()
+      slots.push({ type: 'disab', groups: [g] })
+    } else if (t === 'stat') {
+      flushNormals()
+      statBuf.push(g)
+    } else {
+      flushStat()
+      normals.push(g)
+      if (normals.length === 2) flushNormals()
+    }
+  }
+  flushNormals(); flushStat()
+  return slots
+})
+
 function stripDisabPrefix(label) {
   return String(label ?? '').replace(/^disabilitas[:\s]+/i, '').trim() || label
 }
@@ -287,9 +316,6 @@ function stripDisabPrefix(label) {
 function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
-
-const STAT_GROUPS = new Set(['Sosial Ekonomi', 'Lainnya', 'Bansos'])
-function isStatGroup(g) { return STAT_GROUPS.has(g) }
 
 function statBoxBg(key, val) {
   if (key === 'pbi_nas')          return { background: val==='1' ? '#fefce8' : '#f8fafc' }
@@ -319,7 +345,7 @@ function disabBadgeStyle(v) {
   }
 }
 
-// Desil banner
+// Desil
 const DESIL_COLORS = [
   null,
   { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'Sangat Miskin' },
@@ -349,13 +375,11 @@ function desilIconStyle(v) {
   return { width:'44px', height:'44px', borderRadius:'12px', background:c.icon+'33', display:'flex', alignItems:'center', justifyContent:'center', color:c.icon, flexShrink:0 }
 }
 
-const pairedGroups = computed(() => _pair(detailGroups.value))
-const pairedKeluargaGroups = computed(() => _pair(keluargaGroups.value))
-function _pair(arr) {
+const pairedKeluargaGroups = computed(() => {
   const r = []
-  for (let i = 0; i < arr.length; i += 2) r.push(arr.slice(i, i + 2))
+  for (let i = 0; i < keluargaGroups.value.length; i += 2) r.push(keluargaGroups.value.slice(i, i + 2))
   return r
-}
+})
 
 const isLaki = computed(() => isLakiVal(data.value?.jenis_kelamin))
 function isLakiVal(v) {
@@ -376,8 +400,7 @@ const GROUP_ICONS = {
   'Alamat': 'pi pi-map-marker',
 }
 function groupIcon(g) {
-  const lower = (g ?? '').toLowerCase()
-  if (lower.includes('disabilitas')) return 'pi pi-accessibility'
+  if ((g ?? '').toLowerCase().includes('disabilitas')) return 'pi pi-accessibility'
   return GROUP_ICONS[g] ?? 'pi pi-list'
 }
 
