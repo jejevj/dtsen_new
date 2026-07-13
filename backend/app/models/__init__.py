@@ -1,8 +1,7 @@
 from .user import User
 from .tuser import TUser
 from .laz import Laz
-from .bidang import Bidang
-from .program import Program
+from .program import Bidang, Program
 from .mustahik import Mustahik
 from .mustahik_bappenas import MustahikBappenas
 from .penerimaan import Penerimaan
