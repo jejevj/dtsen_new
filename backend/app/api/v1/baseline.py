@@ -57,13 +57,12 @@ PROVINSI_MAP = {
     "papdy":     {"label": "Papua Barat Daya",   "slug": "papdy",      "bps": "92"},
 }
 
-# Lookup: BPS kode (2 digit) → slug
 _BPS_TO_SLUG: dict[str, str] = {v["bps"]: k for k, v in PROVINSI_MAP.items()}
 
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
 ZAWA_TIMEOUT = 60
-ZAWA_LIMIT   = 10   # page size untuk ZAWA API
-DB_PAGE_SIZE = 50   # page size untuk query DB lokal
+ZAWA_LIMIT   = 10
+DB_PAGE_SIZE = 50
 
 SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000
 SYNC_MAX_KELUARGA_PER_RUN     = 5_000
@@ -71,8 +70,6 @@ SYNC_MAX_KELUARGA_PER_RUN     = 5_000
 _CACHE: dict = {}
 CACHE_TTL = 600
 
-
-# ─── Kode wilayah normalizer ──────────────────────────────────
 
 def _normalize_kode(raw: str) -> tuple[str, str]:
     s = raw.strip()
@@ -99,8 +96,6 @@ def _kode_filter(column, raw: str):
     return db.or_(column == dotted, column == plain)
 
 
-# ─── Provinsi resolver ────────────────────────────────────────
-
 def _resolve_provinsi(raw: str):
     if not raw:
         return None, None
@@ -114,8 +109,6 @@ def _resolve_provinsi(raw: str):
             return slug, PROVINSI_MAP[slug]
     return None, None
 
-
-# ─── Identity & Access Control ────────────────────────────────
 
 def _current_identity() -> dict:
     return parse_identity_str(get_jwt_identity())
@@ -201,15 +194,11 @@ def _get_wilayah_scope(identity: dict) -> dict:
     }
 
 
-# ─── Wilayah scope endpoint ───────────────────────────────────
-
 @api_v1_bp.get('/baseline/wilayah-scope')
 @jwt_required()
 def baseline_wilayah_scope():
     return jsonify(_get_wilayah_scope(_current_identity())), 200
 
-
-# ─── ZAWA HTTP helpers ────────────────────────────────────────
 
 def _zawa_headers() -> dict:
     api_key = os.environ.get("ZAWA_API_KEY", "")
@@ -373,14 +362,7 @@ def _build_db_cursor(page: int) -> str:
     return f"db:page_{page}"
 
 
-# ─── DB cache helpers ─────────────────────────────────────────
-
 def _cache_anggota_to_db(items: list, provinsi_slug: str):
-    """
-    Simpan anggota ke DB. provinsi_slug dipakai sebagai default,
-    tapi jika item memiliki kode_provinsi_ktp yang valid, slug diturunkan
-    dari BPS kode agar data tidak salah label provinsi.
-    """
     if not items:
         return 0
     saved = 0
@@ -388,19 +370,14 @@ def _cache_anggota_to_db(items: list, provinsi_slug: str):
         nik = str(row.get("nomor_induk_kependudukan", "") or "").strip()
         if not nik:
             continue
-
-        # Tentukan provinsi_slug yang benar dari kode_provinsi_ktp jika tersedia
         kode_prov_ktp = str(row.get("kode_provinsi_ktp") or "").strip().zfill(2)
         correct_slug  = _BPS_TO_SLUG.get(kode_prov_ktp) or provinsi_slug
-
         existing = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first()
         if existing:
-            # Perbaiki provinsi_slug jika selama ini salah
             if existing.provinsi_slug != correct_slug and correct_slug:
                 existing.provinsi_slug = correct_slug
                 db.session.add(existing)
             continue
-
         db.session.add(ZawaAnggota.from_api(row, correct_slug))
         saved += 1
     db.session.commit()
@@ -422,8 +399,6 @@ def _upsert_keluarga_from_api_item(item: dict) -> str:
         logger.warning(f"[Sync] gagal insert keluarga NKK={nkk}: {e}")
         return 'error'
 
-
-# ─── SYNC ENDPOINTS ──────────────────────────────────────────
 
 @api_v1_bp.post('/baseline/sync/anggota')
 @jwt_required()
@@ -596,8 +571,6 @@ def baseline_sync_status():
     }), 200
 
 
-# ─── READ ENDPOINTS ──────────────────────────────────────────
-
 @api_v1_bp.get('/baseline/ping')
 @jwt_required()
 def baseline_ping():
@@ -652,19 +625,24 @@ def baseline_provinsi_list():
 def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
                              kabkota_filter, kecamatan_filter, search: str):
     """
-    Bangun query ZawaAnggota dengan filter provinsi ganda:
-      - provinsi_slug = slug   (data yang disync dengan label benar)
-      - ATAU kode_provinsi_ktp = bps_kode  (data yang mungkin tersync dengan slug salah
-                                             tapi kode KTP-nya benar)
-    Ini menangani kasus data lama yang terlanjur disimpan dengan provinsi_slug
-    yang salah karena ZAWA endpoint Aceh mengembalikan data lintas provinsi.
+    Bangun query ZawaAnggota dengan sumber kebenaran utama = kode_provinsi_ktp.
+    Jangan lagi memakai provinsi_slug sebagai OR filter utama karena data historis
+    bisa terlanjur salah label akibat hasil sync lintas provinsi dari endpoint ZAWA.
+    Fallback ke provinsi_slug hanya dipakai jika kode_provinsi_ktp kosong/null.
     """
-    prov_filter = db.or_(
-        ZawaAnggota.provinsi_slug == provinsi_slug,
-        ZawaAnggota.kode_provinsi_ktp == bps_kode,
-        ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),  # "11" dan "11" (tanpa leading zero jika kode < 10)
+    q = ZawaAnggota.query.filter(
+        db.or_(
+            ZawaAnggota.kode_provinsi_ktp == bps_kode,
+            ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),
+            db.and_(
+                db.or_(
+                    ZawaAnggota.kode_provinsi_ktp.is_(None),
+                    ZawaAnggota.kode_provinsi_ktp == '',
+                ),
+                ZawaAnggota.provinsi_slug == provinsi_slug,
+            )
+        )
     )
-    q = ZawaAnggota.query.filter(prov_filter)
 
     if kabkota_filter:
         q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))
@@ -701,7 +679,7 @@ def baseline_anggota():
     if allowed is not None and provinsi not in allowed:
         return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
 
-    bps_kode = info["bps"]  # misal "11" untuk Aceh, "31" untuk DKI
+    bps_kode = info["bps"]
 
     kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
@@ -719,7 +697,6 @@ def baseline_anggota():
             if kecamatan_dotted not in allowed_kec and kecamatan_plain not in allowed_kec:
                 return jsonify({"error": "Akses ditolak. Kecamatan ini tidak termasuk wilayah Anda."}), 403
 
-    # ── Search by NIK ─────────────────────────────────────────
     if search and _is_numeric_id(search):
         db_row = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=search.strip()).first()
         if db_row:
@@ -738,7 +715,6 @@ def baseline_anggota():
                 logger.warning(f"[Baseline] gagal cache anggota NIK={search}: {e}")
         return _build_table_response(payload, info["label"], provinsi)
 
-    # ── DB cache dengan pagination proper ─────────────────────
     db_page = None
     if not cursor:
         db_page = 1
@@ -779,7 +755,6 @@ def baseline_anggota():
                 }
             }), 200
 
-    # ── Fallback ke ZAWA API ──────────────────────────────────
     params: dict = {}
     if cursor and not cursor.startswith("db:page_"):
         params["cursor"] = cursor
@@ -817,7 +792,6 @@ def baseline_keluarga():
     kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
     kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
 
-    # ── Resolve provinsi ──────────────────────────────────────
     prov_slug = prov_info = prov_bps = None
     if provinsi_raw:
         prov_slug, prov_info = _resolve_provinsi(provinsi_raw)
@@ -830,7 +804,6 @@ def baseline_keluarga():
     label = prov_info["label"] if prov_info else "Keluarga"
     label_provinsi = prov_slug or "nasional"
 
-    # ── Normalize kabkota / kecamatan ──────────────────────────
     kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
         kabkota_dotted, kabkota_plain = _normalize_kode(kabkota_filter)
@@ -847,7 +820,6 @@ def baseline_keluarga():
             if kecamatan_dotted not in allowed_kec and kecamatan_plain not in allowed_kec:
                 return jsonify({"error": "Akses ditolak. Kecamatan ini tidak termasuk wilayah Anda."}), 403
 
-    # ── Search by NKK (16 digit) ──────────────────────────────
     if search and _is_nkk(search):
         db_row = ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=search.strip()).first()
         if db_row:
@@ -867,15 +839,12 @@ def baseline_keluarga():
                 logger.warning(f"[Baseline] gagal cache keluarga NKK={search}: {e}")
         return _build_table_response(payload, label, label_provinsi)
 
-    # ── DB query dengan filter wilayah + pagination ──────────
     db_page = _parse_db_cursor(cursor) if cursor else 1
     if db_page is None:
         db_page = 1
 
     q = ZawaKeluarga.query
 
-    # Filter provinsi: gunakan kode_provinsi (BPS 2-digit) sebagai sumber kebenaran
-    # Tambahkan juga filter nama provinsi sebagai fallback untuk data lama
     if prov_bps:
         q = q.filter(db.or_(
             ZawaKeluarga.kode_provinsi == prov_bps,
@@ -926,7 +895,6 @@ def baseline_keluarga():
             }
         }), 200
 
-    # ── Fallback ke ZAWA (hanya jika tidak ada filter wilayah spesifik) ──
     if prov_bps or kabkota_dotted or kecamatan_dotted:
         columns = []
         return jsonify({
@@ -971,8 +939,6 @@ def baseline_clear_cache():
     _CACHE.clear()
     return jsonify({"message": "Cache berhasil dikosongkan."}), 200
 
-
-# ─── ENDPOINT: Repair provinsi_slug dari kode_provinsi_ktp ───
 
 @api_v1_bp.post('/baseline/repair/provinsi-slug')
 @jwt_required()
