@@ -46,7 +46,7 @@
           </div>
         </div>
 
-        <!-- ===== FIELD GROUPS ===== -->
+        <!-- ===== FIELD GROUPS (individu) ===== -->
         <template v-if="detailGroups.length">
           <template v-for="(rowPair, ri) in pairedGroups" :key="ri">
 
@@ -79,19 +79,29 @@
               </div>
             </template>
 
-            <!-- Disabilitas group: badge kompak per baris -->
+            <!-- Disabilitas group: tabel kompak 2-kolom -->
             <template v-else-if="rowPair.some(g => isDisabilitasGroup(g.group))">
               <div>
                 <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
                   <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
                   <div style="position:relative;z-index:1;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
-                    <div class="disab-list">
-                      <div v-for="field in group.fields" :key="field.field_key" class="disab-row">
-                        <span class="disab-aspek">{{ field.field_label.replace(/^Disabilitas:\s*/i,'') }}</span>
-                        <span class="disab-badge" :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
-                      </div>
-                    </div>
+                    <table class="disab-table">
+                      <thead>
+                        <tr>
+                          <th class="disab-th">Aspek</th>
+                          <th class="disab-th" style="text-align:right;">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="field in group.fields" :key="field.field_key" class="disab-tr">
+                          <td class="disab-td-aspek">{{ field.field_label.replace(/^Disabilitas:\s*/i,'') }}</td>
+                          <td class="disab-td-status">
+                            <span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -131,40 +141,88 @@
           <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi tampilan…
         </div>
 
-        <!-- ===== ANGGOTA KK — satu kali, di luar loop group ===== -->
-        <div class="detail-card" style="display:flex;flex-direction:column;">
-          <p class="section-title">
-            <i class="pi pi-users"></i> Anggota dalam KK
-            <span style="margin-left:auto;font-size:11px;font-weight:500;color:#94a3b8;font-family:monospace;">{{ data.nomor_kartu_keluarga ?? '-' }}</span>
-          </p>
-          <div v-if="loadingKK" style="text-align:center;padding:30px;">
-            <i class="pi pi-spin pi-spinner" style="color:#cbd5e1;"></i>
-            <p style="color:#94a3b8;font-size:12px;margin-top:8px;">Memuat anggota KK…</p>
-          </div>
-          <template v-else-if="kkMembers.length">
-            <div style="overflow-x:auto;">
-              <table class="kk-table">
-                <thead><tr><th>Nama</th><th>NIK</th><th>Hub. Keluarga</th><th>L/P</th></tr></thead>
-                <tbody>
-                  <tr
-                    v-for="m in kkMembers" :key="m.nomor_induk_kependudukan"
-                    :class="{ 'kk-active-row': m.nomor_induk_kependudukan === data.nomor_induk_kependudukan }"
-                    style="cursor:pointer;" @click="goToMember(m.nomor_induk_kependudukan)"
-                  >
-                    <td><span v-if="m.nomor_induk_kependudukan === data.nomor_induk_kependudukan" class="kk-you-badge">Ini</span>{{ m.nama ?? '-' }}</td>
-                    <td style="font-family:monospace;font-size:11px;">{{ m.nomor_induk_kependudukan ?? '-' }}</td>
-                    <td>{{ resolveValue('status_hubungan_keluarga', m.status_hubungan_keluarga) }}</td>
-                    <td><span :style="{ padding:'2px 7px', borderRadius:'99px', fontSize:'10px', fontWeight:'700', background:isLakiVal(m.jenis_kelamin)?'#eff6ff':'#fdf2f8', color:isLakiVal(m.jenis_kelamin)?'#2563eb':'#db2777' }">{{ isLakiVal(m.jenis_kelamin)?'L':'P' }}</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </template>
-          <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
-            <i class="pi pi-users" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-            Data anggota KK tidak ditemukan
-          </div>
+        <!-- ===== KARTU KELUARGA SECTION ===== -->
+
+        <!-- Banner Desil Nasional -->
+        <div v-if="loadingKK" style="text-align:center;padding:20px;color:#94a3b8;font-size:12px;">
+          <i class="pi pi-spin pi-spinner"></i> Memuat data keluarga…
         </div>
+        <template v-else>
+
+          <!-- Banner desil -->
+          <div v-if="kkDetail" class="desil-banner" :style="desilBannerStyle(kkDetail.desil_nasional)">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+              <div :style="desilIconStyle(kkDetail.desil_nasional)">
+                <i class="pi pi-chart-bar" style="font-size:18px;"></i>
+              </div>
+              <div>
+                <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:0 0 2px;opacity:.75;">Desil Kesejahteraan Nasional</p>
+                <p style="font-size:1.35rem;font-weight:900;margin:0;">
+                  Desil {{ kkDetail.desil_nasional ?? '-' }}
+                  <span style="font-size:13px;font-weight:500;margin-left:6px;opacity:.7;">{{ desilLabel(kkDetail.desil_nasional) }}</span>
+                </p>
+              </div>
+              <div style="margin-left:auto;text-align:right;">
+                <p style="font-size:11px;margin:0;opacity:.65;">No. KK</p>
+                <p style="font-size:12px;font-family:monospace;font-weight:700;margin:0;">{{ kkDetail.nomor_kartu_keluarga }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detail Keluarga groups -->
+          <template v-if="kkDetail && keluargaGroups.length">
+            <template v-for="(rowPair, ri) in pairedKeluargaGroups" :key="'kk-'+ri">
+              <div :class="rowPair.length === 2 ? 'grid-2' : ''">
+                <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-kk-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-kk-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div style="position:relative;z-index:1;">
+                    <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
+                    <table class="info-table">
+                      <tbody>
+                        <tr v-for="field in group.fields" :key="field.field_key">
+                          <td class="td-label">{{ field.field_label }}</td>
+                          <td class="td-value">{{ resolveValue(field.field_key, kkDetail[field.field_key]) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </template>
+
+          <!-- Tabel Anggota KK -->
+          <div class="detail-card" style="display:flex;flex-direction:column;">
+            <p class="section-title">
+              <i class="pi pi-users"></i> Anggota dalam KK
+              <span style="margin-left:auto;font-size:11px;font-weight:500;color:#94a3b8;font-family:monospace;">{{ data.nomor_kartu_keluarga ?? '-' }}</span>
+            </p>
+            <template v-if="kkMembers.length">
+              <div style="overflow-x:auto;">
+                <table class="kk-table">
+                  <thead><tr><th>Nama</th><th>NIK</th><th>Hub. Keluarga</th><th>L/P</th></tr></thead>
+                  <tbody>
+                    <tr
+                      v-for="m in kkMembers" :key="m.nomor_induk_kependudukan"
+                      :class="{ 'kk-active-row': m.nomor_induk_kependudukan === data.nomor_induk_kependudukan }"
+                      style="cursor:pointer;" @click="goToMember(m.nomor_induk_kependudukan)"
+                    >
+                      <td><span v-if="m.nomor_induk_kependudukan === data.nomor_induk_kependudukan" class="kk-you-badge">Ini</span>{{ m.nama ?? '-' }}</td>
+                      <td style="font-family:monospace;font-size:11px;">{{ m.nomor_induk_kependudukan ?? '-' }}</td>
+                      <td>{{ resolveValue('status_hubungan_keluarga', m.status_hubungan_keluarga) }}</td>
+                      <td><span :style="{ padding:'2px 7px', borderRadius:'99px', fontSize:'10px', fontWeight:'700', background:isLakiVal(m.jenis_kelamin)?'#eff6ff':'#fdf2f8', color:isLakiVal(m.jenis_kelamin)?'#2563eb':'#db2777' }">{{ isLakiVal(m.jenis_kelamin)?'L':'P' }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+            <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
+              <i class="pi pi-users" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+              Data anggota KK tidak ditemukan
+            </div>
+          </div>
+
+        </template>
 
       </template>
     </div>
@@ -184,11 +242,13 @@ const route     = useRoute()
 const router    = useRouter()
 const authStore = useAuthStore()
 
-const loading      = ref(true)
-const data         = ref(null)
-const detailGroups = ref([])
-const loadingKK    = ref(false)
-const kkMembers    = ref([])
+const loading        = ref(true)
+const data           = ref(null)
+const detailGroups   = ref([])
+const keluargaGroups = ref([])
+const loadingKK      = ref(false)
+const kkMembers      = ref([])
+const kkDetail       = ref(null)   // ZawaKeluarga data
 
 const { resolveValue, getDetailFields } = useBaselineRefs()
 
@@ -215,19 +275,13 @@ function statBoxBg(key, val) {
   return { background: '#f8fafc' }
 }
 
-// Level disabilitas ZAWA:
-// 0 / null / ''  = tidak ada kesulitan
-// 1              = sedikit kesulitan, tidak butuh bantuan
-// 2              = banyak kesulitan
-// 3              = tidak bisa sama sekali
-// Nilai string dari resolveValue juga ditangani
+// Disabilitas level badge
 const DISAB_LEVELS = {
-  '0': { label: 'Tidak ada kesulitan',             bg: '#f0fdf4', color: '#15803d' },
-  '1': { label: 'Sedikit kesulitan',               bg: '#fefce8', color: '#a16207' },
-  '2': { label: 'Banyak kesulitan',                bg: '#fff7ed', color: '#c2410c' },
-  '3': { label: 'Tidak bisa sama sekali',          bg: '#fef2f2', color: '#b91c1c' },
+  '0': { label: 'Tidak ada',           bg: '#f0fdf4', color: '#15803d' },
+  '1': { label: 'Sedikit kesulitan',   bg: '#fefce8', color: '#a16207' },
+  '2': { label: 'Banyak kesulitan',    bg: '#fff7ed', color: '#c2410c' },
+  '3': { label: 'Tidak bisa',          bg: '#fef2f2', color: '#b91c1c' },
 }
-
 function disabBadgeLabel(v) {
   const s = String(v ?? '').trim()
   return (DISAB_LEVELS[s] ?? DISAB_LEVELS['0']).label
@@ -236,32 +290,55 @@ function disabBadgeStyle(v) {
   const s = String(v ?? '').trim()
   const lvl = DISAB_LEVELS[s] ?? DISAB_LEVELS['0']
   return {
-    background: lvl.bg,
-    color:      lvl.color,
-    padding:    '2px 9px',
-    borderRadius: '99px',
-    fontSize:   '11px',
-    fontWeight: '600',
-    whiteSpace: 'nowrap',
-    flexShrink: '0',
+    background: lvl.bg, color: lvl.color,
+    padding: '1px 8px', borderRadius: '99px',
+    fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap',
   }
 }
 
-const pairedGroups = computed(() => {
-  const result = []
-  for (let i = 0; i < detailGroups.value.length; i += 2) {
-    result.push(detailGroups.value.slice(i, i + 2))
-  }
-  return result
-})
+// Desil banner helpers
+const DESIL_COLORS = [
+  null,
+  { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'Sangat Miskin' },
+  { bg:'#fff7ed', border:'#fed7aa', text:'#9a3412', icon:'#fb923c', label:'Miskin' },
+  { bg:'#fefce8', border:'#fde68a', text:'#92400e', icon:'#fbbf24', label:'Hampir Miskin' },
+  { bg:'#fefce8', border:'#fde68a', text:'#a16207', icon:'#fbbf24', label:'Rentan Miskin' },
+  { bg:'#f0fdf4', border:'#bbf7d0', text:'#166534', icon:'#4ade80', label:'Menengah Bawah' },
+  { bg:'#f0fdf4', border:'#bbf7d0', text:'#15803d', icon:'#22c55e', label:'Menengah' },
+  { bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', icon:'#10b981', label:'Menengah Atas' },
+  { bg:'#eff6ff', border:'#bfdbfe', text:'#1e40af', icon:'#60a5fa', label:'Sejahtera' },
+  { bg:'#eff6ff', border:'#bfdbfe', text:'#1d4ed8', icon:'#3b82f6', label:'Sangat Sejahtera' },
+  { bg:'#f5f3ff', border:'#ddd6fe', text:'#4c1d95', icon:'#a78bfa', label:'Paling Sejahtera' },
+]
+function _desilIdx(v) {
+  const n = parseInt(String(v ?? '').trim())
+  return (Number.isInteger(n) && n >= 1 && n <= 10) ? n : 0
+}
+function desilLabel(v) { return DESIL_COLORS[_desilIdx(v)]?.label ?? '' }
+function desilBannerStyle(v) {
+  const c = DESIL_COLORS[_desilIdx(v)]
+  if (!c) return { background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'14px', padding:'18px 22px', color:'#64748b' }
+  return { background:c.bg, border:`1px solid ${c.border}`, borderRadius:'14px', padding:'18px 22px', color:c.text }
+}
+function desilIconStyle(v) {
+  const c = DESIL_COLORS[_desilIdx(v)]
+  if (!c) return { width:'44px', height:'44px', borderRadius:'12px', background:'#e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', color:'#94a3b8', flexShrink:0 }
+  return { width:'44px', height:'44px', borderRadius:'12px', background:c.icon+'33', display:'flex', alignItems:'center', justifyContent:'center', color:c.icon, flexShrink:0 }
+}
+
+const pairedGroups = computed(() => _pair(detailGroups.value))
+const pairedKeluargaGroups = computed(() => _pair(keluargaGroups.value))
+function _pair(arr) {
+  const r = []
+  for (let i = 0; i < arr.length; i += 2) r.push(arr.slice(i, i + 2))
+  return r
+}
 
 const isLaki = computed(() => isLakiVal(data.value?.jenis_kelamin))
 function isLakiVal(v) {
   const s = (v ?? '').toString()
   return s === '1' || s.toLowerCase() === 'l' || s.toLowerCase() === 'laki-laki'
 }
-
-function isVal1(v) { return v === '1' || v === 1 }
 
 const GROUP_ICONS = {
   'Data Pribadi': 'pi pi-id-card', 'Alamat KTP': 'pi pi-map-marker',
@@ -270,6 +347,10 @@ const GROUP_ICONS = {
   'Kesehatan': 'pi pi-heart', 'Disabilitas': 'pi pi-accessibility',
   'Kesehatan & Disabilitas': 'pi pi-heart',
   'Sosial Ekonomi': 'pi pi-wallet', 'Bansos': 'pi pi-wallet', 'Lainnya': 'pi pi-list',
+  'Kondisi Rumah': 'pi pi-home', 'Fasilitas Rumah': 'pi pi-home',
+  'Aset Bergerak': 'pi pi-car', 'Aset Tidak Bergerak': 'pi pi-building',
+  'Ternak': 'pi pi-star', 'Info Keluarga': 'pi pi-users',
+  'Alamat': 'pi pi-map-marker',
 }
 function groupIcon(g) { return GROUP_ICONS[g] ?? 'pi pi-list' }
 
@@ -290,13 +371,20 @@ async function loadData() {
   } catch (e) { console.error('[AnggotaDetail] gagal load:', e) }
 }
 
-async function loadKKMembers(nkk) {
+// Fetch anggota KK + detail keluarga secara paralel
+async function loadKKData(nkk) {
   if (!nkk) return
   loadingKK.value = true
   kkMembers.value = []
+  kkDetail.value  = null
   try {
-    const res = await api.get('/baseline/anggota/by-nkk', { params: { nkk } })
-    kkMembers.value = res.data?.data ?? []
+    const [anggotaRes, keluargaRes] = await Promise.all([
+      api.get('/baseline/anggota/by-nkk', { params: { nkk } }),
+      api.get('/baseline/keluarga', { params: { search: nkk } }),
+    ])
+    kkMembers.value = anggotaRes.data?.data ?? []
+    const kkRows    = keluargaRes.data?.data ?? []
+    kkDetail.value  = kkRows.find(r => String(r.nomor_kartu_keluarga ?? '').trim() === nkk) ?? kkRows[0] ?? null
   } catch (e) {
     console.error('[AnggotaDetail] gagal load KK:', e)
   } finally {
@@ -317,10 +405,15 @@ function formatRupiah(n) {
 
 onMounted(async () => {
   loading.value = true
-  const [groups] = await Promise.all([ getDetailFields('individu'), loadData() ])
-  detailGroups.value = groups
+  const [indGroups, kkGroups] = await Promise.all([
+    getDetailFields('individu'),
+    getDetailFields('keluarga'),
+    loadData(),
+  ])
+  detailGroups.value   = indGroups
+  keluargaGroups.value = kkGroups
   loading.value = false
-  if (data.value?.nomor_kartu_keluarga) loadKKMembers(data.value.nomor_kartu_keluarga)
+  if (data.value?.nomor_kartu_keluarga) loadKKData(data.value.nomor_kartu_keluarga)
 })
 </script>
 
@@ -341,12 +434,15 @@ onMounted(async () => {
 .stat-box  { border-radius:10px; padding:16px; }
 .stat-label { font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin:0 0 4px; }
 .stat-val   { font-size:1.25rem; font-weight:900; margin:0; }
-/* ---- Disabilitas badge list ---- */
-.disab-list { display:flex; flex-direction:column; gap:6px; }
-.disab-row  { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:5px 0; border-bottom:1px solid #f8fafc; }
-.disab-row:last-child { border-bottom:none; }
-.disab-aspek { font-size:12px; color:#374151; font-weight:500; flex:1; min-width:0; }
-.disab-badge { /* styled inline via disabBadgeStyle() */ }
+/* ---- Disabilitas tabel kompak ---- */
+.disab-table { width:100%; border-collapse:collapse; }
+.disab-th { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.4px; padding:5px 4px 7px; border-bottom:1px solid #f1f5f9; }
+.disab-tr { border-bottom:1px solid #f8fafc; }
+.disab-tr:last-child { border-bottom:none; }
+.disab-td-aspek  { font-size:12px; color:#374151; font-weight:500; padding:7px 4px; width:55%; }
+.disab-td-status { font-size:12px; padding:7px 4px; text-align:right; }
+/* ---- Desil banner ---- */
+.desil-banner { border-radius:14px; padding:18px 22px; }
 /* ---- KK table ---- */
 .kk-table { width:100%; border-collapse:collapse; font-size:12px; }
 .kk-table thead tr { background:#f8fafc; }
