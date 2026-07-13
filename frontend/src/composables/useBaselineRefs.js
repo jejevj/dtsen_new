@@ -1,68 +1,71 @@
 /**
  * useBaselineRefs
- * Fetch m_tampilan_dtsen_ref sekali, cache di module scope,
- * lalu sediakan helper resolveValue(fieldKey, rawValue) → label string.
+ * - Fetch m_tampilan_dtsen_ref sekali (cache module-level) → resolveValue(fieldKey, raw)
+ * - Fetch detail fields per kategori (individu/keluarga) → getDetailFields(kategori)
  */
 import { ref } from 'vue'
-import { fetchTampilanDtsen } from '@/services/tampilanDtsenService'
+import api from '@/services/api'
 
-// Module-level cache agar tidak re-fetch tiap komponen mount
-let _loaded = false
-let _loading = false
-let _listeners = []
+// ── Cache refs (kode → label) ─────────────────────────────────
+let _refsLoaded = false
+let _refsLoading = false
+let _refsListeners = []
+const _refMap = {}   // { field_key: { '1': 'Laki-laki', ... } }
 
-// Map: field_key → Map(ref_value → ref_label)
-// Contoh: { jenis_kelamin: { '1': 'Laki-laki', '2': 'Perempuan' } }
-const _refMap = {}
-
-async function _loadOnce() {
-  if (_loaded) return
-  if (_loading) {
-    // tunggu yang sedang berjalan
-    await new Promise(resolve => _listeners.push(resolve))
+async function _loadRefs() {
+  if (_refsLoaded) return
+  if (_refsLoading) {
+    await new Promise(r => _refsListeners.push(r))
     return
   }
-  _loading = true
+  _refsLoading = true
   try {
-    const fields = await fetchTampilanDtsen()
+    const res = await api.get('/tampilan-dtsen')
+    const fields = res.data?.data ?? []
     for (const field of fields) {
-      if (field.refs && field.refs.length > 0) {
+      if (field.refs?.length) {
         const map = {}
-        for (const r of field.refs) {
-          // simpan dengan String() agar lookup selalu konsisten
-          map[String(r.ref_value)] = r.ref_label
-        }
+        for (const r of field.refs) map[String(r.ref_value)] = r.ref_label
         _refMap[field.field_key] = map
       }
     }
-    _loaded = true
+    _refsLoaded = true
   } catch (e) {
-    console.warn('[useBaselineRefs] gagal fetch tampilan-dtsen:', e)
+    console.warn('[useBaselineRefs] gagal fetch refs:', e)
   } finally {
-    _loading = false
-    _listeners.forEach(fn => fn())
-    _listeners = []
+    _refsLoading = false
+    _refsListeners.forEach(fn => fn())
+    _refsListeners = []
   }
 }
 
+// ── Cache detail fields per kategori ───────────────────────
+const _detailCache = {}  // { 'individu': [...fields], 'keluarga': [...fields] }
+
+async function _loadDetailFields(kategori) {
+  if (_detailCache[kategori]) return
+  try {
+    const res = await api.get('/tampilan-dtsen/detail', { params: { kategori } })
+    _detailCache[kategori] = res.data?.data ?? []
+  } catch (e) {
+    console.warn('[useBaselineRefs] gagal fetch detail fields:', e)
+    _detailCache[kategori] = []
+  }
+}
+
+// ── Composable ───────────────────────────────────────────
 export function useBaselineRefs() {
-  const ready = ref(_loaded)
+  const ready = ref(_refsLoaded)
 
   async function init() {
-    if (_loaded) {
-      ready.value = true
-      return
-    }
-    await _loadOnce()
+    if (_refsLoaded) { ready.value = true; return }
+    await _loadRefs()
     ready.value = true
   }
 
   /**
-   * Resolve nilai mentah ke label.
+   * Resolve nilai mentah ke label dari m_tampilan_dtsen_ref.
    * Jika tidak ada mapping → kembalikan nilai asli.
-   * @param {string} fieldKey  - e.g. 'jenis_kelamin'
-   * @param {*}      rawValue  - e.g. 1, '1', '2'
-   * @returns {string}
    */
   function resolveValue(fieldKey, rawValue) {
     if (rawValue === null || rawValue === undefined || rawValue === '') return '-'
@@ -71,12 +74,33 @@ export function useBaselineRefs() {
     return map[String(rawValue)] ?? String(rawValue)
   }
 
-  /**
-   * Apakah field ini punya mapping refs?
-   */
   function hasRefs(fieldKey) {
     return Boolean(_refMap[fieldKey])
   }
 
-  return { ready, init, resolveValue, hasRefs }
+  /**
+   * Ambil daftar field untuk halaman detail (is_detail=1).
+   * Dikelompokkan per field_group.
+   * @param {'individu'|'keluarga'} kategori
+   * @returns {Promise<Array<{group: string, fields: Array}>>}
+   */
+  async function getDetailFields(kategori) {
+    await Promise.all([_loadRefs(), _loadDetailFields(kategori)])
+    ready.value = true
+    const fields = _detailCache[kategori] ?? []
+    // Kelompokkan berdasarkan field_group, pertahankan urutan
+    const groups = []
+    const groupMap = {}
+    for (const f of fields) {
+      const g = f.field_group || 'Lainnya'
+      if (!groupMap[g]) {
+        groupMap[g] = { group: g, fields: [] }
+        groups.push(groupMap[g])
+      }
+      groupMap[g].fields.push(f)
+    }
+    return groups
+  }
+
+  return { ready, init, resolveValue, hasRefs, getDetailFields }
 }

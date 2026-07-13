@@ -13,7 +13,7 @@
         <p style="color:#94a3b8;margin-top:12px;font-size:13px;">Memuat data…</p>
       </div>
 
-      <!-- Error / Not found -->
+      <!-- Not found -->
       <div v-else-if="!data" style="text-align:center;padding:60px 20px;background:white;border-radius:14px;border:1px solid #f1f5f9;">
         <i class="pi pi-user-minus" style="font-size:40px;color:#cbd5e1;"></i>
         <p style="color:#64748b;margin:12px 0 0;">Data anggota tidak ditemukan</p>
@@ -25,7 +25,6 @@
         <!-- ===== HEADER IDENTITY ===== -->
         <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
           <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
-            <!-- Avatar -->
             <div :style="{
               width:'80px', height:'80px', borderRadius:'16px',
               background: isLaki ? '#eff6ff' : '#fdf2f8',
@@ -34,22 +33,16 @@
             }">
               <i class="pi pi-user" :style="{ fontSize:'32px', color: isLaki ? '#2563eb' : '#db2777' }"></i>
             </div>
-
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
                 <h2 style="font-size:1.25rem;font-weight:800;color:#1e293b;margin:0;">{{ data.nama ?? '-' }}</h2>
                 <span v-if="data.jenis_kelamin" :style="{ padding:'3px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background: isLaki?'#eff6ff':'#fdf2f8', color: isLaki?'#2563eb':'#db2777' }">
                   {{ isLaki ? 'Laki-laki' : 'Perempuan' }}
                 </span>
-                <span v-if="data.status_kawin" style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#f0fdf4;color:#15803d;">
-                  {{ ref('status_kawin', data.status_kawin) }}
-                </span>
               </div>
               <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ data.nomor_induk_kependudukan ?? '-' }}</strong></p>
               <p style="font-size:13px;color:#64748b;margin:0;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ data.nomor_kartu_keluarga ?? '-' }}</strong></p>
             </div>
-
-            <!-- Badge PBI -->
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
               <span v-if="data.pbi_nas === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;">
                 <i class="pi pi-shield" style="font-size:10px;"></i> PBI Nasional
@@ -57,145 +50,102 @@
               <span v-if="data.pbi_pemda === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#ede9fe;color:#6d28d9;">
                 <i class="pi pi-shield" style="font-size:10px;"></i> PBI Pemda
               </span>
-              <span v-if="data.pbi_nas !== '1' && data.pbi_pemda !== '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;background:#f1f5f9;color:#94a3b8;">
-                Non PBI
-              </span>
+              <span v-if="data.pbi_nas !== '1' && data.pbi_pemda !== '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;background:#f1f5f9;color:#94a3b8;">Non PBI</span>
             </div>
           </div>
         </div>
 
-        <!-- ===== GRID ROW 1: Data Pribadi + Alamat KTP ===== -->
-        <div class="grid-2">
-
-          <!-- Data Pribadi -->
-          <div class="detail-card wm-card">
-            <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="wm-a1" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" fill="url(#wm-a1)" /></svg></div>
-            <div style="position:relative;z-index:1;">
-              <p class="section-title"><i class="pi pi-id-card"></i> Data Pribadi</p>
-              <table class="info-table">
-                <tbody>
-                  <tr><td class="td-label">Tanggal Lahir</td><td class="td-value">{{ formatTanggal(data.tanggal_lahir) }}</td></tr>
-                  <tr><td class="td-label">Jenis Kelamin</td><td class="td-value">{{ isLaki ? 'Laki-laki' : 'Perempuan' }}</td></tr>
-                  <tr><td class="td-label">Status Kawin</td><td class="td-value">{{ ref('status_kawin', data.status_kawin) }}</td></tr>
-                  <tr><td class="td-label">Hub. Keluarga</td><td class="td-value">{{ ref('status_hubungan_keluarga', data.status_hubungan_keluarga) }}</td></tr>
-                  <tr><td class="td-label">No. KK</td><td class="td-value" style="font-family:monospace;font-size:12px;">{{ data.nomor_kartu_keluarga ?? '-' }}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Alamat KTP -->
-          <div class="detail-card wm-card">
-            <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="wm-a2" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" fill="url(#wm-a2)" /></svg></div>
-            <div style="position:relative;z-index:1;">
-              <p class="section-title"><i class="pi pi-map-marker"></i> Alamat KTP</p>
-              <table class="info-table">
-                <tbody>
-                  <tr><td class="td-label">Alamat</td><td class="td-value">{{ data.alamat_ktp ?? '-' }}</td></tr>
-                  <tr><td class="td-label">RT / RW</td><td class="td-value">{{ data.rt_ktp ?? '-' }} / {{ data.rw_ktp ?? '-' }}</td></tr>
-                  <tr><td class="td-label">Dusun</td><td class="td-value">{{ data.dusun_ktp ?? '-' }}</td></tr>
-                  <tr><td class="td-label">Kel / Desa</td><td class="td-value">{{ data.kelurahan_desa_ktp ?? '-' }}</td></tr>
-                  <tr><td class="td-label">Kecamatan</td><td class="td-value">{{ data.kecamatan_ktp ?? '-' }}</td></tr>
-                  <tr><td class="td-label">Kab / Kota</td><td class="td-value">{{ data.kabupaten_kota_ktp ?? '-' }}</td></tr>
-                  <tr><td class="td-label">Provinsi</td><td class="td-value">{{ data.provinsi_ktp ?? '-' }}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- ===== GRID ROW 2: Pendidikan + Pekerjaan ===== -->
-        <div class="grid-2">
-
-          <!-- Pendidikan -->
-          <div class="detail-card wm-card">
-            <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="wm-a3" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" fill="url(#wm-a3)" /></svg></div>
-            <div style="position:relative;z-index:1;">
-              <p class="section-title"><i class="pi pi-book"></i> Pendidikan</p>
-              <table class="info-table">
-                <tbody>
-                  <tr><td class="td-label">Partisipasi Sekolah</td><td class="td-value">{{ ref('partisipasi_sekolah', data.partisipasi_sekolah) }}</td></tr>
-                  <tr><td class="td-label">Jenjang Tertinggi</td><td class="td-value">{{ ref('jenjang_tertinggi_yang_diduduki', data.jenjang_tertinggi_yang_diduduki) }}</td></tr>
-                  <tr><td class="td-label">Kelas Tertinggi</td><td class="td-value">{{ data.kelas_tertinggi_yang_diduduki != null ? 'Kelas ' + data.kelas_tertinggi_yang_diduduki : '-' }}</td></tr>
-                  <tr><td class="td-label">Ijazah Tertinggi</td><td class="td-value">{{ ref('ijazah_tertinggi_yang_dimiliki', data.ijazah_tertinggi_yang_dimiliki) }}</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Pekerjaan -->
-          <div class="detail-card wm-card">
-            <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="wm-a4" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" fill="url(#wm-a4)" /></svg></div>
-            <div style="position:relative;z-index:1;">
-              <p class="section-title"><i class="pi pi-briefcase"></i> Pekerjaan &amp; Usaha</p>
-              <table class="info-table">
-                <tbody>
-                  <tr><td class="td-label">Status Bekerja</td><td class="td-value">{{ ref('status_bekerja', data.status_bekerja) }}</td></tr>
-                  <tr><td class="td-label">Status dlm Pekerjaan</td><td class="td-value">{{ ref('status_dalam_pekerjaan_utama', data.status_dalam_pekerjaan_utama) }}</td></tr>
-                  <tr><td class="td-label">Lapangan Usaha</td><td class="td-value">{{ ref('lapangan_usaha_dari_pekerjaan_utama', data.lapangan_usaha_dari_pekerjaan_utama) }}</td></tr>
-                  <tr><td class="td-label">Kepemilikan Usaha</td><td class="td-value">{{ ref('kepemilikan_usaha', data.kepemilikan_usaha) }}</td></tr>
-                  <tr><td class="td-label">Jumlah Usaha</td><td class="td-value">{{ data.jumlah_usaha != null ? data.jumlah_usaha + ' usaha' : '-' }}</td></tr>
-                  <tr><td class="td-label">Omzet Usaha/Bln</td><td class="td-value">{{ data.omzet_usaha_utama ? formatRupiah(data.omzet_usaha_utama) : '-' }}</td></tr>
-                  <tr><td class="td-label">Pekerja Dibayar</td><td class="td-value">{{ data.jumlah_pekerja_yang_dibayar_dari_usaha_utama ?? '-' }} orang</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- ===== DISABILITAS + KESEHATAN (full width) ===== -->
-        <div class="detail-card wm-card">
-          <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="wm-a5" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" fill="url(#wm-a5)" /></svg></div>
-          <div style="position:relative;z-index:1;">
-            <p class="section-title"><i class="pi pi-heart"></i> Kesehatan &amp; Disabilitas</p>
-            <div class="grid-3" style="gap:12px;">
-              <div v-for="item in disabilitasItems" :key="item.label">
-                <p style="font-size:11px;color:#94a3b8;font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;">{{ item.label }}</p>
-                <span :style="{
-                  display:'inline-block', padding:'3px 10px', borderRadius:'99px',
-                  fontSize:'12px', fontWeight:'700',
-                  background: item.val==='1'||item.val===1 ? '#fef2f2' : '#f0fdf4',
-                  color:       item.val==='1'||item.val===1 ? '#dc2626'  : '#15803d'
-                }">
-                  {{ item.val==='1'||item.val===1 ? 'Ada Hambatan' : 'Normal' }}
-                </span>
+        <!-- ===== FIELD GROUPS DINAMIS (is_detail=1, kategori=individu) ===== -->
+        <!-- Render 2 group per baris -->
+        <template v-if="detailGroups.length">
+          <div
+            v-for="(rowPair, ri) in pairedGroups"
+            :key="ri"
+            :class="rowPair.length === 2 ? 'grid-2' : ''"
+          >
+            <div
+              v-for="group in rowPair"
+              :key="group.group"
+              class="detail-card wm-card"
+            >
+              <!-- Watermark -->
+              <div class="wm-overlay" aria-hidden="true">
+                <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern :id="'wm-g-' + group.group" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                      <text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                      <text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" :fill="'url(#wm-g-' + group.group + ')'" />
+                </svg>
               </div>
-              <div>
-                <p style="font-size:11px;color:#94a3b8;font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;">Kondisi Gizi</p>
-                <span style="display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:#fef3c7;color:#b45309;">
-                  {{ ref('kondisi_gizi', data.kondisi_gizi) }}
-                </span>
-              </div>
-              <div>
-                <p style="font-size:11px;color:#94a3b8;font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:.5px;">Penyakit Kronis</p>
-                <span :style="{
-                  display:'inline-block', padding:'3px 10px', borderRadius:'99px',
-                  fontSize:'12px', fontWeight:'700',
-                  background: data.penyakit_kronis ? '#fef2f2' : '#f0fdf4',
-                  color:       data.penyakit_kronis ? '#dc2626'  : '#15803d'
-                }">
-                  {{ ref('penyakit_kronis', data.penyakit_kronis) }}
-                </span>
+
+              <div style="position:relative;z-index:1;">
+                <p class="section-title">
+                  <i :class="groupIcon(group.group)"></i> {{ group.group }}
+                </p>
+                <table class="info-table">
+                  <tbody>
+                    <tr v-for="field in group.fields" :key="field.field_key">
+                      <td class="td-label">{{ field.field_label }}</td>
+                      <td class="td-value">
+                        <!-- Nilai khusus: tidak di-resolve via ref -->
+                        <template v-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">
+                          {{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}
+                        </template>
+                        <template v-else-if="field.field_key === 'tanggal_lahir'">
+                          {{ formatTanggal(data[field.field_key]) }}
+                        </template>
+                        <template v-else-if="field.field_key === 'omzet_usaha_utama'">
+                          {{ data[field.field_key] ? formatRupiah(data[field.field_key]) : '-' }}
+                        </template>
+                        <template v-else-if="field.field_key === 'jumlah_usaha'">
+                          {{ data[field.field_key] != null ? data[field.field_key] + ' usaha' : '-' }}
+                        </template>
+                        <template v-else-if="field.field_key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama'">
+                          {{ data[field.field_key] ?? '-' }} orang
+                        </template>
+                        <!-- Disabilitas: badge Ada Hambatan / Normal -->
+                        <template v-else-if="field.field_type === 'Boolean' || isDisabilitas(field.field_key)">
+                          <span :style="{
+                            display:'inline-block', padding:'2px 8px', borderRadius:'99px',
+                            fontSize:'11px', fontWeight:'700',
+                            background: isVal1(data[field.field_key]) ? '#fef2f2' : '#f0fdf4',
+                            color:      isVal1(data[field.field_key]) ? '#dc2626'  : '#15803d'
+                          }">
+                            {{ isVal1(data[field.field_key]) ? 'Ada Hambatan' : 'Normal' }}
+                          </span>
+                        </template>
+                        <!-- Default: resolve via refs -->
+                        <template v-else>
+                          {{ resolveValue(field.field_key, data[field.field_key]) }}
+                        </template>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
+        </template>
+
+        <!-- Fallback jika detailGroups belum siap -->
+        <div v-else-if="!loading" style="text-align:center;padding:40px;color:#94a3b8;font-size:13px;">
+          <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi tampilan…
         </div>
 
-        <!-- ===== RINGKASAN BANSOS ===== -->
+        <!-- ===== RINGKASAN BANSOS (selalu tampil) ===== -->
         <div class="detail-card">
           <p class="section-title"><i class="pi pi-wallet"></i> Status Bantuan Sosial</p>
           <div class="grid-3">
             <div class="stat-box" :style="{ background: data.pbi_nas==='1' ? '#fefce8' : '#f8fafc' }">
               <p class="stat-label">PBI Nasional</p>
-              <p class="stat-val" :style="{ color: data.pbi_nas==='1' ? '#b45309' : '#94a3b8' }">
-                {{ data.pbi_nas === '1' ? 'Terdaftar' : 'Tidak' }}
-              </p>
+              <p class="stat-val" :style="{ color: data.pbi_nas==='1' ? '#b45309' : '#94a3b8' }">{{ data.pbi_nas === '1' ? 'Terdaftar' : 'Tidak' }}</p>
             </div>
             <div class="stat-box" :style="{ background: data.pbi_pemda==='1' ? '#ede9fe' : '#f8fafc' }">
               <p class="stat-label">PBI Pemda</p>
-              <p class="stat-val" :style="{ color: data.pbi_pemda==='1' ? '#6d28d9' : '#94a3b8' }">
-                {{ data.pbi_pemda === '1' ? 'Terdaftar' : 'Tidak' }}
-              </p>
+              <p class="stat-val" :style="{ color: data.pbi_pemda==='1' ? '#6d28d9' : '#94a3b8' }">{{ data.pbi_pemda === '1' ? 'Terdaftar' : 'Tidak' }}</p>
             </div>
             <div class="stat-box" :style="{ background: data.id_pelanggan_pln ? '#f0fdf4' : '#f8fafc' }">
               <p class="stat-label">ID Pelanggan PLN</p>
@@ -212,7 +162,7 @@
 </template>
 
 <script setup>
-import { ref as vueRef, computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -223,19 +173,11 @@ import { useBaselineRefs } from '@/composables/useBaselineRefs'
 const route     = useRoute()
 const authStore = useAuthStore()
 
-const loading = vueRef(true)
-const data    = vueRef(null)
+const loading      = ref(true)
+const data         = ref(null)
+const detailGroups = ref([])   // [{ group, fields[] }]
 
-// ── Refs resolver dari m_tampilan_dtsen_ref
-const { ready, init, resolveValue } = useBaselineRefs()
-
-/**
- * Shorthand untuk resolve nilai field ke label.
- * Jika refs belum siap atau tidak ada mapping → kembalikan raw value.
- */
-function ref(fieldKey, rawValue) {
-  return resolveValue(fieldKey, rawValue)
-}
+const { resolveValue, getDetailFields } = useBaselineRefs()
 
 const userIdentifier = computed(() => {
   const u = authStore.user
@@ -243,63 +185,67 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
-async function loadData() {
-  loading.value = true
-  data.value = null
-  const nik = route.params.nik
+// Pasangkan groups 2 per baris untuk layout grid-2
+const pairedGroups = computed(() => {
+  const result = []
+  for (let i = 0; i < detailGroups.value.length; i += 2) {
+    result.push(detailGroups.value.slice(i, i + 2))
+  }
+  return result
+})
 
+const isLaki = computed(() => {
+  const v = (data.value?.jenis_kelamin ?? '').toString()
+  return v === '1' || v.toLowerCase() === 'l' || v.toLowerCase() === 'laki-laki'
+})
+
+// Daftar field_key disabilitas yang butuh badge Ada Hambatan / Normal
+const DISABILITAS_KEYS = new Set([
+  'penglihatan','pendengaran','berjalan_atau_naik_tangga','menggunakan_tangan_jari',
+  'mengingat_berkonsentrasi','mengurus_diri','berbicara_komunikasi',
+  'belajar_kemampuan_intelektual','pengendalian_perilaku','kesedihan_depresi',
+])
+function isDisabilitas(key) { return DISABILITAS_KEYS.has(key) }
+function isVal1(v) { return v === '1' || v === 1 }
+
+// Icon per group
+const GROUP_ICONS = {
+  'Data Pribadi': 'pi pi-id-card',
+  'Alamat KTP':   'pi pi-map-marker',
+  'Alamat Domisili': 'pi pi-map',
+  'Pendidikan':   'pi pi-book',
+  'Pekerjaan':    'pi pi-briefcase',
+  'Pekerjaan & Usaha': 'pi pi-briefcase',
+  'Kesehatan':    'pi pi-heart',
+  'Disabilitas':  'pi pi-accessibility',
+  'Kesehatan & Disabilitas': 'pi pi-heart',
+  'Bansos':       'pi pi-wallet',
+}
+function groupIcon(g) { return GROUP_ICONS[g] ?? 'pi pi-list' }
+
+async function loadData() {
+  const nik = route.params.nik
   try {
     const provinsiList = await fetchBaselineProvinsi()
-    if (!provinsiList.length) {
-      console.error('[AnggotaDetail] Tidak ada provinsi yang dapat diakses')
-      return
-    }
-
     for (const prov of provinsiList) {
       const res = await api.get('/baseline/anggota', {
         params: { provinsi: prov.kode, search: nik },
       })
-      const items = res.data?.data ?? []
-      const found = items.find(
+      const found = (res.data?.data ?? []).find(
         r => r.nomor_induk_kependudukan === nik || r.nik === nik
       )
-      if (found) {
-        data.value = found
-        break
-      }
+      if (found) { data.value = found; break }
     }
   } catch (e) {
     console.error('[AnggotaDetail] gagal load:', e)
-  } finally {
-    loading.value = false
   }
 }
 
-const isLaki = computed(() => {
-  const v = (data.value?.jenis_kelamin ?? '').toString().toLowerCase()
-  return v === 'l' || v === 'laki-laki' || v === '1' || v === 'm'
-})
-
-const disabilitasItems = computed(() => [
-  { label: 'Penglihatan',       val: data.value?.penglihatan },
-  { label: 'Pendengaran',       val: data.value?.pendengaran },
-  { label: 'Berjalan / Tangga', val: data.value?.berjalan_atau_naik_tangga },
-  { label: 'Tangan / Jari',     val: data.value?.menggunakan_tangan_jari },
-  { label: 'Mengingat',         val: data.value?.mengingat_berkonsentrasi },
-  { label: 'Mengurus Diri',     val: data.value?.mengurus_diri },
-  { label: 'Komunikasi',        val: data.value?.berbicara_komunikasi },
-  { label: 'Belajar',           val: data.value?.belajar_kemampuan_intelektual },
-  { label: 'Perilaku',          val: data.value?.pengendalian_perilaku },
-  { label: 'Kesedihan',         val: data.value?.kesedihan_depresi },
-])
-
-// ─── Helper non-ref ──────────────────────────────────────────
 function formatTanggal(v) {
   if (!v) return '-'
   const str = String(v).includes('T') ? v : v + 'T00:00:00'
   const d = new Date(str)
-  if (isNaN(d.getTime())) return String(v)
-  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+  return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' })
 }
 function formatRupiah(n) {
   if (!n && n !== 0) return '-'
@@ -307,8 +253,13 @@ function formatRupiah(n) {
 }
 
 onMounted(async () => {
-  // Jalankan paralel: fetch data anggota + fetch refs
-  await Promise.all([loadData(), init()])
+  loading.value = true
+  const [groups] = await Promise.all([
+    getDetailFields('individu'),
+    loadData(),
+  ])
+  detailGroups.value = groups
+  loading.value = false
 })
 </script>
 
