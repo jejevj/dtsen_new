@@ -10,7 +10,7 @@
  *  - Drag & drop elemen
  *  - Keyboard shortcuts DevTools:
  *      F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U (view source)
- *  - DevTools console detection (debugger trap loop)
+ *  - DevTools open detection via window-size heuristic (reliable, no debugger loop)
  *
  * Toast bridge:
  *  Karena composable ini dijalankan sebelum app Vue di-mount,
@@ -43,7 +43,7 @@ export function initViewGuard() {
     dispatchBlocked('Fitur drag tidak diizinkan pada halaman ini.')
   }, true)
 
-  // 4. Inject CSS: user-select none + cursor default pada seluruh halaman
+  // 4. Inject CSS: user-select none pada seluruh halaman
   const style = document.createElement('style')
   style.id = 'view-guard-style'
   style.textContent = `
@@ -66,28 +66,24 @@ export function initViewGuard() {
     const shift = e.shiftKey
     const key   = e.key
 
-    // F12
     if (key === 'F12') {
       e.preventDefault()
       dispatchBlocked('Akses Developer Tools tidak diizinkan.')
       return
     }
 
-    // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (Chrome DevTools)
     if (ctrl && shift && ['i','I','j','J','c','C'].includes(key)) {
       e.preventDefault()
       dispatchBlocked('Akses Developer Tools tidak diizinkan.')
       return
     }
 
-    // Ctrl+U (View Page Source)
     if (ctrl && ['u','U'].includes(key)) {
       e.preventDefault()
       dispatchBlocked('Melihat sumber halaman tidak diizinkan.')
       return
     }
 
-    // Ctrl+S (Save page)
     if (ctrl && ['s','S'].includes(key)) {
       e.preventDefault()
       dispatchBlocked('Menyimpan halaman tidak diizinkan.')
@@ -95,35 +91,39 @@ export function initViewGuard() {
     }
   }, true)
 
-  // 6. DevTools open detection via debugger trap
-  //    Saat DevTools terbuka, debugger statement menyebabkan delay terdeteksi
-  //    dan halaman akan ditampilkan overlay peringatan.
+  // 6. DevTools detection via window-size heuristic
+  //    Saat DevTools terbuka dalam posisi dock (side/bottom), ukuran
+  //    window.outerWidth atau window.outerHeight akan lebih besar dari
+  //    window.innerWidth/innerHeight secara signifikan (threshold 160px).
+  //    Teknik ini tidak menggunakan debugger sehingga tidak memblokir event loop.
   ;(function devtoolsDetect() {
+    const THRESHOLD = 160
     let devtoolsOpen = false
-    const threshold  = 160 // ms
 
-    function check() {
-      const start = performance.now()
-      // eslint-disable-next-line no-debugger
-      debugger
-      const delta = performance.now() - start
-
-      if (delta > threshold) {
-        if (!devtoolsOpen) {
-          devtoolsOpen = true
-          dispatchBlocked('Developer Tools terdeteksi terbuka. Tutup untuk melanjutkan.')
-          showDevtoolsWarning()
-        }
-      } else {
-        if (devtoolsOpen) {
-          devtoolsOpen = false
-          hideDevtoolsWarning()
-        }
-      }
-      requestAnimationFrame(check)
+    function isDevtoolsOpen() {
+      return (
+        window.outerWidth  - window.innerWidth  > THRESHOLD ||
+        window.outerHeight - window.innerHeight > THRESHOLD
+      )
     }
 
-    requestAnimationFrame(check)
+    function check() {
+      const open = isDevtoolsOpen()
+
+      if (open && !devtoolsOpen) {
+        devtoolsOpen = true
+        dispatchBlocked('Developer Tools terdeteksi terbuka. Tutup untuk melanjutkan.')
+        showDevtoolsWarning()
+      } else if (!open && devtoolsOpen) {
+        devtoolsOpen = false
+        hideDevtoolsWarning()
+      }
+    }
+
+    // Cek saat resize (trigger utama saat DevTools dibuka/tutup)
+    window.addEventListener('resize', check)
+    // Cek awal saat halaman pertama kali dimuat
+    check()
   })()
 }
 
