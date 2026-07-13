@@ -411,7 +411,8 @@ function groupIcon(g) {
 function goToMember(nik) {
   if (!nik || nik === data.value?.nomor_induk_kependudukan) return
   window.scrollTo({ top: 0, behavior: 'smooth' })
-  router.push({ name: 'AnggotaDetail', params: { nik } })
+  // Nama route sesuai router/index.js: 'baseline-anggota-detail'
+  router.push({ name: 'baseline-anggota-detail', params: { nik } })
 }
 
 async function loadData(nik) {
@@ -447,8 +448,8 @@ async function loadKKData(nkk) {
 }
 
 async function init(nik) {
-  loading.value = true
-  data.value    = null
+  loading.value   = true
+  data.value      = null
   kkMembers.value = []
   kkDetail.value  = null
 
@@ -466,8 +467,8 @@ async function init(nik) {
   }
 }
 
-// Watch perubahan NIK di URL — diperlukan karena Vue Router tidak unmount
-// komponen saat navigasi ke route yang sama dengan param berbeda
+// Watch perubahan NIK di URL — Vue Router tidak remount komponen
+// saat navigasi ke route yang sama dengan param berbeda
 watch(
   () => route.params.nik,
   (newNik) => { if (newNik) init(String(newNik)) },
