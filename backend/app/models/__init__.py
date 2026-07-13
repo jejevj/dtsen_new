@@ -1,8 +1,11 @@
 from .user import User
 from .tuser import TUser
 from .laz import Laz
+from .bidang import Bidang
 from .program import Program
 from .mustahik import Mustahik
+from .mustahik_bappenas import MustahikBappenas
+from .penerimaan import Penerimaan
 from .wilayah import Provinsi, KabKota, Kecamatan, Kelurahan
 from .tampilan_dtsen import TampilanDtsen
 from .t_dtsen_akses import TDtsenAkses
@@ -14,8 +17,11 @@ __all__ = [
     'User',
     'TUser',
     'Laz',
+    'Bidang',
     'Program',
     'Mustahik',
+    'MustahikBappenas',
+    'Penerimaan',
     'Provinsi',
     'KabKota',
     'Kecamatan',
