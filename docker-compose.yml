@@ -1,6 +1,6 @@
 version: '3.9'
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────────
 # DTSEN Stack
 #  dtsen_api      : Flask/Gunicorn  → host:8778
 #  dtsen_frontend : Vue + Nginx     → host:8786
@@ -11,7 +11,7 @@ version: '3.9'
 #   docker compose up -d --build
 # Update:
 #   git pull && docker compose up -d --build
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────────
 
 services:
 
@@ -47,8 +47,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      # Semua variabel VITE_ harus di-pass sebagai build args karena
+      # Vite mem-bake nilai ini saat `vite build` — bukan saat runtime.
+      # File .env di host TIDAK dibaca oleh `docker build`.
       args:
         VITE_API_BASE_URL: /api/v1
+        VITE_APP_NAME: DTSEN
+        VITE_APP_VERSION: 2.0.0
+        VITE_USE_MOCK: "false"
+        VITE_VIEW_ONLY: "true"
     image: dtsen_frontend:latest
     container_name: dtsen_frontend
     restart: unless-stopped
