@@ -55,7 +55,7 @@
           </div>
         </div>
 
-        <!-- ===== FIELD GROUPS DARI DB (is_detail=1, kategori=individu) ===== -->
+        <!-- ===== FIELD GROUPS DARI DB ===== -->
         <template v-if="detailGroups.length">
           <div
             v-for="(rowPair, ri) in pairedGroups"
@@ -67,7 +67,7 @@
               :key="group.group"
               class="detail-card wm-card"
             >
-              <!-- Watermark: gunakan slug agar id SVG valid (tanpa spasi) -->
+              <!-- Watermark -->
               <div class="wm-overlay" aria-hidden="true">
                 <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                   <defs>
@@ -89,43 +89,87 @@
                 <p class="section-title">
                   <i :class="groupIcon(group.group)"></i> {{ group.group }}
                 </p>
-                <table class="info-table">
-                  <tbody>
-                    <tr v-for="field in group.fields" :key="field.field_key">
-                      <td class="td-label">{{ field.field_label }}</td>
-                      <td class="td-value">
-                        <template v-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">
-                          {{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}
-                        </template>
-                        <template v-else-if="field.field_key === 'tanggal_lahir'">
-                          {{ formatTanggal(data[field.field_key]) }}
-                        </template>
-                        <template v-else-if="field.field_key === 'omzet_usaha_utama'">
-                          {{ data[field.field_key] ? formatRupiah(data[field.field_key]) : '-' }}
-                        </template>
-                        <template v-else-if="field.field_key === 'jumlah_usaha'">
-                          {{ data[field.field_key] != null ? data[field.field_key] + ' usaha' : '-' }}
-                        </template>
-                        <template v-else-if="field.field_key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama'">
-                          {{ data[field.field_key] ?? '-' }} orang
-                        </template>
-                        <template v-else-if="isDisabilitas(field.field_key)">
-                          <span :style="{
-                            display:'inline-block', padding:'2px 8px', borderRadius:'99px',
-                            fontSize:'11px', fontWeight:'700',
-                            background: isVal1(data[field.field_key]) ? '#fef2f2' : '#f0fdf4',
-                            color:      isVal1(data[field.field_key]) ? '#dc2626'  : '#15803d'
-                          }">
-                            {{ isVal1(data[field.field_key]) ? 'Ada Hambatan' : 'Normal' }}
-                          </span>
-                        </template>
-                        <template v-else>
+
+                <!-- ── Stat-box layout: untuk group Sosial Ekonomi & Lainnya ── -->
+                <template v-if="isStatGroup(group.group)">
+                  <div class="grid-stat">
+                    <div
+                      v-for="field in group.fields"
+                      :key="field.field_key"
+                      class="stat-box"
+                      :style="statBoxBg(field.field_key, data[field.field_key])"
+                    >
+                      <p class="stat-label">{{ field.field_label }}</p>
+                      <!-- ID Pelanggan PLN: monospace -->
+                      <template v-if="field.field_key === 'id_pelanggan_pln'">
+                        <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;"
+                           :style="{ color: data[field.field_key] ? '#15803d' : '#94a3b8' }">
+                          {{ data[field.field_key] ?? 'Tidak ada' }}
+                        </p>
+                      </template>
+                      <!-- pbi_nas -->
+                      <template v-else-if="field.field_key === 'pbi_nas'">
+                        <p class="stat-val" :style="{ color: data[field.field_key]==='1' ? '#b45309' : '#94a3b8' }">
+                          {{ data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}
+                        </p>
+                      </template>
+                      <!-- pbi_pemda -->
+                      <template v-else-if="field.field_key === 'pbi_pemda'">
+                        <p class="stat-val" :style="{ color: data[field.field_key]==='1' ? '#6d28d9' : '#94a3b8' }">
+                          {{ data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}
+                        </p>
+                      </template>
+                      <!-- field stat lainnya: resolve via refs -->
+                      <template v-else>
+                        <p class="stat-val" style="color:#374151;">
                           {{ resolveValue(field.field_key, data[field.field_key]) }}
-                        </template>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                        </p>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- ── Tabel biasa: semua group selain stat ── -->
+                <template v-else>
+                  <table class="info-table">
+                    <tbody>
+                      <tr v-for="field in group.fields" :key="field.field_key">
+                        <td class="td-label">{{ field.field_label }}</td>
+                        <td class="td-value">
+                          <template v-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">
+                            {{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}
+                          </template>
+                          <template v-else-if="field.field_key === 'tanggal_lahir'">
+                            {{ formatTanggal(data[field.field_key]) }}
+                          </template>
+                          <template v-else-if="field.field_key === 'omzet_usaha_utama'">
+                            {{ data[field.field_key] ? formatRupiah(data[field.field_key]) : '-' }}
+                          </template>
+                          <template v-else-if="field.field_key === 'jumlah_usaha'">
+                            {{ data[field.field_key] != null ? data[field.field_key] + ' usaha' : '-' }}
+                          </template>
+                          <template v-else-if="field.field_key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama'">
+                            {{ data[field.field_key] ?? '-' }} orang
+                          </template>
+                          <template v-else-if="isDisabilitas(field.field_key)">
+                            <span :style="{
+                              display:'inline-block', padding:'2px 8px', borderRadius:'99px',
+                              fontSize:'11px', fontWeight:'700',
+                              background: isVal1(data[field.field_key]) ? '#fef2f2' : '#f0fdf4',
+                              color:      isVal1(data[field.field_key]) ? '#dc2626'  : '#15803d'
+                            }">
+                              {{ isVal1(data[field.field_key]) ? 'Ada Hambatan' : 'Normal' }}
+                            </span>
+                          </template>
+                          <template v-else>
+                            {{ resolveValue(field.field_key, data[field.field_key]) }}
+                          </template>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </template>
+
               </div>
             </div>
           </div>
@@ -165,9 +209,21 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
-// Konversi nama group ke slug valid untuk id SVG (tanpa spasi/karakter aneh)
+// Slug aman untuk id SVG (tanpa spasi)
 function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+// Group yang pakai layout stat-box (bukan tabel)
+const STAT_GROUPS = new Set(['Sosial Ekonomi', 'Lainnya', 'Bansos'])
+function isStatGroup(g) { return STAT_GROUPS.has(g) }
+
+// Background stat-box per field
+function statBoxBg(key, val) {
+  if (key === 'pbi_nas')       return { background: val === '1' ? '#fefce8' : '#f8fafc' }
+  if (key === 'pbi_pemda')     return { background: val === '1' ? '#ede9fe' : '#f8fafc' }
+  if (key === 'id_pelanggan_pln') return { background: val ? '#f0fdf4' : '#f8fafc' }
+  return { background: '#f8fafc' }
 }
 
 // Pasangkan groups 2 per baris
@@ -250,10 +306,10 @@ onMounted(async () => {
 
 <style scoped>
 .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.grid-stat { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
 @media(max-width:768px) {
-  .grid-2 { grid-template-columns:1fr; }
-  .grid-3 { grid-template-columns:1fr; }
+  .grid-2    { grid-template-columns:1fr; }
+  .grid-stat { grid-template-columns:1fr 1fr; }
 }
 .detail-card {
   background:white; border-radius:14px; border:1px solid #f1f5f9;
