@@ -201,10 +201,20 @@
                     <tr
                       v-for="m in kkMembers" :key="m.nomor_induk_kependudukan"
                       :class="{ 'kk-active-row': m.nomor_induk_kependudukan === data.nomor_induk_kependudukan }"
-                      style="cursor:pointer;" @click="goToMember(m.nomor_induk_kependudukan)"
+                      :style="{ cursor: m.nomor_induk_kependudukan !== data.nomor_induk_kependudukan ? 'pointer' : 'default' }"
+                      @click="goToMember(m.nomor_induk_kependudukan)"
                     >
-                      <td><span v-if="m.nomor_induk_kependudukan === data.nomor_induk_kependudukan" class="kk-you-badge">Ini</span>{{ m.nama ?? '-' }}</td>
-                      <td style="font-family:monospace;font-size:11px;">{{ m.nomor_induk_kependudukan ?? '-' }}</td>
+                      <td>
+                        <span v-if="m.nomor_induk_kependudukan === data.nomor_induk_kependudukan" class="kk-you-badge">Ini</span>
+                        {{ m.nama ?? '-' }}
+                      </td>
+                      <td style="font-family:monospace;font-size:11px;">
+                        <span
+                          v-if="m.nomor_induk_kependudukan !== data.nomor_induk_kependudukan"
+                          class="nik-link"
+                        >{{ m.nomor_induk_kependudukan ?? '-' }}</span>
+                        <span v-else>{{ m.nomor_induk_kependudukan ?? '-' }}</span>
+                      </td>
                       <td>{{ resolveValue('status_hubungan_keluarga', m.status_hubungan_keluarga) }}</td>
                       <td><span :style="{ padding:'2px 7px', borderRadius:'99px', fontSize:'10px', fontWeight:'700', background:isLakiVal(m.jenis_kelamin)?'#eff6ff':'#fdf2f8', color:isLakiVal(m.jenis_kelamin)?'#2563eb':'#db2777' }">{{ isLakiVal(m.jenis_kelamin)?'L':'P' }}</span></td>
                     </tr>
@@ -226,7 +236,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -272,12 +282,6 @@ function groupType(group) {
   return 'normal'
 }
 
-/**
- * Buat slot render:
- * - group disabilitas → slot sendiri (type:'disab', groups:[g])
- * - group stat        → dikumpulkan berurutan jadi satu slot (type:'stat')
- * - group normal      → dipasangkan 2-2 (type:'normal', groups:[g1,g2?])
- */
 const groupSlots = computed(() => {
   const slots = []
   const normals = []
@@ -345,7 +349,6 @@ function disabBadgeStyle(v) {
   }
 }
 
-// Desil
 const DESIL_COLORS = [
   null,
   { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'Sangat Miskin' },
@@ -404,13 +407,15 @@ function groupIcon(g) {
   return GROUP_ICONS[g] ?? 'pi pi-list'
 }
 
+// Navigasi ke anggota lain dalam KK yang sama
 function goToMember(nik) {
   if (!nik || nik === data.value?.nomor_induk_kependudukan) return
+  window.scrollTo({ top: 0, behavior: 'smooth' })
   router.push({ name: 'AnggotaDetail', params: { nik } })
 }
 
-async function loadData() {
-  const nik = route.params.nik
+async function loadData(nik) {
+  data.value = null
   try {
     const provinsiList = await fetchBaselineProvinsi()
     for (const prov of provinsiList) {
@@ -441,6 +446,33 @@ async function loadKKData(nkk) {
   }
 }
 
+async function init(nik) {
+  loading.value = true
+  data.value    = null
+  kkMembers.value = []
+  kkDetail.value  = null
+
+  const [indGroups, kkGroups] = await Promise.all([
+    getDetailFields('individu'),
+    getDetailFields('keluarga'),
+    loadData(nik),
+  ])
+  detailGroups.value   = indGroups
+  keluargaGroups.value = kkGroups
+  loading.value = false
+
+  if (data.value?.nomor_kartu_keluarga) {
+    loadKKData(data.value.nomor_kartu_keluarga)
+  }
+}
+
+// Watch perubahan NIK di URL — diperlukan karena Vue Router tidak unmount
+// komponen saat navigasi ke route yang sama dengan param berbeda
+watch(
+  () => route.params.nik,
+  (newNik) => { if (newNik) init(String(newNik)) },
+)
+
 function formatTanggal(v) {
   if (!v) return '-'
   const str = String(v).includes('T') ? v : v + 'T00:00:00'
@@ -452,18 +484,7 @@ function formatRupiah(n) {
   return 'Rp ' + Number(n).toLocaleString('id-ID')
 }
 
-onMounted(async () => {
-  loading.value = true
-  const [indGroups, kkGroups] = await Promise.all([
-    getDetailFields('individu'),
-    getDetailFields('keluarga'),
-    loadData(),
-  ])
-  detailGroups.value   = indGroups
-  keluargaGroups.value = kkGroups
-  loading.value = false
-  if (data.value?.nomor_kartu_keluarga) loadKKData(data.value.nomor_kartu_keluarga)
-})
+onMounted(() => init(String(route.params.nik)))
 </script>
 
 <style scoped>
@@ -502,4 +523,7 @@ onMounted(async () => {
 .kk-table tbody tr:hover td { background:#f8fafc; }
 .kk-active-row td { background:#eff6ff !important; }
 .kk-you-badge { display:inline-block; padding:1px 6px; border-radius:99px; font-size:10px; font-weight:700; background:#2563eb; color:white; margin-right:5px; vertical-align:middle; }
+/* NIK anggota lain tampil seperti link */
+.nik-link { color:#2563eb; text-decoration:underline; cursor:pointer; }
+.kk-table tbody tr:not(.kk-active-row):hover .nik-link { color:#1d4ed8; }
 </style>
