@@ -1,0 +1,196 @@
+from ..extensions import db
+from sqlalchemy import text
+
+# Placeholder provinsi — 34 provinsi Indonesia dengan kode BPS
+_PROVINSI_PLACEHOLDER = [
+    {'provinsi_kode': '11', 'provinsi_nama': 'Aceh',                    'mustahik': 42000,  'penyaluran': 85000000000,  'laz_count': 3},
+    {'provinsi_kode': '12', 'provinsi_nama': 'Sumatera Utara',           'mustahik': 78000,  'penyaluran': 210000000000, 'laz_count': 5},
+    {'provinsi_kode': '13', 'provinsi_nama': 'Sumatera Barat',           'mustahik': 35000,  'penyaluran': 95000000000,  'laz_count': 3},
+    {'provinsi_kode': '14', 'provinsi_nama': 'Riau',                     'mustahik': 29000,  'penyaluran': 75000000000,  'laz_count': 2},
+    {'provinsi_kode': '15', 'provinsi_nama': 'Jambi',                    'mustahik': 18000,  'penyaluran': 42000000000,  'laz_count': 2},
+    {'provinsi_kode': '16', 'provinsi_nama': 'Sumatera Selatan',         'mustahik': 45000,  'penyaluran': 110000000000, 'laz_count': 3},
+    {'provinsi_kode': '17', 'provinsi_nama': 'Bengkulu',                 'mustahik': 12000,  'penyaluran': 28000000000,  'laz_count': 1},
+    {'provinsi_kode': '18', 'provinsi_nama': 'Lampung',                  'mustahik': 52000,  'penyaluran': 120000000000, 'laz_count': 3},
+    {'provinsi_kode': '19', 'provinsi_nama': 'Kepulauan Bangka Belitung','mustahik': 8000,   'penyaluran': 20000000000,  'laz_count': 1},
+    {'provinsi_kode': '21', 'provinsi_nama': 'Kepulauan Riau',           'mustahik': 11000,  'penyaluran': 35000000000,  'laz_count': 1},
+    {'provinsi_kode': '31', 'provinsi_nama': 'DKI Jakarta',              'mustahik': 95000,  'penyaluran': 850000000000, 'laz_count': 12},
+    {'provinsi_kode': '32', 'provinsi_nama': 'Jawa Barat',               'mustahik': 320000, 'penyaluran': 780000000000, 'laz_count': 15},
+    {'provinsi_kode': '33', 'provinsi_nama': 'Jawa Tengah',              'mustahik': 285000, 'penyaluran': 620000000000, 'laz_count': 13},
+    {'provinsi_kode': '34', 'provinsi_nama': 'DI Yogyakarta',            'mustahik': 42000,  'penyaluran': 130000000000, 'laz_count': 4},
+    {'provinsi_kode': '35', 'provinsi_nama': 'Jawa Timur',               'mustahik': 310000, 'penyaluran': 720000000000, 'laz_count': 14},
+    {'provinsi_kode': '36', 'provinsi_nama': 'Banten',                   'mustahik': 88000,  'penyaluran': 210000000000, 'laz_count': 5},
+    {'provinsi_kode': '51', 'provinsi_nama': 'Bali',                     'mustahik': 9000,   'penyaluran': 25000000000,  'laz_count': 1},
+    {'provinsi_kode': '52', 'provinsi_nama': 'Nusa Tenggara Barat',      'mustahik': 65000,  'penyaluran': 145000000000, 'laz_count': 4},
+    {'provinsi_kode': '53', 'provinsi_nama': 'Nusa Tenggara Timur',      'mustahik': 38000,  'penyaluran': 68000000000,  'laz_count': 2},
+    {'provinsi_kode': '61', 'provinsi_nama': 'Kalimantan Barat',         'mustahik': 28000,  'penyaluran': 65000000000,  'laz_count': 2},
+    {'provinsi_kode': '62', 'provinsi_nama': 'Kalimantan Tengah',        'mustahik': 15000,  'penyaluran': 38000000000,  'laz_count': 1},
+    {'provinsi_kode': '63', 'provinsi_nama': 'Kalimantan Selatan',       'mustahik': 32000,  'penyaluran': 88000000000,  'laz_count': 3},
+    {'provinsi_kode': '64', 'provinsi_nama': 'Kalimantan Timur',         'mustahik': 22000,  'penyaluran': 72000000000,  'laz_count': 2},
+    {'provinsi_kode': '65', 'provinsi_nama': 'Kalimantan Utara',         'mustahik': 7000,   'penyaluran': 18000000000,  'laz_count': 1},
+    {'provinsi_kode': '71', 'provinsi_nama': 'Sulawesi Utara',           'mustahik': 12000,  'penyaluran': 30000000000,  'laz_count': 1},
+    {'provinsi_kode': '72', 'provinsi_nama': 'Sulawesi Tengah',          'mustahik': 22000,  'penyaluran': 48000000000,  'laz_count': 2},
+    {'provinsi_kode': '73', 'provinsi_nama': 'Sulawesi Selatan',         'mustahik': 68000,  'penyaluran': 165000000000, 'laz_count': 5},
+    {'provinsi_kode': '74', 'provinsi_nama': 'Sulawesi Tenggara',        'mustahik': 18000,  'penyaluran': 40000000000,  'laz_count': 2},
+    {'provinsi_kode': '75', 'provinsi_nama': 'Gorontalo',                'mustahik': 10000,  'penyaluran': 22000000000,  'laz_count': 1},
+    {'provinsi_kode': '76', 'provinsi_nama': 'Sulawesi Barat',           'mustahik': 9000,   'penyaluran': 19000000000,  'laz_count': 1},
+    {'provinsi_kode': '81', 'provinsi_nama': 'Maluku',                   'mustahik': 15000,  'penyaluran': 32000000000,  'laz_count': 1},
+    {'provinsi_kode': '82', 'provinsi_nama': 'Maluku Utara',             'mustahik': 12000,  'penyaluran': 26000000000,  'laz_count': 1},
+    {'provinsi_kode': '91', 'provinsi_nama': 'Papua Barat',              'mustahik': 8000,   'penyaluran': 18000000000,  'laz_count': 1},
+    {'provinsi_kode': '94', 'provinsi_nama': 'Papua',                    'mustahik': 18000,  'penyaluran': 38000000000,  'laz_count': 2},
+]
+
+# Placeholder kabkota
+_KABKOTA_PLACEHOLDER = [
+    # Jawa Barat (32)
+    {'provinsi_kode': '32', 'kabkota_kode': '3201', 'kabkota_nama': 'Kab. Bogor',         'mustahik': 45000, 'penyaluran': 110000000000, 'laz_count': 4},
+    {'provinsi_kode': '32', 'kabkota_kode': '3202', 'kabkota_nama': 'Kab. Sukabumi',      'mustahik': 28000, 'penyaluran': 65000000000,  'laz_count': 2},
+    {'provinsi_kode': '32', 'kabkota_kode': '3203', 'kabkota_nama': 'Kab. Cianjur',       'mustahik': 22000, 'penyaluran': 48000000000,  'laz_count': 2},
+    {'provinsi_kode': '32', 'kabkota_kode': '3204', 'kabkota_nama': 'Kab. Bandung',       'mustahik': 38000, 'penyaluran': 90000000000,  'laz_count': 3},
+    {'provinsi_kode': '32', 'kabkota_kode': '3271', 'kabkota_nama': 'Kota Bogor',         'mustahik': 18000, 'penyaluran': 55000000000,  'laz_count': 2},
+    {'provinsi_kode': '32', 'kabkota_kode': '3273', 'kabkota_nama': 'Kota Bandung',       'mustahik': 35000, 'penyaluran': 95000000000,  'laz_count': 4},
+    {'provinsi_kode': '32', 'kabkota_kode': '3275', 'kabkota_nama': 'Kota Bekasi',        'mustahik': 42000, 'penyaluran': 115000000000, 'laz_count': 4},
+    {'provinsi_kode': '32', 'kabkota_kode': '3276', 'kabkota_nama': 'Kota Depok',         'mustahik': 25000, 'penyaluran': 72000000000,  'laz_count': 2},
+    # Jawa Tengah (33)
+    {'provinsi_kode': '33', 'kabkota_kode': '3301', 'kabkota_nama': 'Kab. Cilacap',       'mustahik': 32000, 'penyaluran': 68000000000,  'laz_count': 2},
+    {'provinsi_kode': '33', 'kabkota_kode': '3302', 'kabkota_nama': 'Kab. Banyumas',      'mustahik': 28000, 'penyaluran': 58000000000,  'laz_count': 2},
+    {'provinsi_kode': '33', 'kabkota_kode': '3374', 'kabkota_nama': 'Kota Semarang',      'mustahik': 22000, 'penyaluran': 75000000000,  'laz_count': 3},
+    {'provinsi_kode': '33', 'kabkota_kode': '3375', 'kabkota_nama': 'Kota Surakarta',     'mustahik': 15000, 'penyaluran': 42000000000,  'laz_count': 2},
+    # Jawa Timur (35)
+    {'provinsi_kode': '35', 'kabkota_kode': '3501', 'kabkota_nama': 'Kab. Pacitan',       'mustahik': 18000, 'penyaluran': 35000000000,  'laz_count': 1},
+    {'provinsi_kode': '35', 'kabkota_kode': '3502', 'kabkota_nama': 'Kab. Ponorogo',      'mustahik': 22000, 'penyaluran': 45000000000,  'laz_count': 1},
+    {'provinsi_kode': '35', 'kabkota_kode': '3578', 'kabkota_nama': 'Kota Surabaya',      'mustahik': 48000, 'penyaluran': 155000000000, 'laz_count': 5},
+    {'provinsi_kode': '35', 'kabkota_kode': '3573', 'kabkota_nama': 'Kota Malang',        'mustahik': 25000, 'penyaluran': 65000000000,  'laz_count': 2},
+    # DKI Jakarta (31)
+    {'provinsi_kode': '31', 'kabkota_kode': '3171', 'kabkota_nama': 'Jakarta Pusat',      'mustahik': 18000, 'penyaluran': 180000000000, 'laz_count': 4},
+    {'provinsi_kode': '31', 'kabkota_kode': '3172', 'kabkota_nama': 'Jakarta Utara',      'mustahik': 15000, 'penyaluran': 140000000000, 'laz_count': 3},
+    {'provinsi_kode': '31', 'kabkota_kode': '3173', 'kabkota_nama': 'Jakarta Barat',      'mustahik': 20000, 'penyaluran': 165000000000, 'laz_count': 3},
+    {'provinsi_kode': '31', 'kabkota_kode': '3174', 'kabkota_nama': 'Jakarta Selatan',    'mustahik': 22000, 'penyaluran': 185000000000, 'laz_count': 4},
+    {'provinsi_kode': '31', 'kabkota_kode': '3175', 'kabkota_nama': 'Jakarta Timur',      'mustahik': 20000, 'penyaluran': 180000000000, 'laz_count': 4},
+    # Sulawesi Selatan (73)
+    {'provinsi_kode': '73', 'kabkota_kode': '7301', 'kabkota_nama': 'Kab. Selayar',       'mustahik': 6000,  'penyaluran': 12000000000,  'laz_count': 1},
+    {'provinsi_kode': '73', 'kabkota_kode': '7371', 'kabkota_nama': 'Kota Makassar',      'mustahik': 32000, 'penyaluran': 85000000000,  'laz_count': 3},
+    # Banten (36)
+    {'provinsi_kode': '36', 'kabkota_kode': '3601', 'kabkota_nama': 'Kab. Pandeglang',    'mustahik': 18000, 'penyaluran': 38000000000,  'laz_count': 1},
+    {'provinsi_kode': '36', 'kabkota_kode': '3671', 'kabkota_nama': 'Kota Tangerang',     'mustahik': 25000, 'penyaluran': 68000000000,  'laz_count': 2},
+    {'provinsi_kode': '36', 'kabkota_kode': '3674', 'kabkota_nama': 'Kota Tangerang Sel.','mustahik': 22000, 'penyaluran': 72000000000,  'laz_count': 2},
+]
+
+# Placeholder kecamatan
+_KECAMATAN_PLACEHOLDER = [
+    {'kabkota_kode': '3273', 'kecamatan_kode': '3273010', 'kecamatan_nama': 'Sukasari',        'mustahik': 3200, 'penyaluran': 8500000000,  'laz_count': 1},
+    {'kabkota_kode': '3273', 'kecamatan_kode': '3273020', 'kecamatan_nama': 'Coblong',          'mustahik': 4100, 'penyaluran': 11200000000, 'laz_count': 1},
+    {'kabkota_kode': '3273', 'kecamatan_kode': '3273030', 'kecamatan_nama': 'Cidadap',          'mustahik': 2800, 'penyaluran': 7400000000,  'laz_count': 1},
+    {'kabkota_kode': '3273', 'kecamatan_kode': '3273040', 'kecamatan_nama': 'Andir',            'mustahik': 3600, 'penyaluran': 9800000000,  'laz_count': 1},
+    {'kabkota_kode': '3273', 'kecamatan_kode': '3273050', 'kecamatan_nama': 'Cicendo',          'mustahik': 3000, 'penyaluran': 8100000000,  'laz_count': 1},
+    {'kabkota_kode': '3273', 'kecamatan_kode': '3273060', 'kecamatan_nama': 'Bandung Wetan',    'mustahik': 1500, 'penyaluran': 4200000000,  'laz_count': 1},
+    {'kabkota_kode': '3273', 'kecamatan_kode': '3273070', 'kecamatan_nama': 'Sumur Bandung',    'mustahik': 2100, 'penyaluran': 5700000000,  'laz_count': 1},
+    {'kabkota_kode': '3273', 'kecamatan_kode': '3273080', 'kecamatan_nama': 'Cibeunying Kidul', 'mustahik': 3900, 'penyaluran': 10500000000, 'laz_count': 1},
+    {'kabkota_kode': '3275', 'kecamatan_kode': '3275010', 'kecamatan_nama': 'Bekasi Utara',     'mustahik': 5200, 'penyaluran': 14000000000, 'laz_count': 1},
+    {'kabkota_kode': '3275', 'kecamatan_kode': '3275020', 'kecamatan_nama': 'Bekasi Selatan',   'mustahik': 4800, 'penyaluran': 12800000000, 'laz_count': 1},
+    {'kabkota_kode': '3275', 'kecamatan_kode': '3275030', 'kecamatan_nama': 'Bekasi Barat',     'mustahik': 4200, 'penyaluran': 11200000000, 'laz_count': 1},
+    {'kabkota_kode': '3275', 'kecamatan_kode': '3275040', 'kecamatan_nama': 'Bekasi Timur',     'mustahik': 3900, 'penyaluran': 10400000000, 'laz_count': 1},
+    {'kabkota_kode': '3275', 'kecamatan_kode': '3275050', 'kecamatan_nama': 'Rawalumbu',        'mustahik': 4600, 'penyaluran': 12300000000, 'laz_count': 1},
+    {'kabkota_kode': '3275', 'kecamatan_kode': '3275060', 'kecamatan_nama': 'Jatiasih',         'mustahik': 5100, 'penyaluran': 13600000000, 'laz_count': 1},
+    {'kabkota_kode': '3275', 'kecamatan_kode': '3275070', 'kecamatan_nama': 'Pondok Gede',      'mustahik': 6200, 'penyaluran': 16500000000, 'laz_count': 1},
+    {'kabkota_kode': '3275', 'kecamatan_kode': '3275080', 'kecamatan_nama': 'Mustika Jaya',     'mustahik': 5800, 'penyaluran': 15400000000, 'laz_count': 1},
+    {'kabkota_kode': '3578', 'kecamatan_kode': '3578010', 'kecamatan_nama': 'Tegalsari',        'mustahik': 3800, 'penyaluran': 12200000000, 'laz_count': 1},
+    {'kabkota_kode': '3578', 'kecamatan_kode': '3578020', 'kecamatan_nama': 'Simokerto',        'mustahik': 4200, 'penyaluran': 13500000000, 'laz_count': 1},
+    {'kabkota_kode': '3578', 'kecamatan_kode': '3578030', 'kecamatan_nama': 'Genteng',          'mustahik': 2900, 'penyaluran': 9800000000,  'laz_count': 1},
+    {'kabkota_kode': '3578', 'kecamatan_kode': '3578040', 'kecamatan_nama': 'Bubutan',          'mustahik': 5100, 'penyaluran': 16400000000, 'laz_count': 1},
+    {'kabkota_kode': '3578', 'kecamatan_kode': '3578050', 'kecamatan_nama': 'Wonokromo',        'mustahik': 6200, 'penyaluran': 19800000000, 'laz_count': 1},
+    {'kabkota_kode': '3578', 'kecamatan_kode': '3578060', 'kecamatan_nama': 'Sawahan',          'mustahik': 5700, 'penyaluran': 18200000000, 'laz_count': 1},
+    {'kabkota_kode': '3174', 'kecamatan_kode': '3174010', 'kecamatan_nama': 'Tebet',            'mustahik': 2800, 'penyaluran': 25000000000, 'laz_count': 1},
+    {'kabkota_kode': '3174', 'kecamatan_kode': '3174020', 'kecamatan_nama': 'Setiabudi',        'mustahik': 2100, 'penyaluran': 19500000000, 'laz_count': 1},
+    {'kabkota_kode': '3174', 'kecamatan_kode': '3174030', 'kecamatan_nama': 'Mampang Prapatan', 'mustahik': 2400, 'penyaluran': 21000000000, 'laz_count': 1},
+    {'kabkota_kode': '3174', 'kecamatan_kode': '3174040', 'kecamatan_nama': 'Pasar Minggu',     'mustahik': 3100, 'penyaluran': 28000000000, 'laz_count': 1},
+    {'kabkota_kode': '3174', 'kecamatan_kode': '3174050', 'kecamatan_nama': 'Kebayoran Lama',   'mustahik': 3600, 'penyaluran': 32000000000, 'laz_count': 1},
+    {'kabkota_kode': '3174', 'kecamatan_kode': '3174060', 'kecamatan_nama': 'Kebayoran Baru',   'mustahik': 1800, 'penyaluran': 16500000000, 'laz_count': 1},
+    {'kabkota_kode': '7371', 'kecamatan_kode': '7371010', 'kecamatan_nama': 'Mariso',           'mustahik': 3200, 'penyaluran': 8400000000,  'laz_count': 1},
+    {'kabkota_kode': '7371', 'kecamatan_kode': '7371020', 'kecamatan_nama': 'Mamajang',         'mustahik': 2800, 'penyaluran': 7200000000,  'laz_count': 1},
+    {'kabkota_kode': '7371', 'kecamatan_kode': '7371030', 'kecamatan_nama': 'Tamalate',         'mustahik': 4500, 'penyaluran': 11800000000, 'laz_count': 1},
+    {'kabkota_kode': '7371', 'kecamatan_kode': '7371040', 'kecamatan_nama': 'Rappocini',        'mustahik': 3900, 'penyaluran': 10200000000, 'laz_count': 1},
+    {'kabkota_kode': '7371', 'kecamatan_kode': '7371050', 'kecamatan_nama': 'Makassar',         'mustahik': 3400, 'penyaluran': 9000000000,  'laz_count': 1},
+]
+
+# Placeholder bidang program BAZNAS & LAZ
+_BIDANG_PLACEHOLDER = [
+    {'bidang_kode': 'SOSIAL',   'bidang_label': 'Zakat Sosial',           'total_penyaluran': 1_850_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'EKONOMI',  'bidang_label': 'Pemberdayaan Ekonomi',   'total_penyaluran': 1_240_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'PENDIDIK', 'bidang_label': 'Pendidikan',             'total_penyaluran':   980_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'KESEHATAN','bidang_label': 'Kesehatan',              'total_penyaluran':   760_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'DAKWAH',   'bidang_label': 'Dakwah & Advokasi',      'total_penyaluran':   420_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+    {'bidang_kode': 'KEMANUSIA','bidang_label': 'Kemanusiaan & Bencana',  'total_penyaluran':   310_000_000_000, 'laz_type': 'BAZNAS & LAZ'},
+]
+
+
+class ReportService:
+    @staticmethod
+    def get_summary(params: dict) -> dict:
+        total = sum(p['penyaluran'] for p in _PROVINSI_PLACEHOLDER)
+        mustahik = sum(p['mustahik'] for p in _PROVINSI_PLACEHOLDER)
+        return {'penerima_manfaat': mustahik, 'penyaluran': total}
+
+    @staticmethod
+    def get_by_gender(params: dict) -> dict:
+        total_mustahik = sum(p['mustahik'] for p in _PROVINSI_PLACEHOLDER)
+        male   = int(total_mustahik * 0.485)
+        female = total_mustahik - male
+        return {'male_count': male, 'female_count': female, 'total': total_mustahik}
+
+    @staticmethod
+    def get_by_bidang(params: dict) -> list:
+        return _BIDANG_PLACEHOLDER
+
+    @staticmethod
+    def get_timeseries(params: dict) -> list:
+        return [
+            {'tahun': 2020, 'Bantuan_Langsung': 2_100_000_000_000, 'Bantuan_Tidak_Langsung':  820_000_000_000},
+            {'tahun': 2021, 'Bantuan_Langsung': 2_450_000_000_000, 'Bantuan_Tidak_Langsung':  950_000_000_000},
+            {'tahun': 2022, 'Bantuan_Langsung': 2_890_000_000_000, 'Bantuan_Tidak_Langsung': 1_100_000_000_000},
+            {'tahun': 2023, 'Bantuan_Langsung': 3_310_000_000_000, 'Bantuan_Tidak_Langsung': 1_250_000_000_000},
+            {'tahun': 2024, 'Bantuan_Langsung': 3_820_000_000_000, 'Bantuan_Tidak_Langsung': 1_480_000_000_000},
+            {'tahun': 2025, 'Bantuan_Langsung': 4_100_000_000_000, 'Bantuan_Tidak_Langsung': 1_660_000_000_000},
+        ]
+
+    @staticmethod
+    def get_desil_summary(params: dict) -> dict:
+        return {str(i): 0 for i in range(11)}
+
+    @staticmethod
+    def get_tabulate(params: dict) -> dict:
+        return {'data': [], 'meta': {}}
+
+    @staticmethod
+    def get_home_summary() -> dict:
+        total_penyaluran = sum(p['penyaluran'] for p in _PROVINSI_PLACEHOLDER)
+        penerima_manfaat = sum(p['mustahik']   for p in _PROVINSI_PLACEHOLDER)
+        # hitungan LAZ dari jumlah unik laz_count per kategori (placeholder)
+        nasional = 34   # BAZNAS Nasional + LAZ Nasional
+        provinsi = 136  # BAZNAS Provinsi + LAZ Provinsi
+        kabkota  = 514  # BAZNAS Kab/Kota + LAZ Kab/Kota
+        return {
+            'total_penyaluran': total_penyaluran,
+            'penerima_manfaat': penerima_manfaat,
+            'nasional': nasional,
+            'provinsi': provinsi,
+            'kabkota':  kabkota,
+        }
+
+    @staticmethod
+    def get_map_data(level: str, provinsi_kode: str = None, kabkota_kode: str = None) -> list:
+        """
+        level='1' → per provinsi
+        level='2' → per kabkota (filter by provinsi_kode jika diberikan)
+        level='3' → per kecamatan (filter by kabkota_kode, wajib)
+        """
+        if level == '3':
+            data = _KECAMATAN_PLACEHOLDER
+            if kabkota_kode:
+                data = [d for d in data if d['kabkota_kode'] == kabkota_kode]
+            return data
+        if level == '2':
+            data = _KABKOTA_PLACEHOLDER
+            if provinsi_kode:
+                data = [d for d in data if d['provinsi_kode'] == provinsi_kode]
+            return data
+        return _PROVINSI_PLACEHOLDER

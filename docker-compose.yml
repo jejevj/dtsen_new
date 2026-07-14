@@ -1,0 +1,67 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DTSEN Stack
+#  dtsen_api      : Flask/Gunicorn  → host:8778
+#  dtsen_frontend : Vue + Nginx     → host:8786
+#
+# Deploy:
+#   cp backend/.env.example backend/.env && nano backend/.env
+#   systemctl stop dtsen-frontend && systemctl disable dtsen-frontend
+#   docker compose up -d --build
+# Update:
+#   git pull && docker compose up -d --build
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: dtsen_api:latest
+    container_name: dtsen_api
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      FLASK_APP: wsgi.py
+      FLASK_ENV: production
+      ZAWA_API_KEY: prod-53a81004-085d-426b-a5a0-c6ef6cdf18e1
+    volumes:
+      - dtsen_uploads:/app/uploads
+      - ./logs:/app/logs
+    ports:
+      - "8778:5000"
+    networks:
+      - dtsen_net
+    healthcheck:
+      # wget tersedia di python:slim, curl tidak
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/api/v1/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: /api/v1
+    image: dtsen_frontend:latest
+    container_name: dtsen_frontend
+    restart: unless-stopped
+    ports:
+      - "8786:80"
+    depends_on:
+      - api
+    networks:
+      - dtsen_net
+
+volumes:
+  dtsen_uploads:
+
+networks:
+  dtsen_net:
+    driver: bridge

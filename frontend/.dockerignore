@@ -1,0 +1,29 @@
+# Dependencies (di-install ulang saat build)
+node_modules/
+
+# Build output
+dist/
+.vite/
+
+# Dev
+*.local
+.env*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Docker
+Dockerfile
+.dockerignore
