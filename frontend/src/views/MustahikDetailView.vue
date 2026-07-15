@@ -522,7 +522,7 @@ function fakeKodePos(id) {
   color:#94a3b8;
   font-weight:500;
   padding:9px 4px;
-  width:45%;
+  width:35%;
   vertical-align:top;
 }
 .td-value {

@@ -267,6 +267,7 @@
 </template>
 
 <script setup>
+
 import { ref, reactive, computed, onMounted } from 'vue'
 import AppLayout   from '@/components/layout/AppLayout.vue'
 import Button      from 'primevue/button'
@@ -276,6 +277,7 @@ import Select      from 'primevue/select'
 import DatePicker  from 'primevue/datepicker'
 import { fetchFilterFields } from '@/services/tampilanDtsenService'
 import api                   from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 // ── Drawer state ──────────────────────────────────────────────────────────────
 const showFilter    = ref(false)
@@ -284,6 +286,7 @@ const filterError   = ref('')
 const filterFields  = ref([])
 const activeFilters = reactive({})
 const globalSearch  = ref('')
+const authStore = useAuthStore()
 
 const activeFilterCount = computed(() =>
   Object.values(activeFilters).filter(v => v !== '' && v != null).length
@@ -324,10 +327,13 @@ const rows         = ref([])
 const pagination   = reactive({ page: 1, perPage: 20, total: 0, totalPages: 1 })
 
 async function fetchMustahik(page = 1) {
+  
+  console.log(authStore.user?.laz_kode)
+
   tableLoading.value = true
   tableError.value   = ''
   try {
-    const params = { page, per_page: pagination.perPage }
+    const params = { page, per_page: pagination.perPage, laz_kode: authStore.user?.laz_kode }
     if (globalSearch.value.trim()) params.nama = globalSearch.value.trim()
     for (const [k, v] of Object.entries(activeFilters)) {
       if (v !== '' && v != null) params[k] = v
