@@ -5,8 +5,8 @@
       <!-- Header -->
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 class="text-xl font-bold text-slate-800">Data Baseline</h2>
-          <p class="text-sm text-slate-500 mt-0.5">Data baseline penerima manfaat ZAWA · Sumber: Kemenag</p>
+          <h2 class="text-xl font-bold text-slate-800">Data DTSEN</h2>
+          <p class="text-sm text-slate-500 mt-0.5">Data DTSEN penerima manfaat ZAWA · Sumber: Kemenag</p>
         </div>
 
         <!-- Tombol Filter -->
