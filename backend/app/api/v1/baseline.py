@@ -70,6 +70,121 @@ SYNC_MAX_KELUARGA_PER_RUN     = 5_000
 _CACHE: dict = {}
 CACHE_TTL = 600
 
+# ---------------------------------------------------------------------------
+# Mapping field_key (dari m_tampilan_dtsen) → nama kolom di ZawaAnggota
+# Digunakan untuk menerapkan filter dinamis dari drawer filter di frontend.
+# ---------------------------------------------------------------------------
+_ANGGOTA_COLUMN_MAP: dict[str, str] = {
+    "nomor_induk_kependudukan":        "nomor_induk_kependudukan",
+    "nomor_kartu_keluarga":            "nomor_kartu_keluarga",
+    "nama":                            "nama",
+    "jenis_kelamin":                   "jenis_kelamin",
+    "tanggal_lahir":                   "tanggal_lahir",
+    "status_kawin":                    "status_kawin",
+    "status_hubungan_keluarga":        "status_hubungan_keluarga",
+    "alamat_ktp":                      "alamat_ktp",
+    "dusun_ktp":                       "dusun_ktp",
+    "rt_ktp":                          "rt_ktp",
+    "rw_ktp":                          "rw_ktp",
+    "kelurahan_desa_ktp":              "kelurahan_desa_ktp",
+    "kecamatan_ktp":                   "kecamatan_ktp",
+    "kabupaten_kota_ktp":              "kabupaten_kota_ktp",
+    "provinsi_ktp":                    "provinsi_ktp",
+    "kode_kelurahan_desa_ktp":         "kode_kelurahan_desa_ktp",
+    "kode_kecamatan_ktp":              "kode_kecamatan_ktp",
+    "kode_kabupaten_kota_ktp":         "kode_kabupaten_kota_ktp",
+    "kode_provinsi_ktp":               "kode_provinsi_ktp",
+    "partisipasi_sekolah":             "partisipasi_sekolah",
+    "jenjang_tertinggi_yang_diduduki": "jenjang_tertinggi_yang_diduduki",
+    "kelas_tertinggi_yang_diduduki":   "kelas_tertinggi_yang_diduduki",
+    "ijazah_tertinggi_yang_dimiliki":  "ijazah_tertinggi_yang_dimiliki",
+    "status_bekerja":                  "status_bekerja",
+    "status_dalam_pekerjaan_utama":    "status_dalam_pekerjaan_utama",
+    "lapangan_usaha_dari_pekerjaan_utama":            "lapangan_usaha_dari_pekerjaan_utama",
+    "lapangan_usaha_dari_usaha_utama":                "lapangan_usaha_dari_usaha_utama",
+    "kepemilikan_usaha":               "kepemilikan_usaha",
+    "jumlah_usaha":                    "jumlah_usaha",
+    "omzet_usaha_utama":               "omzet_usaha_utama",
+    "jumlah_pekerja_yang_dibayar_dari_usaha_utama":   "jumlah_pekerja_yang_dibayar_dari_usaha_utama",
+    "jumlah_pekerja_yang_tidak_dibayar_dari_usaha_utama": "jumlah_pekerja_yang_tidak_dibayar_dari_usaha_utama",
+    "penglihatan":                     "penglihatan",
+    "pendengaran":                     "pendengaran",
+    "berjalan_atau_naik_tangga":       "berjalan_atau_naik_tangga",
+    "menggunakan_tangan_jari":         "menggunakan_tangan_jari",
+    "mengingat_berkonsentrasi":        "mengingat_berkonsentrasi",
+    "mengurus_diri":                   "mengurus_diri",
+    "berbicara_komunikasi":            "berbicara_komunikasi",
+    "belajar_kemampuan_intelektual":   "belajar_kemampuan_intelektual",
+    "pengendalian_perilaku":           "pengendalian_perilaku",
+    "kesedihan_depresi":               "kesedihan_depresi",
+    "kondisi_gizi":                    "kondisi_gizi",
+    "penyakit_kronis":                 "penyakit_kronis",
+    "pbi_nas":                         "pbi_nas",
+    "pbi_pemda":                       "pbi_pemda",
+    "id_pelanggan_pln":                "id_pelanggan_pln",
+}
+
+# ---------------------------------------------------------------------------
+# Mapping field_key → nama kolom di ZawaKeluarga
+# ---------------------------------------------------------------------------
+_KELUARGA_COLUMN_MAP: dict[str, str] = {
+    "nomor_kartu_keluarga":              "nomor_kartu_keluarga",
+    "nama_anggota_keluarga":             "nama_anggota_keluarga",
+    "jumlah_anggota_keluarga":           "jumlah_anggota_keluarga",
+    "alamat":                            "alamat",
+    "kelurahan_desa":                    "kelurahan_desa",
+    "kecamatan":                         "kecamatan",
+    "kabupaten_kota":                    "kabupaten_kota",
+    "provinsi":                          "provinsi",
+    "kode_kelurahan_desa":               "kode_kelurahan_desa",
+    "kode_kecamatan":                    "kode_kecamatan",
+    "kode_kabupaten_kota":               "kode_kabupaten_kota",
+    "kode_provinsi":                     "kode_provinsi",
+    "luas_lantai":                       "luas_lantai",
+    "jenis_lantai_terluas":              "jenis_lantai_terluas",
+    "jenis_dinding_terluas":             "jenis_dinding_terluas",
+    "jenis_atap_terluas":                "jenis_atap_terluas",
+    "jenis_kloset":                      "jenis_kloset",
+    "fasilitas_bab":                     "fasilitas_bab",
+    "sumber_air_minum_utama":            "sumber_air_minum_utama",
+    "sumber_penerangan_utama":           "sumber_penerangan_utama",
+    "bahan_bakar_utama_memasak":         "bahan_bakar_utama_memasak",
+    "daya_terpasang":                    "daya_terpasang",
+    "pembuangan_akhir_tinja":            "pembuangan_akhir_tinja",
+    "status_kepemilikan_rumah":          "status_kepemilikan_rumah",
+    "kepemilikan_aset":                  "kepemilikan_aset",
+    "aset_bergerak_sepeda_motor":        "aset_bergerak_sepeda_motor",
+    "aset_bergerak_mobil":               "aset_bergerak_mobil",
+    "aset_bergerak_sepeda":              "aset_bergerak_sepeda",
+    "aset_bergerak_perahu":              "aset_bergerak_perahu",
+    "aset_bergerak_kapal_perahu_motor":  "aset_bergerak_kapal_perahu_motor",
+    "aset_bergerak_smartphone":          "aset_bergerak_smartphone",
+    "aset_bergerak_komputer_laptop_tablet": "aset_bergerak_komputer_laptop_tablet",
+    "aset_bergerak_lemari_es":           "aset_bergerak_lemari_es",
+    "aset_bergerak_ac":                  "aset_bergerak_ac",
+    "aset_bergerak_tv_datar":            "aset_bergerak_tv_datar",
+    "aset_bergerak_emas_perhiasan":      "aset_bergerak_emas_perhiasan",
+    "aset_bergerak_tabung_gas":          "aset_bergerak_tabung_gas",
+    "aset_bergerak_pemanas_air":         "aset_bergerak_pemanas_air",
+    "aset_bergerak_telepon_rumah":       "aset_bergerak_telepon_rumah",
+    "aset_tidak_bergerak_rumah_lainnya": "aset_tidak_bergerak_rumah_lainnya",
+    "aset_tidak_bergerak_lahan_lainnya": "aset_tidak_bergerak_lahan_lainnya",
+    "jumlah_ternak_sapi":               "jumlah_ternak_sapi",
+    "jumlah_ternak_kerbau":             "jumlah_ternak_kerbau",
+    "jumlah_ternak_kuda":               "jumlah_ternak_kuda",
+    "jumlah_ternak_kambing_domba":      "jumlah_ternak_kambing_domba",
+    "jumlah_ternak_babi":               "jumlah_ternak_babi",
+    "pbi_nas":                          "pbi_nas",
+    "pbi_pemda":                        "pbi_pemda",
+    "desil_nasional":                   "desil_nasional",
+    "id_pelanggan_pln":                 "id_pelanggan_pln",
+}
+
+# Kumpulan param yang bukan bagian dari filter dinamis (sudah ditangani secara eksplisit)
+_RESERVED_PARAMS = {
+    'provinsi', 'cursor', 'search', 'kabkota_kode', 'kecamatan_kode',
+}
+
 
 def _normalize_kode(raw: str) -> tuple[str, str]:
     s = raw.strip()
@@ -401,7 +516,6 @@ def _upsert_keluarga_from_api_item(item: dict) -> str:
 
 
 def _dedupe_by_nik(items: list) -> list:
-    """Hapus duplikat berdasarkan nomor_induk_kependudukan, pertahankan kemunculan pertama."""
     seen: set = set()
     result = []
     for item in items or []:
@@ -414,8 +528,43 @@ def _dedupe_by_nik(items: list) -> list:
 
 
 # ---------------------------------------------------------------------------
+# Helper: terapkan extra_filters (dari activeFilters frontend) ke SQLAlchemy query
+# Bekerja dengan mencocokkan field_key ke kolom model yang sudah terdaftar di column_map.
+# Sama persis dengan konsep pencarian NIK: filter langsung ke kolom DB.
+# ---------------------------------------------------------------------------
+def _apply_extra_filters(q, model, column_map: dict, extra_filters: dict):
+    """Terapkan filter dinamis dari m_tampilan_dtsen ke query SQLAlchemy.
+
+    Untuk setiap key di extra_filters:
+    - Jika key ada di column_map dan kolom ada di model → filter exact match (ilike untuk string)
+    - Nilai kosong / None diabaikan
+    """
+    for field_key, val in extra_filters.items():
+        if val is None or val == '':
+            continue
+        col_name = column_map.get(field_key)
+        if not col_name:
+            logger.debug(f"[Filter] field_key '{field_key}' tidak ada di column_map, dilewati.")
+            continue
+        col = getattr(model, col_name, None)
+        if col is None:
+            logger.debug(f"[Filter] kolom '{col_name}' tidak ada di model, dilewati.")
+            continue
+        # Deteksi tipe kolom: jika string → ilike (case-insensitive); selain itu exact match
+        col_type = str(col.property.columns[0].type).upper()
+        if any(t in col_type for t in ('VARCHAR', 'TEXT', 'CHAR', 'STRING')):
+            q = q.filter(col.ilike(f"%{val}%"))
+        else:
+            # Numerik / integer: exact match
+            try:
+                q = q.filter(col == type(col.property.columns[0].type.python_type())(val))
+            except Exception:
+                q = q.filter(col == val)
+    return q
+
+
+# ---------------------------------------------------------------------------
 # GET /baseline/anggota/by-nkk?nkk=<16-digit>
-# Ambil semua anggota dalam satu Kartu Keluarga, unik per NIK.
 # ---------------------------------------------------------------------------
 @api_v1_bp.get('/baseline/anggota/by-nkk')
 @jwt_required()
@@ -426,7 +575,6 @@ def baseline_anggota_by_nkk():
     if not _is_nkk(nkk):
         return jsonify({"error": "Format NKK tidak valid (harus 16 digit angka)."}), 400
 
-    # 1. Cari di DB lokal, dedup by NIK
     db_rows = ZawaAnggota.query.filter_by(nomor_kartu_keluarga=nkk).all()
     if db_rows:
         items = _dedupe_by_nik([_row_to_dict(r) for r in db_rows])
@@ -435,7 +583,6 @@ def baseline_anggota_by_nkk():
             "meta": {"totalItems": len(items), "source": "local_db", "nkk": nkk}
         }), 200
 
-    # 2. Fallback: deteksi provinsi dari 2 digit pertama NKK lalu fetch ZAWA
     bps_kode = nkk[:2]
     prov_slug = _BPS_TO_SLUG.get(bps_kode)
     if not prov_slug:
@@ -463,7 +610,6 @@ def baseline_anggota_by_nkk():
             break
         cursor = payload["nextCursor"]
 
-    # Dedup by NIK sebelum cache dan return
     found_items = _dedupe_by_nik(found_items)
 
     if found_items:
@@ -706,7 +852,12 @@ def baseline_provinsi_list():
 
 
 def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
-                             kabkota_filter, kecamatan_filter, search: str):
+                             kabkota_filter, kecamatan_filter, search: str,
+                             extra_filters: dict = None):
+    """Bangun query ZawaAnggota dengan filter wilayah, teks, dan filter dinamis.
+
+    extra_filters: dict {field_key: value} dari m_tampilan_dtsen (is_filter=1, kategori=individu).
+    """
     q = ZawaAnggota.query.filter(
         db.or_(
             ZawaAnggota.kode_provinsi_ktp == bps_kode,
@@ -730,6 +881,9 @@ def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
             ZawaAnggota.nama.ilike(q_lower),
             ZawaAnggota.nomor_induk_kependudukan.ilike(q_lower),
         ))
+    # Terapkan filter dinamis dari drawer filter
+    if extra_filters:
+        q = _apply_extra_filters(q, ZawaAnggota, _ANGGOTA_COLUMN_MAP, extra_filters)
     return q
 
 
@@ -744,6 +898,12 @@ def baseline_anggota():
     search           = request.args.get('search', '').strip()
     kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
     kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
+
+    # Kumpulkan extra_filters: semua param yang bukan reserved dan ada di _ANGGOTA_COLUMN_MAP
+    extra_filters = {
+        k: v for k, v in request.args.items()
+        if k not in _RESERVED_PARAMS and k in _ANGGOTA_COLUMN_MAP and v
+    }
 
     if not provinsi_raw:
         return jsonify({"error": "Parameter 'provinsi' wajib diisi."}), 400
@@ -801,7 +961,7 @@ def baseline_anggota():
         q = _build_anggota_db_query(
             provinsi_slug=provinsi, bps_kode=bps_kode,
             kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
-            search=search,
+            search=search, extra_filters=extra_filters,
         )
         total_count = q.count()
         if total_count > 0:
@@ -820,6 +980,20 @@ def baseline_anggota():
                     "currentPage": db_page, "hasNextPage": has_next,
                     "hasPreviousPage": db_page > 1, "nextCursor": next_cur,
                     "limit": DB_PAGE_SIZE, "searchMode": "db_cache", "source": "local_db",
+                }
+            }), 200
+        # Jika ada extra_filters tapi tidak ada data di DB, kembalikan kosong
+        # (tidak fallback ke ZAWA untuk menghindari salah data)
+        if extra_filters:
+            return jsonify({
+                "data": [], "columns": [],
+                "meta": {
+                    "provinsi": provinsi, "label": info["label"],
+                    "totalItems": 0, "totalPages": 1, "currentPage": 1,
+                    "hasNextPage": False, "hasPreviousPage": False,
+                    "nextCursor": None, "limit": DB_PAGE_SIZE,
+                    "searchMode": "db_cache", "source": "local_db",
+                    "errorMessage": "Tidak ada data yang sesuai dengan filter yang dipilih.",
                 }
             }), 200
 
@@ -859,6 +1033,12 @@ def baseline_keluarga():
     provinsi_raw     = request.args.get('provinsi', '').strip() or None
     kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
     kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
+
+    # Kumpulkan extra_filters untuk keluarga
+    extra_filters = {
+        k: v for k, v in request.args.items()
+        if k not in _RESERVED_PARAMS and k in _KELUARGA_COLUMN_MAP and v
+    }
 
     prov_slug = prov_info = prov_bps = None
     if provinsi_raw:
@@ -932,6 +1112,9 @@ def baseline_keluarga():
             ZawaKeluarga.kabupaten_kota.ilike(q_lower),
             ZawaKeluarga.provinsi.ilike(q_lower),
         ))
+    # Terapkan extra_filters untuk keluarga
+    if extra_filters:
+        q = _apply_extra_filters(q, ZawaKeluarga, _KELUARGA_COLUMN_MAP, extra_filters)
 
     filtered_total = q.count()
     if filtered_total > 0:
@@ -953,7 +1136,7 @@ def baseline_keluarga():
             }
         }), 200
 
-    if prov_bps or kabkota_dotted or kecamatan_dotted:
+    if prov_bps or kabkota_dotted or kecamatan_dotted or extra_filters:
         return jsonify({
             "data": [], "columns": [],
             "meta": {
@@ -962,7 +1145,7 @@ def baseline_keluarga():
                 "hasNextPage": False, "hasPreviousPage": False,
                 "nextCursor": None, "limit": DB_PAGE_SIZE,
                 "searchMode": "db_local", "source": "local_db",
-                "errorMessage": "Data belum tersedia di cache lokal. Lakukan sync terlebih dahulu.",
+                "errorMessage": "Data belum tersedia di cache lokal atau tidak ada yang sesuai filter. Lakukan sync terlebih dahulu.",
             }
         }), 200
 
