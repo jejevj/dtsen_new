@@ -187,6 +187,20 @@
               />
             </div>
 
+            <!-- Filter Desil Kemiskinan (hardcode, langsung kirim ke backend) -->
+            <div class="flex flex-col gap-1 min-w-[200px]">
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Desil Kemiskinan</label>
+              <Select
+                v-model="keluarga.desil"
+                :options="desilOptions"
+                option-label="label"
+                option-value="value"
+                placeholder="Semua Desil"
+                class="w-full text-sm"
+                show-clear
+              />
+            </div>
+
             <!-- Tombol Tampilkan & Reset -->
             <div class="flex gap-2 pb-0.5">
               <Button
@@ -284,6 +298,23 @@
             </div>
 
             <template v-else>
+              <!-- Filter Desil hardcode untuk tab Keluarga -->
+              <div v-if="activeTab === 'keluarga'" class="space-y-3">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Kesejahteraan</p>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">Desil Kemiskinan</label>
+                  <Select
+                    v-model="keluarga.desil"
+                    :options="desilOptions"
+                    option-label="label"
+                    option-value="value"
+                    placeholder="Semua Desil"
+                    class="w-full text-sm"
+                    show-clear
+                  />
+                </div>
+              </div>
+
               <div
                 v-for="(groupFields, groupName) in groupedFilterFields"
                 :key="groupName"
@@ -332,7 +363,7 @@
                 </div>
               </div>
 
-              <div v-if="!filterFields.length" class="text-sm text-slate-400 py-4">
+              <div v-if="activeTab !== 'keluarga' && !filterFields.length" class="text-sm text-slate-400 py-4">
                 <i class="pi pi-info-circle mr-1"></i>
                 Belum ada field filter yang dikonfigurasi.
               </div>
@@ -385,6 +416,20 @@ import {
 import { fetchFilterFields } from '@/services/tampilanDtsenService'
 
 const router = useRouter()
+
+// Opsi Desil Kemiskinan (hardcode, tidak butuh konfigurasi DB)
+const desilOptions = [
+  { value: '1',  label: 'Desil 1 – Sangat Miskin' },
+  { value: '2',  label: 'Desil 2 – Miskin' },
+  { value: '3',  label: 'Desil 3 – Hampir Miskin' },
+  { value: '4',  label: 'Desil 4 – Rentan Miskin' },
+  { value: '5',  label: 'Desil 5' },
+  { value: '6',  label: 'Desil 6' },
+  { value: '7',  label: 'Desil 7' },
+  { value: '8',  label: 'Desil 8' },
+  { value: '9',  label: 'Desil 9' },
+  { value: '10', label: 'Desil 10 – Tidak Miskin' },
+]
 
 function goToAnggotaDetail(row) {
   const nik = row.nomor_induk_kependudukan || row.nik || row.id
@@ -523,6 +568,7 @@ function makeTableState() {
     provinsi:  '',
     kabkota:   '',
     kecamatan: '',
+    desil:     '',   // filter desil khusus tab keluarga
     historyStack: [], currentCursor: null,
     meta: {
       label: '', totalItems: 0, totalPages: 1, currentPage: 1,
@@ -547,9 +593,12 @@ const currentFilters = computed(() =>
   activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
 )
 
-const activeFilterCount = computed(() =>
-  Object.values(currentFilters.value).filter(v => v !== '' && v != null).length
-)
+// Hitung jumlah filter aktif: dari drawer + desil khusus keluarga
+const activeFilterCount = computed(() => {
+  const drawerCount = Object.values(currentFilters.value).filter(v => v !== '' && v != null).length
+  const desilCount  = (activeTab.value === 'keluarga' && keluarga.desil) ? 1 : 0
+  return drawerCount + desilCount
+})
 
 function formatFilterValue(val) {
   if (val instanceof Date) {
@@ -563,6 +612,12 @@ function formatFilterValue(val) {
 
 const activeFiltersBadges = computed(() => {
   const result = []
+  // Badge desil untuk tab keluarga
+  if (activeTab.value === 'keluarga' && keluarga.desil) {
+    const opt = desilOptions.find(o => o.value === keluarga.desil)
+    result.push({ key: '__desil__', label: 'Desil', display: opt?.label ?? keluarga.desil })
+  }
+  // Badge dari drawer filter dinamis
   for (const f of filterFields.value) {
     const val = currentFilters.value[f.field_key]
     if (val === '' || val == null) continue
@@ -627,12 +682,18 @@ function applyFilter() {
 function resetFilter() {
   const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
   for (const k of Object.keys(store)) store[k] = ''
+  if (activeTab.value === 'keluarga') keluarga.desil = ''
   showFilter.value = false
   if (activeTab.value === 'anggota') loadAnggota()
   else loadKeluarga()
 }
 
 function clearOneFilter(fieldKey) {
+  if (fieldKey === '__desil__') {
+    keluarga.desil = ''
+    loadKeluarga()
+    return
+  }
   const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
   if (fieldKey in store) { store[fieldKey] = ''; applyFilter() }
 }
@@ -703,6 +764,8 @@ async function loadKeluarga(cursor = null) {
     }
     if (keluarga.kabkota)   params.kabkota_kode   = keluarga.kabkota
     if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
+    // Kirim desil_nasional ke backend jika dipilih
+    if (keluarga.desil)     params.desil_nasional  = keluarga.desil
     Object.assign(params, buildFilterParams(keluargaFilters))
     const res = await fetchBaselineKeluarga(params)
     keluarga.rows = res.data ?? []; keluarga.columns = res.columns ?? []
@@ -725,6 +788,7 @@ function resetKeluarga() {
   keluarga.kabkota   = ''
   keluarga.kecamatan = ''
   keluarga.search    = ''
+  keluarga.desil     = ''
   keluarga.rows = []; keluarga.columns = []
   keluarga.historyStack = []; keluarga.currentCursor = null
   keluargaKabkotaOptions.value   = []
