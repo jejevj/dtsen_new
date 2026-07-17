@@ -9,24 +9,26 @@
           <p class="text-sm text-slate-500 mt-0.5">Data baseline penerima manfaat ZAWA · Sumber: Kemenag</p>
         </div>
 
-        <!-- Tombol Filter (hanya aktif jika provinsi sudah dipilih) -->
-        <Button
-          icon="pi pi-filter"
-          severity="primary"
-          outlined
-          size="small"
+        <!-- Tombol Filter -->
+        <button
           :disabled="!currentProvinsi"
-          v-tooltip="!currentProvinsi ? 'Pilih provinsi terlebih dahulu' : ''"
+          v-tooltip="!currentProvinsi ? 'Pilih provinsi terlebih dahulu' : 'Buka filter pencarian'"
           @click="showFilter = true"
+          :class="[
+            'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border shadow-sm',
+            activeFilterCount > 0
+              ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700 shadow-primary-200'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300',
+            !currentProvinsi ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+          ]"
         >
-          <template #default>
-            <span>Filter</span>
-            <span
-              v-if="activeFilterCount > 0"
-              class="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary-600 text-white text-[10px] font-bold"
-            >{{ activeFilterCount }}</span>
-          </template>
-        </Button>
+          <i class="pi pi-filter text-base"></i>
+          <span>Filter</span>
+          <span
+            v-if="activeFilterCount > 0"
+            class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white text-primary-700 text-[11px] font-bold"
+          >{{ activeFilterCount }}</span>
+        </button>
       </div>
 
       <!-- Tab switcher -->
@@ -94,18 +96,7 @@
               />
             </div>
 
-            <!-- Search -->
-            <div class="flex flex-col gap-1 flex-1 min-w-[180px]">
-              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cari (halaman ini)</label>
-              <InputText
-                v-model="anggota.search"
-                placeholder="Nama / NIK…"
-                class="text-sm w-full"
-                @keyup.enter="loadAnggota()"
-              />
-            </div>
-
-            <!-- Tombol -->
+            <!-- Tombol Tampilkan & Reset -->
             <div class="flex gap-2 pb-0.5">
               <Button
                 label="Tampilkan" icon="pi pi-search" size="small"
@@ -196,18 +187,7 @@
               />
             </div>
 
-            <!-- Search -->
-            <div class="flex flex-col gap-1 flex-1 min-w-[180px]">
-              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cari (halaman ini)</label>
-              <InputText
-                v-model="keluarga.search"
-                placeholder="No. KK / Nama…"
-                class="text-sm w-full"
-                @keyup.enter="loadKeluarga()"
-              />
-            </div>
-
-            <!-- Tombol -->
+            <!-- Tombol Tampilkan & Reset -->
             <div class="flex gap-2 pb-0.5">
               <Button
                 label="Tampilkan" icon="pi pi-search" size="small"
@@ -290,24 +270,20 @@
           <!-- Body drawer (scrollable) -->
           <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
-            <!-- Pemberitahuan jika provinsi belum dipilih -->
             <div v-if="!currentProvinsi" class="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm">
               <i class="pi pi-exclamation-triangle shrink-0"></i>
               <span>Pilih provinsi terlebih dahulu untuk mengaktifkan filter.</span>
             </div>
 
-            <!-- Loading konfigurasi -->
             <div v-else-if="filterLoading" class="flex items-center gap-2 text-slate-400 text-sm py-4">
               <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi filter…
             </div>
 
-            <!-- Error konfigurasi -->
             <div v-else-if="filterError" class="text-sm text-red-500 bg-red-50 rounded-xl p-3">
               <i class="pi pi-exclamation-triangle mr-1"></i> {{ filterError }}
             </div>
 
             <template v-else>
-              <!-- Group per field_group -->
               <div
                 v-for="(groupFields, groupName) in groupedFilterFields"
                 :key="groupName"
@@ -318,7 +294,6 @@
                 <div v-for="field in groupFields" :key="field.field_key">
                   <label class="block text-xs font-medium text-slate-600 mb-1">{{ field.field_label }}</label>
 
-                  <!-- Dropdown jika ada refs -->
                   <Select
                     v-if="field.refs && field.refs.length"
                     v-model="currentFilters[field.field_key]"
@@ -330,7 +305,6 @@
                     show-clear
                   />
 
-                  <!-- Angka -->
                   <InputNumber
                     v-else-if="field.field_type === 'Integer' || field.field_type === 'Float'"
                     v-model="currentFilters[field.field_key]"
@@ -340,7 +314,6 @@
                     :max-fraction-digits="field.field_type === 'Float' ? 2 : 0"
                   />
 
-                  <!-- Tanggal -->
                   <DatePicker
                     v-else-if="field.field_type === 'Date'"
                     v-model="currentFilters[field.field_key]"
@@ -350,7 +323,6 @@
                     show-button-bar
                   />
 
-                  <!-- Teks -->
                   <InputText
                     v-else
                     v-model="currentFilters[field.field_key]"
@@ -360,7 +332,6 @@
                 </div>
               </div>
 
-              <!-- Kosong -->
               <div v-if="!filterFields.length" class="text-sm text-slate-400 py-4">
                 <i class="pi pi-info-circle mr-1"></i>
                 Belum ada field filter yang dikonfigurasi.
@@ -438,7 +409,6 @@ function switchTab(key) {
   activeTab.value = key
 }
 
-// ── Computed: provinsi aktif sesuai tab yang sedang ditampilkan
 const currentProvinsi = computed(() =>
   activeTab.value === 'anggota' ? anggota.provinsi : keluarga.provinsi
 )
@@ -564,32 +534,23 @@ function makeTableState() {
 const anggota  = makeTableState()
 const keluarga = makeTableState()
 
-// ── Drawer Filter state
-// Pisah filter per tab agar tidak cross-contaminate
+// ── Drawer Filter
 const showFilter    = ref(false)
 const filterLoading = ref(false)
 const filterError   = ref('')
 const filterFields  = ref([])
 
-// Filter anggota (individu) dan filter keluarga disimpan terpisah
 const anggotaFilters  = reactive({})
 const keluargaFilters = reactive({})
 
-// currentFilters mengarah ke store yang sesuai tab aktif
 const currentFilters = computed(() =>
   activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
 )
 
-// Jumlah filter aktif untuk tab yang sedang aktif
 const activeFilterCount = computed(() =>
   Object.values(currentFilters.value).filter(v => v !== '' && v != null).length
 )
 
-/**
- * Format nilai filter untuk dikirim ke backend:
- * - Date object → string YYYY-MM-DD
- * - Nilai lain → string
- */
 function formatFilterValue(val) {
   if (val instanceof Date) {
     const y = val.getFullYear()
@@ -600,13 +561,11 @@ function formatFilterValue(val) {
   return String(val)
 }
 
-// Badge filter: array of { key, label, display } untuk tab aktif
 const activeFiltersBadges = computed(() => {
   const result = []
   for (const f of filterFields.value) {
     const val = currentFilters.value[f.field_key]
     if (val === '' || val == null) continue
-    // Cari label display untuk nilai dropdown (refs)
     let display = formatFilterValue(val)
     if (f.refs && f.refs.length) {
       const ref = f.refs.find(r => r.ref_value === String(val))
@@ -627,7 +586,6 @@ const groupedFilterFields = computed(() => {
   return groups
 })
 
-// Kategori filter sesuai tab aktif
 const filterKategori = computed(() =>
   activeTab.value === 'anggota' ? 'individu' : 'keluarga'
 )
@@ -639,7 +597,6 @@ async function loadFilterFields() {
   try {
     const data = await fetchFilterFields(filterKategori.value)
     filterFields.value = data
-    // Inisialisasi key yang belum ada di currentFilters
     const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
     for (const f of data) {
       if (!(f.field_key in store)) store[f.field_key] = ''
@@ -652,20 +609,13 @@ async function loadFilterFields() {
   }
 }
 
-// Reload filter fields saat tab berganti
 watch(activeTab, () => {
-  // Reset fields agar drawer menampilkan field yang sesuai tab baru
   filterFields.value = []
-  if (currentProvinsi.value) {
-    loadFilterFields()
-  }
+  if (currentProvinsi.value) loadFilterFields()
 })
 
-// Load filter fields saat drawer dibuka (lazy)
 watch(showFilter, (val) => {
-  if (val && filterFields.value.length === 0 && currentProvinsi.value) {
-    loadFilterFields()
-  }
+  if (val && filterFields.value.length === 0 && currentProvinsi.value) loadFilterFields()
 })
 
 function applyFilter() {
@@ -675,7 +625,6 @@ function applyFilter() {
 }
 
 function resetFilter() {
-  // Reset hanya filter tab aktif
   const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
   for (const k of Object.keys(store)) store[k] = ''
   showFilter.value = false
@@ -685,19 +634,13 @@ function resetFilter() {
 
 function clearOneFilter(fieldKey) {
   const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
-  if (fieldKey in store) {
-    store[fieldKey] = ''
-    applyFilter()
-  }
+  if (fieldKey in store) { store[fieldKey] = ''; applyFilter() }
 }
 
-// ── Helper: build extra filter params untuk dikirim ke backend
 function buildFilterParams(store) {
   const params = {}
   for (const [k, v] of Object.entries(store)) {
-    if (v !== '' && v != null) {
-      params[k] = formatFilterValue(v)
-    }
+    if (v !== '' && v != null) params[k] = formatFilterValue(v)
   }
   return params
 }
@@ -714,7 +657,6 @@ async function loadAnggota(cursor = null) {
     }
     if (anggota.kabkota)   params.kabkota_kode   = anggota.kabkota
     if (anggota.kecamatan) params.kecamatan_kode = anggota.kecamatan
-    // Gabungkan filter aktif tab anggota
     Object.assign(params, buildFilterParams(anggotaFilters))
     const res = await fetchBaselineAnggota(params)
     anggota.rows = res.data ?? []; anggota.columns = res.columns ?? []
@@ -741,7 +683,6 @@ function resetAnggota() {
   anggota.historyStack = []; anggota.currentCursor = null
   anggotaKabkotaOptions.value   = []
   anggotaKecamatanOptions.value = []
-  // Reset filter anggota
   for (const k of Object.keys(anggotaFilters)) anggotaFilters[k] = ''
   Object.assign(anggota.meta, {
     label:'', totalItems:0, totalPages:1, currentPage:1,
@@ -762,7 +703,6 @@ async function loadKeluarga(cursor = null) {
     }
     if (keluarga.kabkota)   params.kabkota_kode   = keluarga.kabkota
     if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
-    // Gabungkan filter aktif tab keluarga
     Object.assign(params, buildFilterParams(keluargaFilters))
     const res = await fetchBaselineKeluarga(params)
     keluarga.rows = res.data ?? []; keluarga.columns = res.columns ?? []
@@ -789,7 +729,6 @@ function resetKeluarga() {
   keluarga.historyStack = []; keluarga.currentCursor = null
   keluargaKabkotaOptions.value   = []
   keluargaKecamatanOptions.value = []
-  // Reset filter keluarga
   for (const k of Object.keys(keluargaFilters)) keluargaFilters[k] = ''
   Object.assign(keluarga.meta, {
     label:'', totalItems:0, totalPages:1, currentPage:1,
