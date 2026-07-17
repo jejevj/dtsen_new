@@ -17,7 +17,7 @@
       <div v-else-if="!data" style="text-align:center;padding:60px 20px;background:white;border-radius:14px;border:1px solid #f1f5f9;">
         <i class="pi pi-user-minus" style="font-size:40px;color:#cbd5e1;"></i>
         <p style="color:#64748b;margin:12px 0 0;">Data anggota tidak ditemukan</p>
-        <p style="color:#94a3b8;font-size:12px;margin-top:4px;">NIK: {{ route.params.nik }}</p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:4px;">NIK: {{ maskNik(route.params.nik) }}</p>
       </div>
 
       <template v-else>
@@ -35,8 +35,9 @@
                   {{ isLaki ? 'Laki-laki' : 'Perempuan' }}
                 </span>
               </div>
-              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ data.nomor_induk_kependudukan ?? '-' }}</strong></p>
-              <p style="font-size:13px;color:#64748b;margin:0;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ data.nomor_kartu_keluarga ?? '-' }}</strong></p>
+              <!-- NIK & No.KK: tampilkan masked -->
+              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_induk_kependudukan) }}</strong></p>
+              <p style="font-size:13px;color:#64748b;margin:0;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</strong></p>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
               <span v-if="data.pbi_nas === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;"><i class="pi pi-shield" style="font-size:10px;"></i> PBI Nasional</span>
@@ -117,7 +118,11 @@
                         <tr v-for="field in group.fields" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
                           <td class="td-value">
-                            <template v-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">{{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}</template>
+                            <!-- Field NIK / No. KK: masked -->
+                            <template v-if="isNikField(field.field_key)">
+                              <span style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
+                            </template>
+                            <template v-else-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">{{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}</template>
                             <template v-else-if="field.field_key === 'tanggal_lahir'">{{ formatTanggal(data[field.field_key]) }}</template>
                             <template v-else-if="field.field_key === 'omzet_usaha_utama'">{{ data[field.field_key] ? formatRupiah(data[field.field_key]) : '-' }}</template>
                             <template v-else-if="field.field_key === 'jumlah_usaha'">{{ data[field.field_key] != null ? data[field.field_key] + ' usaha' : '-' }}</template>
@@ -160,7 +165,8 @@
               </div>
               <div style="margin-left:auto;text-align:right;">
                 <p style="font-size:11px;margin:0;opacity:.65;">No. KK</p>
-                <p style="font-size:12px;font-family:monospace;font-weight:700;margin:0;">{{ kkDetail.nomor_kartu_keluarga }}</p>
+                <!-- No. KK di banner: masked -->
+                <p style="font-size:12px;font-family:monospace;font-weight:700;margin:0;">{{ maskNik(kkDetail.nomor_kartu_keluarga) }}</p>
               </div>
             </div>
           </div>
@@ -177,7 +183,12 @@
                       <tbody>
                         <tr v-for="field in group.fields" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
-                          <td class="td-value">{{ resolveValue(field.field_key, kkDetail[field.field_key]) }}</td>
+                          <td class="td-value">
+                            <template v-if="isNikField(field.field_key)">
+                              <span style="font-family:monospace;">{{ maskNik(kkDetail[field.field_key]) }}</span>
+                            </template>
+                            <template v-else>{{ resolveValue(field.field_key, kkDetail[field.field_key]) }}</template>
+                          </td>
                         </tr>
                       </tbody>
                     </table>
@@ -191,7 +202,7 @@
           <div class="detail-card" style="display:flex;flex-direction:column;">
             <p class="section-title">
               <i class="pi pi-users"></i> Anggota dalam KK
-              <span style="margin-left:auto;font-size:11px;font-weight:500;color:#94a3b8;font-family:monospace;">{{ data.nomor_kartu_keluarga ?? '-' }}</span>
+              <span style="margin-left:auto;font-size:11px;font-weight:500;color:#94a3b8;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</span>
             </p>
             <template v-if="kkMembers.length">
               <div style="overflow-x:auto;">
@@ -208,12 +219,13 @@
                         <span v-if="m.nomor_induk_kependudukan === data.nomor_induk_kependudukan" class="kk-you-badge">Ini</span>
                         {{ m.nama ?? '-' }}
                       </td>
+                      <!-- NIK anggota KK: selalu masked -->
                       <td style="font-family:monospace;font-size:11px;">
                         <span
                           v-if="m.nomor_induk_kependudukan !== data.nomor_induk_kependudukan"
                           class="nik-link"
-                        >{{ m.nomor_induk_kependudukan ?? '-' }}</span>
-                        <span v-else>{{ m.nomor_induk_kependudukan ?? '-' }}</span>
+                        >{{ maskNik(m.nomor_induk_kependudukan) }}</span>
+                        <span v-else>{{ maskNik(m.nomor_induk_kependudukan) }}</span>
                       </td>
                       <td>{{ resolveValue('status_hubungan_keluarga', m.status_hubungan_keluarga) }}</td>
                       <td><span :style="{ padding:'2px 7px', borderRadius:'99px', fontSize:'10px', fontWeight:'700', background:isLakiVal(m.jenis_kelamin)?'#eff6ff':'#fdf2f8', color:isLakiVal(m.jenis_kelamin)?'#2563eb':'#db2777' }">{{ isLakiVal(m.jenis_kelamin)?'L':'P' }}</span></td>
@@ -243,6 +255,7 @@ import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import { fetchBaselineProvinsi } from '@/services/baselineService'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
+import { maskNik } from '@/utils/formatter'
 
 const route     = useRoute()
 const router    = useRouter()
@@ -263,6 +276,13 @@ const userIdentifier = computed(() => {
   if (!u) return 'CONFIDENTIAL'
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
+
+// Kolom/field yang dianggap NIK / No. KK — wajib di-masking
+const NIK_FIELDS = new Set([
+  'nomor_induk_kependudukan', 'nik',
+  'nomor_kartu_keluarga', 'nkk',
+])
+function isNikField(key) { return NIK_FIELDS.has(key) }
 
 // ---- Tipe group ----
 const DISAB_KEYS = new Set([
@@ -285,16 +305,13 @@ function groupType(group) {
 const groupSlots = computed(() => {
   const slots = []
   const normals = []
-
   function flushNormals() {
     while (normals.length) slots.push({ type: 'normal', groups: normals.splice(0, 2) })
   }
-
   let statBuf = []
   function flushStat() {
     if (statBuf.length) { slots.push({ type: 'stat', groups: [...statBuf] }); statBuf = [] }
   }
-
   for (const g of detailGroups.value) {
     const t = groupType(g)
     if (t === 'disab') {
@@ -316,11 +333,9 @@ const groupSlots = computed(() => {
 function stripDisabPrefix(label) {
   return String(label ?? '').replace(/^disabilitas[:\s]+/i, '').trim() || label
 }
-
 function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
-
 function statBoxBg(key, val) {
   if (key === 'pbi_nas')          return { background: val==='1' ? '#fefce8' : '#f8fafc' }
   if (key === 'pbi_pemda')        return { background: val==='1' ? '#ede9fe' : '#f8fafc' }
@@ -407,11 +422,9 @@ function groupIcon(g) {
   return GROUP_ICONS[g] ?? 'pi pi-list'
 }
 
-// Navigasi ke anggota lain dalam KK yang sama
 function goToMember(nik) {
   if (!nik || nik === data.value?.nomor_induk_kependudukan) return
   window.scrollTo({ top: 0, behavior: 'smooth' })
-  // Nama route sesuai router/index.js: 'baseline-anggota-detail'
   router.push({ name: 'baseline-anggota-detail', params: { nik } })
 }
 
@@ -452,7 +465,6 @@ async function init(nik) {
   data.value      = null
   kkMembers.value = []
   kkDetail.value  = null
-
   const [indGroups, kkGroups] = await Promise.all([
     getDetailFields('individu'),
     getDetailFields('keluarga'),
@@ -461,14 +473,11 @@ async function init(nik) {
   detailGroups.value   = indGroups
   keluargaGroups.value = kkGroups
   loading.value = false
-
   if (data.value?.nomor_kartu_keluarga) {
     loadKKData(data.value.nomor_kartu_keluarga)
   }
 }
 
-// Watch perubahan NIK di URL — Vue Router tidak remount komponen
-// saat navigasi ke route yang sama dengan param berbeda
 watch(
   () => route.params.nik,
   (newNik) => { if (newNik) init(String(newNik)) },
@@ -505,7 +514,6 @@ onMounted(() => init(String(route.params.nik)))
 .stat-box  { border-radius:10px; padding:16px; }
 .stat-label { font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin:0 0 4px; }
 .stat-val   { font-size:1.25rem; font-weight:900; margin:0; }
-/* ---- Disabilitas tabel ---- */
 .disab-table { width:100%; border-collapse:collapse; }
 .disab-th { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.4px; padding:6px 8px 8px; border-bottom:2px solid #f1f5f9; }
 .disab-tr { border-bottom:1px solid #f8fafc; transition:background .15s; }
@@ -513,9 +521,7 @@ onMounted(() => init(String(route.params.nik)))
 .disab-tr:hover { background:#f8fafc; }
 .disab-td-aspek  { font-size:12px; color:#374151; font-weight:500; padding:9px 8px; width:55%; }
 .disab-td-status { font-size:12px; padding:9px 8px; text-align:right; }
-/* ---- Desil banner ---- */
 .desil-banner { border-radius:14px; padding:18px 22px; }
-/* ---- KK table ---- */
 .kk-table { width:100%; border-collapse:collapse; font-size:12px; }
 .kk-table thead tr { background:#f8fafc; }
 .kk-table th { padding:8px 10px; text-align:left; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid #f1f5f9; }
@@ -524,7 +530,6 @@ onMounted(() => init(String(route.params.nik)))
 .kk-table tbody tr:hover td { background:#f8fafc; }
 .kk-active-row td { background:#eff6ff !important; }
 .kk-you-badge { display:inline-block; padding:1px 6px; border-radius:99px; font-size:10px; font-weight:700; background:#2563eb; color:white; margin-right:5px; vertical-align:middle; }
-/* NIK anggota lain tampil seperti link */
 .nik-link { color:#2563eb; text-decoration:underline; cursor:pointer; }
 .kk-table tbody tr:not(.kk-active-row):hover .nik-link { color:#1d4ed8; }
 </style>

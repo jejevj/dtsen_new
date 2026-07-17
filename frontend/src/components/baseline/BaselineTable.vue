@@ -49,7 +49,7 @@
             <td
               v-for="col in displayColumns" :key="col"
               class="px-4 py-2.5 text-slate-700 max-w-[220px] truncate"
-              :title="displayValue(col, row[col])"
+              :title="isNikCol(col) ? String(row[col] ?? '') : displayValue(col, row[col])"
             >
               <!-- Badge untuk jenis_kelamin -->
               <template v-if="col === 'jenis_kelamin'">
@@ -64,7 +64,12 @@
                 </span>
               </template>
 
-              <!-- Nilai biasa dengan ref lookup -->
+              <!-- NIK / No. KK: tampilkan masked -->
+              <template v-else-if="isNikCol(col)">
+                <span class="font-mono text-xs tracking-wide">{{ maskNik(row[col]) }}</span>
+              </template>
+
+              <!-- Nilai biasa -->
               <template v-else>
                 {{ displayValue(col, row[col]) }}
               </template>
@@ -108,6 +113,7 @@
 import { computed, onMounted } from 'vue'
 import Button from 'primevue/button'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
+import { maskNik } from '@/utils/formatter'
 
 const props = defineProps({
   loading:      { type: Boolean, default: false },
@@ -118,36 +124,33 @@ const props = defineProps({
   historyStack: { type: Array,   default: () => [] },
   emptyHint:    { type: String,  default: 'Tidak ada data.' },
   title:        { type: String,  default: 'Data' },
-  // 'anggota' | 'keluarga'
   type:         { type: String,  default: 'anggota' },
 })
 defineEmits(['next', 'prev', 'detail'])
+
+// Kolom yang dianggap NIK / nomor identitas — wajib di-masking
+const NIK_COLS = new Set([
+  'nomor_induk_kependudukan', 'nik',
+  'nomor_kartu_keluarga', 'nkk',
+])
+function isNikCol(col) { return NIK_COLS.has(col) }
 
 // ── Refs resolver
 const { ready, init, resolveValue, hasRefs } = useBaselineRefs()
 onMounted(() => init())
 
-/**
- * Tampilkan nilai kolom:
- * - Jika ada mapping di tampilan-dtsen → gunakan label
- * - Jika tidak ada → tampilkan raw
- */
 function displayValue(col, rawValue) {
   if (!ready.value) {
-    // Belum siap: fallback sementara untuk jenis_kelamin
     if (col === 'jenis_kelamin') {
       const fallback = { '1': 'Laki-laki', '2': 'Perempuan' }
       return fallback[String(rawValue)] ?? (rawValue ?? '-')
     }
     return rawValue ?? '-'
   }
-  if (hasRefs(col)) {
-    return resolveValue(col, rawValue)
-  }
+  if (hasRefs(col)) return resolveValue(col, rawValue)
   return rawValue ?? '-'
 }
 
-// Badge styling jenis_kelamin
 function genderClass(val) {
   const v = String(val)
   if (v === '1') return 'bg-blue-50 text-blue-700 border border-blue-200'
@@ -161,7 +164,6 @@ function genderIcon(val) {
   return 'pi pi-question-circle'
 }
 
-// Kolom prioritas per tipe tabel
 const ANGGOTA_COLS  = ['nama', 'nomor_induk_kependudukan', 'jenis_kelamin', 'kabupaten_kota_ktp', 'provinsi_ktp']
 const KELUARGA_COLS = ['nomor_kartu_keluarga', 'nama_anggota_keluarga', 'jumlah_anggota_keluarga', 'kabupaten_kota', 'provinsi']
 
