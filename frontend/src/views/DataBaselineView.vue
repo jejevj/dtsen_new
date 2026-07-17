@@ -124,12 +124,12 @@
           <div v-if="activeFilterCount > 0" class="mt-3 flex items-center gap-2 flex-wrap">
             <span class="text-xs text-slate-500">Filter aktif:</span>
             <span
-              v-for="(val, key) in activeFiltersBadges"
-              :key="key"
+              v-for="(item, idx) in activeFiltersBadges"
+              :key="idx"
               class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 text-xs font-semibold rounded-full"
             >
-              {{ key }}: {{ val }}
-              <button class="ml-0.5 hover:text-primary-900" @click="clearOneFilter(key)">
+              {{ item.label }}: {{ item.display }}
+              <button class="ml-0.5 hover:text-primary-900" @click="clearOneFilter(item.key)">
                 <i class="pi pi-times text-[10px]"></i>
               </button>
             </span>
@@ -226,12 +226,12 @@
           <div v-if="activeFilterCount > 0" class="mt-3 flex items-center gap-2 flex-wrap">
             <span class="text-xs text-slate-500">Filter aktif:</span>
             <span
-              v-for="(val, key) in activeFiltersBadges"
-              :key="key"
+              v-for="(item, idx) in activeFiltersBadges"
+              :key="idx"
               class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 text-xs font-semibold rounded-full"
             >
-              {{ key }}: {{ val }}
-              <button class="ml-0.5 hover:text-primary-900" @click="clearOneFilter(key)">
+              {{ item.label }}: {{ item.display }}
+              <button class="ml-0.5 hover:text-primary-900" @click="clearOneFilter(item.key)">
                 <i class="pi pi-times text-[10px]"></i>
               </button>
             </span>
@@ -321,7 +321,7 @@
                   <!-- Dropdown jika ada refs -->
                   <Select
                     v-if="field.refs && field.refs.length"
-                    v-model="activeFilters[field.field_key]"
+                    v-model="currentFilters[field.field_key]"
                     :options="[{ ref_value: '', ref_label: 'Semua' }, ...field.refs]"
                     option-label="ref_label"
                     option-value="ref_value"
@@ -333,7 +333,7 @@
                   <!-- Angka -->
                   <InputNumber
                     v-else-if="field.field_type === 'Integer' || field.field_type === 'Float'"
-                    v-model="activeFilters[field.field_key]"
+                    v-model="currentFilters[field.field_key]"
                     :placeholder="field.field_label"
                     class="w-full"
                     :min-fraction-digits="field.field_type === 'Float' ? 2 : 0"
@@ -343,7 +343,7 @@
                   <!-- Tanggal -->
                   <DatePicker
                     v-else-if="field.field_type === 'Date'"
-                    v-model="activeFilters[field.field_key]"
+                    v-model="currentFilters[field.field_key]"
                     :placeholder="field.field_label"
                     date-format="dd/mm/yy"
                     class="w-full"
@@ -353,7 +353,7 @@
                   <!-- Teks -->
                   <InputText
                     v-else
-                    v-model="activeFilters[field.field_key]"
+                    v-model="currentFilters[field.field_key]"
                     :placeholder="'Cari ' + field.field_label"
                     class="w-full text-sm"
                   />
@@ -432,7 +432,11 @@ const tabs = [
   { key: 'keluarga', label: 'Keluarga', icon: 'pi pi-home' },
 ]
 const activeTab = ref('anggota')
-function switchTab(key) { activeTab.value = key }
+
+function switchTab(key) {
+  if (activeTab.value === key) return
+  activeTab.value = key
+}
 
 // ── Computed: provinsi aktif sesuai tab yang sedang ditampilkan
 const currentProvinsi = computed(() =>
@@ -561,24 +565,54 @@ const anggota  = makeTableState()
 const keluarga = makeTableState()
 
 // ── Drawer Filter state
+// Pisah filter per tab agar tidak cross-contaminate
 const showFilter    = ref(false)
 const filterLoading = ref(false)
 const filterError   = ref('')
 const filterFields  = ref([])
-const activeFilters = reactive({})
 
-const activeFilterCount = computed(() =>
-  Object.values(activeFilters).filter(v => v !== '' && v != null).length
+// Filter anggota (individu) dan filter keluarga disimpan terpisah
+const anggotaFilters  = reactive({})
+const keluargaFilters = reactive({})
+
+// currentFilters mengarah ke store yang sesuai tab aktif
+const currentFilters = computed(() =>
+  activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
 )
 
-// Badge label: hanya tampilkan yang aktif beserta label yang mudah dibaca
+// Jumlah filter aktif untuk tab yang sedang aktif
+const activeFilterCount = computed(() =>
+  Object.values(currentFilters.value).filter(v => v !== '' && v != null).length
+)
+
+/**
+ * Format nilai filter untuk dikirim ke backend:
+ * - Date object → string YYYY-MM-DD
+ * - Nilai lain → string
+ */
+function formatFilterValue(val) {
+  if (val instanceof Date) {
+    const y = val.getFullYear()
+    const m = String(val.getMonth() + 1).padStart(2, '0')
+    const d = String(val.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  return String(val)
+}
+
+// Badge filter: array of { key, label, display } untuk tab aktif
 const activeFiltersBadges = computed(() => {
-  const result = {}
+  const result = []
   for (const f of filterFields.value) {
-    const val = activeFilters[f.field_key]
-    if (val !== '' && val != null) {
-      result[f.field_label] = val
+    const val = currentFilters.value[f.field_key]
+    if (val === '' || val == null) continue
+    // Cari label display untuk nilai dropdown (refs)
+    let display = formatFilterValue(val)
+    if (f.refs && f.refs.length) {
+      const ref = f.refs.find(r => r.ref_value === String(val))
+      if (ref) display = ref.ref_label
     }
+    result.push({ key: f.field_key, label: f.field_label, display })
   }
   return result
 })
@@ -593,7 +627,7 @@ const groupedFilterFields = computed(() => {
   return groups
 })
 
-// Tentukan kategori filter sesuai tab aktif
+// Kategori filter sesuai tab aktif
 const filterKategori = computed(() =>
   activeTab.value === 'anggota' ? 'individu' : 'keluarga'
 )
@@ -605,8 +639,10 @@ async function loadFilterFields() {
   try {
     const data = await fetchFilterFields(filterKategori.value)
     filterFields.value = data
+    // Inisialisasi key yang belum ada di currentFilters
+    const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
     for (const f of data) {
-      if (!(f.field_key in activeFilters)) activeFilters[f.field_key] = ''
+      if (!(f.field_key in store)) store[f.field_key] = ''
     }
   } catch (e) {
     filterError.value = 'Gagal memuat konfigurasi filter.'
@@ -618,9 +654,11 @@ async function loadFilterFields() {
 
 // Reload filter fields saat tab berganti
 watch(activeTab, () => {
+  // Reset fields agar drawer menampilkan field yang sesuai tab baru
   filterFields.value = []
-  for (const k of Object.keys(activeFilters)) activeFilters[k] = ''
-  if (currentProvinsi.value) loadFilterFields()
+  if (currentProvinsi.value) {
+    loadFilterFields()
+  }
 })
 
 // Load filter fields saat drawer dibuka (lazy)
@@ -637,18 +675,31 @@ function applyFilter() {
 }
 
 function resetFilter() {
-  for (const k of Object.keys(activeFilters)) activeFilters[k] = ''
+  // Reset hanya filter tab aktif
+  const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
+  for (const k of Object.keys(store)) store[k] = ''
   showFilter.value = false
   if (activeTab.value === 'anggota') loadAnggota()
   else loadKeluarga()
 }
 
-function clearOneFilter(label) {
-  const field = filterFields.value.find(f => f.field_label === label)
-  if (field) {
-    activeFilters[field.field_key] = ''
+function clearOneFilter(fieldKey) {
+  const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
+  if (fieldKey in store) {
+    store[fieldKey] = ''
     applyFilter()
   }
+}
+
+// ── Helper: build extra filter params untuk dikirim ke backend
+function buildFilterParams(store) {
+  const params = {}
+  for (const [k, v] of Object.entries(store)) {
+    if (v !== '' && v != null) {
+      params[k] = formatFilterValue(v)
+    }
+  }
+  return params
 }
 
 // ── Anggota
@@ -663,10 +714,8 @@ async function loadAnggota(cursor = null) {
     }
     if (anggota.kabkota)   params.kabkota_kode   = anggota.kabkota
     if (anggota.kecamatan) params.kecamatan_kode = anggota.kecamatan
-    // Tambahkan activeFilters ke params
-    for (const [k, v] of Object.entries(activeFilters)) {
-      if (v !== '' && v != null) params[k] = v
-    }
+    // Gabungkan filter aktif tab anggota
+    Object.assign(params, buildFilterParams(anggotaFilters))
     const res = await fetchBaselineAnggota(params)
     anggota.rows = res.data ?? []; anggota.columns = res.columns ?? []
     Object.assign(anggota.meta, res.meta ?? {})
@@ -692,7 +741,8 @@ function resetAnggota() {
   anggota.historyStack = []; anggota.currentCursor = null
   anggotaKabkotaOptions.value   = []
   anggotaKecamatanOptions.value = []
-  for (const k of Object.keys(activeFilters)) activeFilters[k] = ''
+  // Reset filter anggota
+  for (const k of Object.keys(anggotaFilters)) anggotaFilters[k] = ''
   Object.assign(anggota.meta, {
     label:'', totalItems:0, totalPages:1, currentPage:1,
     hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
@@ -712,10 +762,8 @@ async function loadKeluarga(cursor = null) {
     }
     if (keluarga.kabkota)   params.kabkota_kode   = keluarga.kabkota
     if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
-    // Tambahkan activeFilters ke params
-    for (const [k, v] of Object.entries(activeFilters)) {
-      if (v !== '' && v != null) params[k] = v
-    }
+    // Gabungkan filter aktif tab keluarga
+    Object.assign(params, buildFilterParams(keluargaFilters))
     const res = await fetchBaselineKeluarga(params)
     keluarga.rows = res.data ?? []; keluarga.columns = res.columns ?? []
     Object.assign(keluarga.meta, res.meta ?? {})
@@ -741,7 +789,8 @@ function resetKeluarga() {
   keluarga.historyStack = []; keluarga.currentCursor = null
   keluargaKabkotaOptions.value   = []
   keluargaKecamatanOptions.value = []
-  for (const k of Object.keys(activeFilters)) activeFilters[k] = ''
+  // Reset filter keluarga
+  for (const k of Object.keys(keluargaFilters)) keluargaFilters[k] = ''
   Object.assign(keluarga.meta, {
     label:'', totalItems:0, totalPages:1, currentPage:1,
     hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
