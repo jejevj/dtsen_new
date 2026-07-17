@@ -12,7 +12,11 @@ class TampilanDtsen(db.Model):
                             comment='Label kolom yang ditampilkan ke user')
     field_group = db.Column(db.String(100), nullable=False, default='',
                             comment='Grup/seksi field (cth: Identitas, Pendidikan)')
-    kategori    = db.Column(db.Enum('individu', 'keluarga'), nullable=False, default='individu')
+    # 'keduanya' = berlaku untuk individu maupun keluarga
+    kategori    = db.Column(
+                    db.Enum('individu', 'keluarga', 'keduanya'),
+                    nullable=False, default='individu'
+                  )
     field_type  = db.Column(db.String(50), nullable=False, default='String',
                             comment='String, String (kode), Integer, Float, Date')
     is_filter   = db.Column(db.SmallInteger, nullable=False, default=0,
