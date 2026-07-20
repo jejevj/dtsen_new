@@ -181,20 +181,13 @@ function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-// Urutan paksa: Aset Bergerak → Aset Tidak Bergerak → Fasilitas Rumah
+// Urutan paksa: Aset Bergerak → Aset Tidak Bergerak → Fasilitas Rumah selalu di akhir
 const KK_GROUP_ORDER = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
 function reorderKeluargaGroups(groups) {
   const pinnedNames = new Set(KK_GROUP_ORDER)
-  const pinned = KK_GROUP_ORDER.map(name => groups.find(g => g.group === name)).filter(Boolean)
   const rest   = groups.filter(g => !pinnedNames.has(g.group))
-  // Sisipkan di posisi kemunculan pertama salah satu dari ketiga group tsb dalam array asli
-  const firstPinnedIdx = groups.findIndex(g => pinnedNames.has(g.group))
-  if (firstPinnedIdx === -1) return [...rest, ...pinned]
-  let countBefore = 0
-  for (let i = 0; i < firstPinnedIdx; i++) {
-    if (!pinnedNames.has(groups[i].group)) countBefore++
-  }
-  return [...rest.slice(0, countBefore), ...pinned, ...rest.slice(countBefore)]
+  const pinned = KK_GROUP_ORDER.map(name => groups.find(g => g.group === name)).filter(Boolean)
+  return [...rest, ...pinned]
 }
 
 const orderedKeluargaGroups = computed(() => reorderKeluargaGroups(keluargaGroups.value))

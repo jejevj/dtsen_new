@@ -279,22 +279,10 @@ function isNikField(key) { return NIK_FIELDS.has(key) }
 // Urutan paksa untuk group-group di bagian keluarga
 const KK_GROUP_ORDER = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
 function reorderKeluargaGroups(groups) {
+  const pinnedNames = new Set(KK_GROUP_ORDER)
+  const rest   = groups.filter(g => !pinnedNames.has(g.group))
   const pinned = KK_GROUP_ORDER.map(name => groups.find(g => g.group === name)).filter(Boolean)
-  const rest   = groups.filter(g => !KK_GROUP_ORDER.includes(g.group))
-  // Sisipkan pinned menggantikan posisi kemunculan pertama salah satu dari ketiganya
-  const firstIdx = rest.findIndex ? (() => {
-    const pinnedNames = new Set(KK_GROUP_ORDER)
-    // cari index di 'groups' asli (sebelum filter)
-    const firstPinnedIdx = groups.findIndex(g => pinnedNames.has(g.group))
-    if (firstPinnedIdx === -1) return rest.length
-    // hitung berapa group non-pinned sebelum index itu
-    let count = 0
-    for (let i = 0; i < firstPinnedIdx; i++) {
-      if (!pinnedNames.has(groups[i].group)) count++
-    }
-    return count
-  })() : rest.length
-  return [...rest.slice(0, firstIdx), ...pinned, ...rest.slice(firstIdx)]
+  return [...rest, ...pinned]
 }
 
 const DISAB_KEYS = new Set([
