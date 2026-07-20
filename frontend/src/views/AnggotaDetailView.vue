@@ -35,7 +35,6 @@
                   {{ isLaki ? 'Laki-laki' : 'Perempuan' }}
                 </span>
               </div>
-              <!-- NIK & No.KK: tampilkan masked -->
               <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_induk_kependudukan) }}</strong></p>
               <p style="font-size:13px;color:#64748b;margin:0;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</strong></p>
             </div>
@@ -118,7 +117,6 @@
                         <tr v-for="field in group.fields" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
                           <td class="td-value">
-                            <!-- Field NIK / No. KK: masked -->
                             <template v-if="isNikField(field.field_key)">
                               <span style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
                             </template>
@@ -165,7 +163,6 @@
               </div>
               <div style="margin-left:auto;text-align:right;">
                 <p style="font-size:11px;margin:0;opacity:.65;">No. KK</p>
-                <!-- No. KK di banner: masked -->
                 <p style="font-size:12px;font-family:monospace;font-weight:700;margin:0;">{{ maskNik(kkDetail.nomor_kartu_keluarga) }}</p>
               </div>
             </div>
@@ -219,12 +216,8 @@
                         <span v-if="m.nomor_induk_kependudukan === data.nomor_induk_kependudukan" class="kk-you-badge">Ini</span>
                         {{ m.nama ?? '-' }}
                       </td>
-                      <!-- NIK anggota KK: selalu masked -->
                       <td style="font-family:monospace;font-size:11px;">
-                        <span
-                          v-if="m.nomor_induk_kependudukan !== data.nomor_induk_kependudukan"
-                          class="nik-link"
-                        >{{ maskNik(m.nomor_induk_kependudukan) }}</span>
+                        <span v-if="m.nomor_induk_kependudukan !== data.nomor_induk_kependudukan" class="nik-link">{{ maskNik(m.nomor_induk_kependudukan) }}</span>
                         <span v-else>{{ maskNik(m.nomor_induk_kependudukan) }}</span>
                       </td>
                       <td>{{ resolveValue('status_hubungan_keluarga', m.status_hubungan_keluarga) }}</td>
@@ -277,14 +270,33 @@ const userIdentifier = computed(() => {
   return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
 })
 
-// Kolom/field yang dianggap NIK / No. KK — wajib di-masking
 const NIK_FIELDS = new Set([
   'nomor_induk_kependudukan', 'nik',
   'nomor_kartu_keluarga', 'nkk',
 ])
 function isNikField(key) { return NIK_FIELDS.has(key) }
 
-// ---- Tipe group ----
+// Urutan paksa untuk group-group di bagian keluarga
+const KK_GROUP_ORDER = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
+function reorderKeluargaGroups(groups) {
+  const pinned = KK_GROUP_ORDER.map(name => groups.find(g => g.group === name)).filter(Boolean)
+  const rest   = groups.filter(g => !KK_GROUP_ORDER.includes(g.group))
+  // Sisipkan pinned menggantikan posisi kemunculan pertama salah satu dari ketiganya
+  const firstIdx = rest.findIndex ? (() => {
+    const pinnedNames = new Set(KK_GROUP_ORDER)
+    // cari index di 'groups' asli (sebelum filter)
+    const firstPinnedIdx = groups.findIndex(g => pinnedNames.has(g.group))
+    if (firstPinnedIdx === -1) return rest.length
+    // hitung berapa group non-pinned sebelum index itu
+    let count = 0
+    for (let i = 0; i < firstPinnedIdx; i++) {
+      if (!pinnedNames.has(groups[i].group)) count++
+    }
+    return count
+  })() : rest.length
+  return [...rest.slice(0, firstIdx), ...pinned, ...rest.slice(firstIdx)]
+}
+
 const DISAB_KEYS = new Set([
   'penglihatan', 'pendengaran', 'berbicara_komunikasi',
   'berjalan_atau_naik_tangga', 'menggunakan_tangan_jari',
@@ -328,6 +340,13 @@ const groupSlots = computed(() => {
   }
   flushNormals(); flushStat()
   return slots
+})
+
+const pairedKeluargaGroups = computed(() => {
+  const ordered = reorderKeluargaGroups(keluargaGroups.value)
+  const r = []
+  for (let i = 0; i < ordered.length; i += 2) r.push(ordered.slice(i, i + 2))
+  return r
 })
 
 function stripDisabPrefix(label) {
@@ -392,12 +411,6 @@ function desilIconStyle(v) {
   if (!c) return { width:'44px', height:'44px', borderRadius:'12px', background:'#e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', color:'#94a3b8', flexShrink:0 }
   return { width:'44px', height:'44px', borderRadius:'12px', background:c.icon+'33', display:'flex', alignItems:'center', justifyContent:'center', color:c.icon, flexShrink:0 }
 }
-
-const pairedKeluargaGroups = computed(() => {
-  const r = []
-  for (let i = 0; i < keluargaGroups.value.length; i += 2) r.push(keluargaGroups.value.slice(i, i + 2))
-  return r
-})
 
 const isLaki = computed(() => isLakiVal(data.value?.jenis_kelamin))
 function isLakiVal(v) {

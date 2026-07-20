@@ -62,7 +62,7 @@
         </div>
 
         <!-- ===== DETAIL GROUPS KELUARGA ===== -->
-        <template v-if="keluargaGroups.length">
+        <template v-if="orderedKeluargaGroups.length">
           <template v-for="(rowPair, ri) in pairedKeluargaGroups" :key="'kk-'+ri">
             <div :class="rowPair.length === 2 ? 'grid-2' : ''">
               <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
@@ -181,6 +181,31 @@ function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+// Urutan paksa: Aset Bergerak → Aset Tidak Bergerak → Fasilitas Rumah
+const KK_GROUP_ORDER = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
+function reorderKeluargaGroups(groups) {
+  const pinnedNames = new Set(KK_GROUP_ORDER)
+  const pinned = KK_GROUP_ORDER.map(name => groups.find(g => g.group === name)).filter(Boolean)
+  const rest   = groups.filter(g => !pinnedNames.has(g.group))
+  // Sisipkan di posisi kemunculan pertama salah satu dari ketiga group tsb dalam array asli
+  const firstPinnedIdx = groups.findIndex(g => pinnedNames.has(g.group))
+  if (firstPinnedIdx === -1) return [...rest, ...pinned]
+  let countBefore = 0
+  for (let i = 0; i < firstPinnedIdx; i++) {
+    if (!pinnedNames.has(groups[i].group)) countBefore++
+  }
+  return [...rest.slice(0, countBefore), ...pinned, ...rest.slice(countBefore)]
+}
+
+const orderedKeluargaGroups = computed(() => reorderKeluargaGroups(keluargaGroups.value))
+
+const pairedKeluargaGroups = computed(() => {
+  const r = []
+  for (let i = 0; i < orderedKeluargaGroups.value.length; i += 2)
+    r.push(orderedKeluargaGroups.value.slice(i, i + 2))
+  return r
+})
+
 const GROUP_ICONS = {
   'Data Pribadi': 'pi pi-id-card',
   'Alamat KTP': 'pi pi-map-marker',
@@ -231,12 +256,6 @@ function desilBadgeStyle(v) {
   if (!c) return { padding:'2px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'600', background:'#f1f5f9', color:'#64748b', display:'inline-block' }
   return { padding:'2px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background:c.bg, color:c.text, border:`1px solid ${c.border}`, display:'inline-block' }
 }
-
-const pairedKeluargaGroups = computed(() => {
-  const r = []
-  for (let i = 0; i < keluargaGroups.value.length; i += 2) r.push(keluargaGroups.value.slice(i, i + 2))
-  return r
-})
 
 function goToAnggota(nik) {
   if (!nik) return
