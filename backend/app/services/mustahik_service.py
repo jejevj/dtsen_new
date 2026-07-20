@@ -1,6 +1,7 @@
 import hashlib
 from datetime import date
 from babel.dates import format_date
+from sqlalchemy import text
 from ..models.mustahik import Mustahik
 from ..models.laz import Laz
 from ..models.program import Program
@@ -22,6 +23,8 @@ SKALA_MAP = {
 GENDER_MAP = {
     'm': 'Laki - Laki',
     'f': 'Perempuan',
+    'M': 'Laki - Laki',
+    'F': 'Perempuan',
 }
 
 
@@ -40,12 +43,30 @@ def _format_tanggal(d) -> str | None:
         return str(d)
 
 
+def _apply_lag_dedup(items: list[dict]) -> list[dict]:
+    """
+    Replicate LAG() window deduplication dari getReallyDetaiMustahikNotHashed:
+    jika nilai sama dengan baris sebelumnya, set ke None.
+    """
+    for i in range(1, len(items)):
+        prev = items[i - 1]
+        curr = items[i]
+        if curr['nama_lengkap'] == prev['nama_lengkap']:
+            curr['nama_lengkap'] = None
+        if curr['jenis_kelamin'] == prev['jenis_kelamin'] and curr['laz_nama'] == prev['laz_nama']:
+            curr['jenis_kelamin'] = None
+        if curr['agama'] == prev['agama']:
+            curr['agama'] = None
+        if curr['nik'] == prev['nik']:
+            curr['nik'] = None
+    return items
+
+
 class MustahikService:
     @staticmethod
     def get_list(params: dict) -> dict:
         query = Mustahik.query
 
-        # --- Filter individu (kategori=individu di tampilan_dtsen) ---
         if params.get('nama'):
             query = query.filter(Mustahik.nama_lengkap.ilike(f"%{params['nama']}%"))
         if params.get('nik'):
@@ -54,8 +75,6 @@ class MustahikService:
             query = query.filter_by(jenis_kelamin=params['jenis_kelamin'])
         if params.get('agama'):
             query = query.filter_by(agama=params['agama'])
-
-        # --- Penerimaan ---
         if params.get('laz_kode'):
             query = query.filter_by(laz_kode=params['laz_kode'])
         if params.get('program_kode'):
@@ -64,8 +83,6 @@ class MustahikService:
             query = query.filter_by(tipe_penerimaan=params['tipe_penerimaan'])
         if params.get('tanggal_terima'):
             query = query.filter_by(tanggal_terima=params['tanggal_terima'])
-
-        # --- Wilayah ---
         if params.get('provinsi_kode'):
             query = query.filter_by(provinsi_kode=params['provinsi_kode'])
         if params.get('kabkota_kode'):
@@ -166,16 +183,111 @@ class MustahikService:
                 'ktp_kelurahan_nama': ktp_kelurahan_nama,
             })
 
-        for i in range(1, len(items)):
-            prev = items[i - 1]
-            curr = items[i]
-            if curr['nama_lengkap'] == prev['nama_lengkap']:
-                curr['nama_lengkap'] = None
-            if curr['jenis_kelamin'] == prev['jenis_kelamin'] and curr['laz_nama'] == prev['laz_nama']:
-                curr['jenis_kelamin'] = None
-            if curr['agama'] == prev['agama']:
-                curr['agama'] = None
-            if curr['nik'] == prev['nik']:
-                curr['nik'] = None
-
+        _apply_lag_dedup(items)
         return {'data': mustahik_detail_schema.dump(items)}
+
+    @staticmethod
+    def get_detail_by_nik(nik: str) -> dict:
+        """
+        Ambil detail mustahik berdasarkan NIK plain (tidak di-hash).
+
+        Strategi performa:
+        - Gunakan raw SQL (text()) agar MySQL optimizer bisa memanfaatkan
+          index pada kolom `nik` secara langsung (berbeda dengan MD5 yang
+          function-based dan tidak bisa pakai index biasa).
+        - Semua JOIN dilakukan dalam satu query untuk menghindari N+1.
+        - LAG deduplication dilakukan di Python (sama persis dengan
+          getReallyDetaiMustahikNotHashed di PHP).
+        """
+        sql = text("""
+            SELECT
+                a.mustahik_id,
+                a.nik,
+                a.kk,
+                a.nama_lengkap,
+                a.jenis_kelamin,
+                a.lahir_tanggal,
+                a.agama,
+                a.kk,
+                a.alamat_domisili,
+                a.rupiah,
+                a.tipe_penerimaan,
+                a.tanggal_terima,
+                a.created_at,
+                a.laz_kode,
+                a.program_kode,
+                a.ktp_alamat,
+                t.laz_nama,
+                t.skala,
+                p.program_nama,
+                prov.provinsi_nama,
+                k.kabkota_nama,
+                mk.kecamatan_nama,
+                ml.kelurahan_nama,
+                ktp_provinsi.provinsi_nama   AS ktp_provinsi_nama,
+                ktp_kabkota.kabkota_nama     AS ktp_kabkota_nama,
+                ktp_kecamatan.kecamatan_nama AS ktp_kecamatan_nama,
+                ktp_kelurahan.kelurahan_nama AS ktp_kelurahan_nama
+            FROM t_mustahik AS a
+            JOIN  t_laz     AS t   ON a.laz_kode      = t.laz_kode
+                                  AND t.laz_status    IN ('aktif', 'daftar_ulang')
+            JOIN  t_program AS p   ON a.program_kode  = p.program_kode
+            LEFT JOIN m_provinsi   AS prov          ON a.provinsi_kode      = prov.provinsi_kode
+            LEFT JOIN m_kabkota    AS k             ON a.kabkota_kode       = k.kabkota_kode
+            LEFT JOIN m_kecamatan  AS mk            ON a.kecamatan_kode     = mk.kecamatan_kode
+            LEFT JOIN m_kelurahan  AS ml            ON a.kelurahan_kode     = ml.kelurahan_kode
+            LEFT JOIN m_provinsi   AS ktp_provinsi  ON a.ktp_provinsi_kode  = ktp_provinsi.provinsi_kode
+            LEFT JOIN m_kabkota    AS ktp_kabkota   ON a.ktp_kabkota_kode   = ktp_kabkota.kabkota_kode
+            LEFT JOIN m_kecamatan  AS ktp_kecamatan ON a.ktp_kecamatan_kode = ktp_kecamatan.kecamatan_kode
+            LEFT JOIN m_kelurahan  AS ktp_kelurahan ON a.ktp_kelurahan_kode = ktp_kelurahan.kelurahan_kode
+            WHERE a.nik = :nik
+            ORDER BY a.created_at DESC
+        """)
+
+        rows = db.session.execute(sql, {'nik': nik}).mappings().all()
+
+        if not rows:
+            return {'message': 'Data tidak ditemukan.', 'status_code': 404}
+
+        skala_map = {1: 'Nasional', 2: 'Provinsi', 3: 'Kabupaten/Kota'}
+        gender_map = {'m': 'Laki - Laki', 'f': 'Perempuan', 'M': 'Laki - Laki', 'F': 'Perempuan'}
+
+        items = []
+        for row in rows:
+            skala_raw = row['skala']
+            skala_label = skala_map.get(skala_raw, str(skala_raw)) if skala_raw is not None else None
+
+            jk_raw = row['jenis_kelamin']
+            jk_label = gender_map.get(jk_raw, jk_raw) if jk_raw is not None else None
+
+            items.append({
+                'nik':                str(row['nik']) if row['nik'] else None,
+                'nik_hashed':         hashlib.md5(str(row['nik']).encode()).hexdigest() if row['nik'] else None,
+                'kk':                 row['kk'],
+                'nama_lengkap':       row['nama_lengkap'],
+                'jenis_kelamin':      jk_label,
+                'lahir_tanggal':      _format_tanggal(row['lahir_tanggal']),
+                'agama':              row['agama'],
+                'rupiah':             str(row['rupiah']) if row['rupiah'] is not None else None,
+                'tipe_penerimaan':    row['tipe_penerimaan'],
+                'tanggal_terima':     str(row['tanggal_terima']) if row['tanggal_terima'] else None,
+                'created_at':         str(row['created_at']) if row['created_at'] else None,
+                'laz_kode':           row['laz_kode'],
+                'laz_nama':           row['laz_nama'],
+                'skala':              skala_label,
+                'program_kode':       row['program_kode'],
+                'program_nama':       row['program_nama'],
+                'alamat_domisili':    row['alamat_domisili'],
+                'provinsi_nama':      row['provinsi_nama'],
+                'kabkota_nama':       row['kabkota_nama'],
+                'kecamatan_nama':     row['kecamatan_nama'],
+                'kelurahan_nama':     row['kelurahan_nama'],
+                'ktp_alamat':         row['ktp_alamat'],
+                'ktp_provinsi_nama':  row['ktp_provinsi_nama'],
+                'ktp_kabkota_nama':   row['ktp_kabkota_nama'],
+                'ktp_kecamatan_nama': row['ktp_kecamatan_nama'],
+                'ktp_kelurahan_nama': row['ktp_kelurahan_nama'],
+            })
+
+        _apply_lag_dedup(items)
+        return {'data': items}

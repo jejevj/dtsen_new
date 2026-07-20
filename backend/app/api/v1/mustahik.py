@@ -42,7 +42,7 @@ def list_mustahik():
 @jwt_required()
 def detail_mustahik(nik_hashed):
     """
-    Get detail mustahik berdasarkan hashed NIK
+    Get detail mustahik berdasarkan hashed NIK (MD5)
     ---
     tags:
       - Mustahik
@@ -53,7 +53,7 @@ def detail_mustahik(nik_hashed):
         name: nik_hashed
         type: string
         required: true
-        description: Hashed NIK mustahik
+        description: Hashed NIK mustahik (MD5)
     responses:
       200:
         description: Detail mustahik berhasil diambil
@@ -63,4 +63,50 @@ def detail_mustahik(nik_hashed):
         description: Token tidak valid
     """
     result = MustahikService.get_detail(nik_hashed)
+    if result.get('status_code') == 404:
+        return jsonify(result), 404
+    return jsonify(result), 200
+
+
+@api_v1_bp.get('/mustahik/by-nik/<string:nik>')
+@jwt_required()
+def detail_mustahik_by_nik(nik):
+    """
+    Get detail mustahik berdasarkan NIK plain (tidak di-hash)
+    ---
+    tags:
+      - Mustahik
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: nik
+        type: string
+        required: true
+        description: |
+          NIK mustahik (16 digit). Query langsung ke kolom nik
+          tanpa fungsi MD5 sehingga dapat memanfaatkan index.
+    responses:
+      200:
+        description: Detail mustahik berhasil diambil
+        schema:
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+      404:
+        description: Mustahik tidak ditemukan
+      400:
+        description: NIK tidak valid
+      401:
+        description: Token tidak valid
+    """
+    nik = nik.strip()
+    if not nik.isdigit() or len(nik) != 16:
+        return jsonify({'message': 'NIK tidak valid. Harus 16 digit angka.'}), 400
+
+    result = MustahikService.get_detail_by_nik(nik)
+    if result.get('status_code') == 404:
+        return jsonify(result), 404
     return jsonify(result), 200
