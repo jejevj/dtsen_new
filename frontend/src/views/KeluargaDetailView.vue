@@ -31,7 +31,6 @@
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
                 <h2 style="font-size:1.25rem;font-weight:800;color:#1e293b;margin:0;">{{ kkDetail.nama_kepala_keluarga ?? kkDetail.nama ?? 'Data Keluarga' }}</h2>
-                <span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#f0fdf4;color:#15803d;">Kepala Keluarga</span>
               </div>
               <p style="font-size:13px;color:#64748b;margin:0 0 4px;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(kkDetail.nomor_kartu_keluarga) }}</strong></p>
               <p v-if="kkDetail.alamat || kkDetail.nama_desa_kelurahan" style="font-size:12px;color:#94a3b8;margin:0;">
