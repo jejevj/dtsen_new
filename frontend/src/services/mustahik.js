@@ -6,6 +6,6 @@ export default {
   getDetail:      (nikHashed)  => api.get(`/mustahik/${nikHashed}`).then((r) => r.data),
   // Endpoint mustahik — NIK plain, riwayat penerimaan zakat/bantuan
   getDetailByNik: (nik)        => api.get(`/mustahik/by-nik/${nik}`).then((r) => r.data),
-  // Endpoint ZAWA/baseline — cek apakah NIK terdata di DTSEN
+  // Endpoint ZAWA/baseline — cek apakah NIK terdata di DTSEN (loop per-provinsi)
   getZawaAnggotaByNik: (nik)   => fetchBaselineAnggotaByNik(nik),
 }
