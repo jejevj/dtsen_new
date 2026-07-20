@@ -72,7 +72,6 @@ CACHE_TTL = 600
 
 # ---------------------------------------------------------------------------
 # Mapping field_key (dari m_tampilan_dtsen) → nama kolom di ZawaAnggota
-# Digunakan untuk menerapkan filter dinamis dari drawer filter di frontend.
 # ---------------------------------------------------------------------------
 _ANGGOTA_COLUMN_MAP: dict[str, str] = {
     "nomor_induk_kependudukan":        "nomor_induk_kependudukan",
@@ -178,6 +177,15 @@ _KELUARGA_COLUMN_MAP: dict[str, str] = {
     "pbi_pemda":                        "pbi_pemda",
     "desil_nasional":                   "desil_nasional",
     "id_pelanggan_pln":                 "id_pelanggan_pln",
+}
+
+# Field ternak yang menggunakan filter range (nilai: "0", "1-5", ">5")
+_TERNAK_RANGE_FIELDS = {
+    "jumlah_ternak_sapi",
+    "jumlah_ternak_kerbau",
+    "jumlah_ternak_kuda",
+    "jumlah_ternak_kambing_domba",
+    "jumlah_ternak_babi",
 }
 
 # Kumpulan param yang bukan bagian dari filter dinamis (sudah ditangani secara eksplisit)
@@ -528,16 +536,45 @@ def _dedupe_by_nik(items: list) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Helper: terapkan extra_filters (dari activeFilters frontend) ke SQLAlchemy query
-# Bekerja dengan mencocokkan field_key ke kolom model yang sudah terdaftar di column_map.
-# Sama persis dengan konsep pencarian NIK: filter langsung ke kolom DB.
+# Helper: parse nilai range ternak
+# "0"   → col == 0
+# "1-5" → col BETWEEN 1 AND 5
+# ">5"  → col > 5
+# ---------------------------------------------------------------------------
+def _parse_range_value(val: str):
+    """
+    Kembalikan tuple (mode, low, high) untuk dipakai di query:
+      mode='eq'      → col == low
+      mode='between' → col BETWEEN low AND high
+      mode='gt'      → col > low
+    Jika format tidak dikenal, return None.
+    """
+    val = val.strip()
+    # Format ">N"
+    m = re.fullmatch(r'>\s*(\d+)', val)
+    if m:
+        return ('gt', int(m.group(1)), None)
+    # Format "N-M"
+    m = re.fullmatch(r'(\d+)\s*-\s*(\d+)', val)
+    if m:
+        return ('between', int(m.group(1)), int(m.group(2)))
+    # Format angka tunggal "0", "1", dst.
+    m = re.fullmatch(r'\d+', val)
+    if m:
+        return ('eq', int(val), None)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Helper: terapkan extra_filters ke SQLAlchemy query
+# Mendukung filter range untuk field ternak ("0", "1-5", ">5")
 # ---------------------------------------------------------------------------
 def _apply_extra_filters(q, model, column_map: dict, extra_filters: dict):
     """Terapkan filter dinamis dari m_tampilan_dtsen ke query SQLAlchemy.
 
-    Untuk setiap key di extra_filters:
-    - Jika key ada di column_map dan kolom ada di model → filter exact match (ilike untuk string)
-    - Nilai kosong / None diabaikan
+    - Field ternak: nilai range "0" / "1-5" / ">5" dikonversi ke kondisi numerik.
+    - Field string: ilike (case-insensitive partial match).
+    - Field numerik lain: exact match.
     """
     for field_key, val in extra_filters.items():
         if val is None or val == '':
@@ -550,12 +587,27 @@ def _apply_extra_filters(q, model, column_map: dict, extra_filters: dict):
         if col is None:
             logger.debug(f"[Filter] kolom '{col_name}' tidak ada di model, dilewati.")
             continue
-        # Deteksi tipe kolom: jika string → ilike (case-insensitive); selain itu exact match
+
+        # --- Filter range untuk field ternak ---
+        if field_key in _TERNAK_RANGE_FIELDS:
+            parsed = _parse_range_value(str(val))
+            if parsed is None:
+                logger.debug(f"[Filter] nilai range '{val}' untuk '{field_key}' tidak dikenal, dilewati.")
+                continue
+            mode, low, high = parsed
+            if mode == 'eq':
+                q = q.filter(col == low)
+            elif mode == 'between':
+                q = q.filter(col.between(low, high))
+            elif mode == 'gt':
+                q = q.filter(col > low)
+            continue
+
+        # --- Filter non-ternak ---
         col_type = str(col.property.columns[0].type).upper()
         if any(t in col_type for t in ('VARCHAR', 'TEXT', 'CHAR', 'STRING')):
             q = q.filter(col.ilike(f"%{val}%"))
         else:
-            # Numerik / integer: exact match
             try:
                 q = q.filter(col == type(col.property.columns[0].type.python_type())(val))
             except Exception:
@@ -854,10 +906,6 @@ def baseline_provinsi_list():
 def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
                              kabkota_filter, kecamatan_filter, search: str,
                              extra_filters: dict = None):
-    """Bangun query ZawaAnggota dengan filter wilayah, teks, dan filter dinamis.
-
-    extra_filters: dict {field_key: value} dari m_tampilan_dtsen (is_filter=1, kategori=individu).
-    """
     q = ZawaAnggota.query.filter(
         db.or_(
             ZawaAnggota.kode_provinsi_ktp == bps_kode,
@@ -881,7 +929,6 @@ def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
             ZawaAnggota.nama.ilike(q_lower),
             ZawaAnggota.nomor_induk_kependudukan.ilike(q_lower),
         ))
-    # Terapkan filter dinamis dari drawer filter
     if extra_filters:
         q = _apply_extra_filters(q, ZawaAnggota, _ANGGOTA_COLUMN_MAP, extra_filters)
     return q
@@ -899,7 +946,6 @@ def baseline_anggota():
     kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
     kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
 
-    # Kumpulkan extra_filters: semua param yang bukan reserved dan ada di _ANGGOTA_COLUMN_MAP
     extra_filters = {
         k: v for k, v in request.args.items()
         if k not in _RESERVED_PARAMS and k in _ANGGOTA_COLUMN_MAP and v
@@ -982,8 +1028,6 @@ def baseline_anggota():
                     "limit": DB_PAGE_SIZE, "searchMode": "db_cache", "source": "local_db",
                 }
             }), 200
-        # Jika ada extra_filters tapi tidak ada data di DB, kembalikan kosong
-        # (tidak fallback ke ZAWA untuk menghindari salah data)
         if extra_filters:
             return jsonify({
                 "data": [], "columns": [],
@@ -1034,7 +1078,6 @@ def baseline_keluarga():
     kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
     kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
 
-    # Kumpulkan extra_filters untuk keluarga
     extra_filters = {
         k: v for k, v in request.args.items()
         if k not in _RESERVED_PARAMS and k in _KELUARGA_COLUMN_MAP and v
@@ -1112,7 +1155,6 @@ def baseline_keluarga():
             ZawaKeluarga.kabupaten_kota.ilike(q_lower),
             ZawaKeluarga.provinsi.ilike(q_lower),
         ))
-    # Terapkan extra_filters untuk keluarga
     if extra_filters:
         q = _apply_extra_filters(q, ZawaKeluarga, _KELUARGA_COLUMN_MAP, extra_filters)
 
