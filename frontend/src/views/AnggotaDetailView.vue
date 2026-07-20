@@ -46,6 +46,16 @@
           </div>
         </div>
 
+        <!-- ===== SECTION LABEL: DATA INDIVIDU ===== -->
+        <div class="section-divider">
+          <div class="section-divider-line"></div>
+          <div class="section-divider-label">
+            <i class="pi pi-user" style="font-size:12px;"></i>
+            <span>Data Individu</span>
+          </div>
+          <div class="section-divider-line"></div>
+        </div>
+
         <!-- ===== FIELD GROUPS (individu) — render per-group ===== -->
         <template v-if="detailGroups.length">
           <template v-for="(slot, si) in groupSlots" :key="si">
@@ -140,6 +150,19 @@
 
         <div v-else-if="!loading" style="text-align:center;padding:40px;color:#94a3b8;font-size:13px;">
           <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi tampilan…
+        </div>
+
+        <!-- ===== SECTION DIVIDER: DATA KARTU KELUARGA ===== -->
+        <div class="section-divider section-divider--kk">
+          <div class="section-divider-line"></div>
+          <div class="section-divider-label section-divider-label--kk">
+            <i class="pi pi-home" style="font-size:12px;"></i>
+            <span>Data Kartu Keluarga</span>
+            <span v-if="data.nomor_kartu_keluarga" style="font-family:monospace;font-size:10px;font-weight:500;opacity:.75;margin-left:4px;">
+              · {{ maskNik(data.nomor_kartu_keluarga) }}
+            </span>
+          </div>
+          <div class="section-divider-line"></div>
         </div>
 
         <!-- ===== KARTU KELUARGA SECTION ===== -->
@@ -276,19 +299,11 @@ const NIK_FIELDS = new Set([
 ])
 function isNikField(key) { return NIK_FIELDS.has(key) }
 
-/**
- * Urutan paksa group keluarga:
- * semua group selain 3 aset tampil sesuai urutan API,
- * lalu tepat setelah "Kondisi Rumah" sisipkan:
- *   Aset Bergerak → Aset Tidak Bergerak → Fasilitas Rumah
- * Group lain sesudah Kondisi Rumah (misal Ternak) tetap mengikuti di belakang.
- */
 const PINNED_AFTER_KONDISI_RUMAH = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
 function reorderKeluargaGroups(groups) {
   const pinnedNames = new Set(PINNED_AFTER_KONDISI_RUMAH)
   const rest   = groups.filter(g => !pinnedNames.has(g.group))
   const pinned = PINNED_AFTER_KONDISI_RUMAH.map(name => groups.find(g => g.group === name)).filter(Boolean)
-  // Cari posisi setelah "Kondisi Rumah" di array rest
   const anchorIdx = rest.findIndex(g => g.group === 'Kondisi Rumah')
   const insertAt  = anchorIdx >= 0 ? anchorIdx + 1 : rest.length
   return [...rest.slice(0, insertAt), ...pinned, ...rest.slice(insertAt)]
@@ -542,4 +557,39 @@ onMounted(() => init(String(route.params.nik)))
 .kk-you-badge { display:inline-block; padding:1px 6px; border-radius:99px; font-size:10px; font-weight:700; background:#2563eb; color:white; margin-right:5px; vertical-align:middle; }
 .nik-link { color:#2563eb; text-decoration:underline; cursor:pointer; }
 .kk-table tbody tr:not(.kk-active-row):hover .nik-link { color:#1d4ed8; }
+
+/* ── Section Divider ── */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+}
+.section-divider-line {
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+.section-divider-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 99px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  white-space: nowrap;
+}
+.section-divider--kk .section-divider-line {
+  background: #bfdbfe;
+}
+.section-divider-label--kk {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
 </style>
