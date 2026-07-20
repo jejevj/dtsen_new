@@ -18,7 +18,6 @@
           </div>
 
           <form @submit.prevent="handleSearch">
-            <!-- NIK -->
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-1">Nomor Induk Kependudukan (NIK)</label>
               <InputText
@@ -31,7 +30,6 @@
               <small v-if="errors.nik" class="p-error text-xs">{{ errors.nik }}</small>
             </div>
 
-            <!-- CAPTCHA ARITMATIKA -->
             <div class="mb-5">
               <label class="block text-sm font-medium text-gray-700 mb-1">Verifikasi Keamanan</label>
               <div class="flex items-center gap-3 mb-2">
@@ -42,7 +40,6 @@
                     @click="refreshCaptcha"
                     :class="['flex items-center p-0.5 text-gray-400 hover:text-primary-600 transition-colors', captchaRefreshing && 'animate-spin']"
                     title="Ganti soal"
-                    aria-label="Ganti soal captcha"
                   >
                     <i class="pi pi-refresh text-sm"></i>
                   </button>
@@ -60,7 +57,6 @@
               <small v-if="errors.captcha" class="p-error text-xs">{{ errors.captcha }}</small>
             </div>
 
-            <!-- Submit -->
             <Button
               type="submit"
               label="Periksa Data"
@@ -77,7 +73,6 @@
             <i class="pi pi-info-circle text-blue-500 text-lg"></i>
             <h2 class="text-base font-semibold text-gray-800">Petunjuk Penggunaan</h2>
           </div>
-
           <ol class="space-y-4">
             <li class="flex gap-3">
               <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">1</span>
@@ -97,7 +92,7 @@
               <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">3</span>
               <div>
                 <p class="text-sm font-medium text-gray-700">Klik Periksa Data</p>
-                <p class="text-xs text-gray-500 mt-0.5">Sistem memeriksa dua sumber: data Mustahik (Penerima Manfaat) dan data ZAWA (Terdata DTSEN).</p>
+                <p class="text-xs text-gray-500 mt-0.5">Sistem memeriksa dua sumber: data DTSEN dan data Mustahik (Penerima Manfaat).</p>
               </div>
             </li>
             <li class="flex gap-3">
@@ -108,19 +103,16 @@
               </div>
             </li>
           </ol>
-
-          <!-- Legend -->
           <div class="mt-5 pt-4 border-t border-gray-100 space-y-2">
+            <div class="flex items-start gap-2">
+              <span class="mt-0.5 w-3 h-3 rounded-full bg-blue-400 flex-shrink-0"></span>
+              <p class="text-xs text-gray-500"><strong class="text-gray-700">Terdata di DTSEN</strong> — NIK tercatat dalam basis data sebagai anggota keluarga miskin/rentan.</p>
+            </div>
             <div class="flex items-start gap-2">
               <span class="mt-0.5 w-3 h-3 rounded-full bg-green-400 flex-shrink-0"></span>
               <p class="text-xs text-gray-500"><strong class="text-gray-700">Penerima Manfaat</strong> — NIK terdaftar sebagai mustahik penerima zakat/bantuan LAZ.</p>
             </div>
-            <div class="flex items-start gap-2">
-              <span class="mt-0.5 w-3 h-3 rounded-full bg-blue-400 flex-shrink-0"></span>
-              <p class="text-xs text-gray-500"><strong class="text-gray-700">Terdata di DTSEN</strong> — NIK tercatat dalam basis data ZAWA sebagai anggota keluarga miskin/rentan.</p>
-            </div>
           </div>
-
           <div class="mt-3">
             <p class="text-xs text-gray-400">
               <i class="pi pi-lock mr-1"></i>
@@ -132,7 +124,7 @@
 
       <!-- ============ HASIL PENCARIAN ============ -->
 
-      <!-- Loading state -->
+      <!-- Loading -->
       <transition name="fade-slide">
         <div v-if="isSearching" class="bg-white rounded-xl shadow-sm border border-gray-100 p-10 flex flex-col items-center gap-3">
           <i class="pi pi-spin pi-spinner text-primary-600" style="font-size: 2rem"></i>
@@ -155,17 +147,147 @@
         </div>
       </transition>
 
-      <!-- Hasil: tampilkan hanya setelah pencarian selesai, bukan loading -->
       <div v-if="searchDone && !isSearching" class="space-y-4">
 
-        <!-- ─────────────────────────────────────────────────────────────────── -->
-        <!-- PANEL 1: PENERIMA MANFAAT (dari API mustahik) -->
-        <!-- ─────────────────────────────────────────────────────────────────── -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!-- PANEL 1: TERDATA DI DTSEN (tampil PERTAMA) -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+
+        <!-- Ditemukan di DTSEN -->
+        <transition name="fade-slide">
+          <div v-if="zawaData" class="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden">
+            <!-- Header panel -->
+            <div class="bg-blue-50 border-b border-blue-200 px-6 py-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <i class="pi pi-database text-blue-600 text-xl"></i>
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-semibold text-blue-800">Terdata di DTSEN</h3>
+                  <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded-full border border-blue-300">DTSEN</span>
+                  <!-- Desil Badge — highlighted -->
+                  <span v-if="zawaDesil"
+                    :style="{ background: DESIL_COLOR[zawaDesil]?.bg, color: DESIL_COLOR[zawaDesil]?.text, border: '1.5px solid ' + DESIL_COLOR[zawaDesil]?.border }"
+                    class="px-3 py-0.5 text-xs font-extrabold rounded-full shadow-sm">
+                    ★ {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
+                  </span>
+                </div>
+                <p class="text-sm text-blue-600">NIK <strong>{{ lastSearchedNik }}</strong> tercatat sebagai anggota keluarga miskin/rentan dalam basis data DTSEN.</p>
+              </div>
+            </div>
+
+            <!-- Data Kependudukan -->
+            <div class="p-6">
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Data Kependudukan (DTSEN)</h4>
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-4">
+                <div>
+                  <p class="text-xs text-gray-400">Nama</p>
+                  <p class="text-sm font-semibold text-gray-800">{{ zawaData.nama || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">NIK</p>
+                  <p class="text-sm font-medium text-gray-800">{{ zawaData.nomor_induk_kependudukan || lastSearchedNik }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">No. KK</p>
+                  <p class="text-sm font-medium text-gray-800">{{ zawaData.nomor_kartu_keluarga || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Jenis Kelamin</p>
+                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(JENIS_KELAMIN, zawaData.jenis_kelamin) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Tanggal Lahir</p>
+                  <p class="text-sm font-medium text-gray-800">{{ formatTanggal(zawaData.tanggal_lahir) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Status Kawin</p>
+                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_KAWIN, zawaData.status_kawin) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Hubungan Keluarga</p>
+                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(HUBUNGAN_KELUARGA, zawaData.status_hubungan_keluarga) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Pendidikan Tertinggi</p>
+                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(PENDIDIKAN, zawaData.ijazah_tertinggi_yang_dimiliki) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Status Bekerja</p>
+                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_BEKERJA, zawaData.status_bekerja) }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Alamat KTP</p>
+                  <p class="text-sm font-medium text-gray-800">{{ zawaData.alamat_ktp || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Kecamatan KTP</p>
+                  <p class="text-sm font-medium text-gray-800">{{ zawaData.kecamatan_ktp || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Kab/Kota KTP</p>
+                  <p class="text-sm font-medium text-gray-800">{{ zawaData.kabupaten_kota_ktp || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Provinsi KTP</p>
+                  <p class="text-sm font-medium text-gray-800">{{ zawaData.provinsi_ktp || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">PBI Nasional</p>
+                  <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_nas != null ? (zawaData.pbi_nas ? 'Ya' : 'Tidak') : '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">PBI Pemda</p>
+                  <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_pemda != null ? (zawaData.pbi_pemda ? 'Ya' : 'Tidak') : '-' }}</p>
+                </div>
+              </div>
+
+              <!-- Desil Card — highlight besar -->
+              <div v-if="zawaDesil" class="mt-5 rounded-xl border-2 px-5 py-4 flex items-center gap-4"
+                :style="{ background: DESIL_COLOR[zawaDesil]?.bg, borderColor: DESIL_COLOR[zawaDesil]?.border }">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-xl flex-shrink-0"
+                  :style="{ background: DESIL_COLOR[zawaDesil]?.border, color: DESIL_COLOR[zawaDesil]?.text }">
+                  D{{ zawaDesil }}
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider" :style="{ color: DESIL_COLOR[zawaDesil]?.text }">Desil Kemiskinan</p>
+                  <p class="text-base font-extrabold" :style="{ color: DESIL_COLOR[zawaDesil]?.text }">
+                    {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
+                  </p>
+                  <p class="text-xs mt-0.5" :style="{ color: DESIL_COLOR[zawaDesil]?.text, opacity: 0.75 }">
+                    No. KK: {{ zawaData.nomor_kartu_keluarga || '-' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </transition>
+
+        <!-- Tidak ditemukan di DTSEN -->
+        <transition name="fade-slide">
+          <div v-if="!zawaData && !zawaLoading" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-6 py-4 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                <i class="pi pi-minus-circle text-gray-400 text-lg"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <p class="text-sm font-semibold text-gray-600">Tidak Terdata di DTSEN</p>
+                  <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">DTSEN</span>
+                </div>
+                <p class="text-xs text-gray-400 mt-0.5">NIK <strong>{{ lastSearchedNik }}</strong> tidak ditemukan dalam basis data DTSEN.</p>
+              </div>
+            </div>
+          </div>
+        </transition>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!-- PANEL 2: PENERIMA MANFAAT / MUSTAHIK (tampil KEDUA) -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
 
         <!-- Ditemukan sebagai Mustahik -->
         <transition name="fade-slide">
           <div v-if="mustahikRows.length > 0" class="bg-white rounded-xl shadow-sm border border-green-200 overflow-hidden">
-            <!-- Header panel -->
             <div class="bg-green-50 border-b border-green-200 px-6 py-4 flex items-center gap-3">
               <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                 <i class="pi pi-check-circle text-green-600 text-xl"></i>
@@ -182,7 +304,6 @@
               </span>
             </div>
 
-            <!-- Identitas Pribadi -->
             <div class="p-6 pb-4">
               <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Identitas Pribadi</h4>
               <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
@@ -221,7 +342,6 @@
               </div>
             </div>
 
-            <!-- Alamat KTP -->
             <div class="px-6 pb-6">
               <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Alamat KTP</h4>
               <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
@@ -244,7 +364,6 @@
               </div>
             </div>
 
-            <!-- Tabel riwayat -->
             <div class="border-t border-gray-100">
               <div class="px-6 py-4 border-b border-gray-100">
                 <h4 class="text-sm font-semibold text-gray-700">Riwayat Penerimaan Zakat / Bantuan</h4>
@@ -314,114 +433,6 @@
           </div>
         </transition>
 
-        <!-- ─────────────────────────────────────────────────────────────────── -->
-        <!-- PANEL 2: TERDATA DI DTSEN (dari API ZAWA / baseline) -->
-        <!-- ─────────────────────────────────────────────────────────────────── -->
-
-        <!-- Ditemukan di ZAWA -->
-        <transition name="fade-slide">
-          <div v-if="zawaData" class="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden">
-            <!-- Header panel -->
-            <div class="bg-blue-50 border-b border-blue-200 px-6 py-4 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <i class="pi pi-database text-blue-600 text-xl"></i>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <h3 class="font-semibold text-blue-800">Terdata di DTSEN</h3>
-                  <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded-full border border-blue-300">ZAWA</span>
-                </div>
-                <p class="text-sm text-blue-600">NIK <strong>{{ lastSearchedNik }}</strong> tercatat sebagai anggota keluarga miskin/rentan dalam basis data DTSEN.</p>
-              </div>
-            </div>
-
-            <!-- Identitas ZAWA -->
-            <div class="p-6">
-              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Data Kependudukan (DTSEN)</h4>
-              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
-                <div>
-                  <p class="text-xs text-gray-400">Nama</p>
-                  <p class="text-sm font-semibold text-gray-800">{{ zawaData.nama || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">NIK</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.nomor_induk_kependudukan || lastSearchedNik }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">No. KK</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.nomor_kartu_keluarga || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Jenis Kelamin</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.jenis_kelamin || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Tanggal Lahir</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.tanggal_lahir || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Status Kawin</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.status_kawin || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Hubungan Keluarga</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.status_hubungan_keluarga || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Pendidikan Tertinggi</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.ijazah_tertinggi_yang_dimiliki || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Status Bekerja</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.status_bekerja || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Alamat KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.alamat_ktp || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Kecamatan KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.kecamatan_ktp || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Kab/Kota KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.kabupaten_kota_ktp || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Provinsi KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.provinsi_ktp || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">PBI Nasional</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_nas != null ? (zawaData.pbi_nas ? 'Ya' : 'Tidak') : '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">PBI Pemda</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_pemda != null ? (zawaData.pbi_pemda ? 'Ya' : 'Tidak') : '-' }}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </transition>
-
-        <!-- Tidak ditemukan di ZAWA -->
-        <transition name="fade-slide">
-          <div v-if="!zawaData && !zawaLoading" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 flex items-center gap-3">
-              <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                <i class="pi pi-minus-circle text-gray-400 text-lg"></i>
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <p class="text-sm font-semibold text-gray-600">Tidak Terdata di DTSEN</p>
-                  <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">ZAWA</span>
-                </div>
-                <p class="text-xs text-gray-400 mt-0.5">NIK <strong>{{ lastSearchedNik }}</strong> tidak ditemukan dalam basis data ZAWA/DTSEN.</p>
-              </div>
-            </div>
-          </div>
-        </transition>
-
         <!-- Pesan bila keduanya tidak ditemukan -->
         <transition name="fade-slide">
           <div v-if="mustahikRows.length === 0 && !zawaData && !mustahikLoading && !zawaLoading"
@@ -430,7 +441,7 @@
               <i class="pi pi-exclamation-triangle text-amber-500 text-lg mt-0.5"></i>
               <div>
                 <p class="text-sm font-semibold text-amber-800">NIK Tidak Ditemukan di Kedua Sumber</p>
-                <p class="text-xs text-amber-700 mt-1">NIK <strong>{{ lastSearchedNik }}</strong> tidak terdaftar sebagai mustahik maupun dalam basis data DTSEN/ZAWA.</p>
+                <p class="text-xs text-amber-700 mt-1">NIK <strong>{{ lastSearchedNik }}</strong> tidak terdaftar sebagai mustahik maupun dalam basis data DTSEN.</p>
                 <ul class="mt-2 text-xs text-amber-600 list-disc list-inside space-y-0.5">
                   <li>Periksa kembali NIK pada KTP</li>
                   <li>Terdapat kemungkinan kesalahan pengetikan</li>
@@ -455,6 +466,11 @@ import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import MustahikService from '@/services/mustahik'
+import {
+  JENIS_KELAMIN, STATUS_KAWIN, HUBUNGAN_KELUARGA,
+  PENDIDIKAN, STATUS_BEKERJA, DESIL_LABEL, DESIL_COLOR, resolveRef,
+} from '@/data/dtsenRef'
+import { fetchBaselineKeluargaByNkk } from '@/services/baselineService'
 
 // ── State ──────────────────────────────────────────
 const form              = reactive({ nik: '', captcha: '' })
@@ -468,6 +484,7 @@ const lastSearchedNik   = ref('')
 const apiError          = ref('')
 const searchDone        = ref(false)
 const captchaRefreshing = ref(false)
+const zawaDesil         = ref(null)   // desil dari data keluarga
 
 // ── CAPTCHA ARITMATIKA ──────────────────────────────
 function generateCaptcha() {
@@ -504,7 +521,6 @@ function refreshCaptcha() {
 
 // ── Computed ───────────────────────────────────────
 const mustahikIdentity = computed(() => mustahikRows.value[0] || {})
-
 const totalRupiah = computed(() =>
   mustahikRows.value.reduce((sum, r) => sum + (parseFloat(r.rupiah) || 0), 0)
 )
@@ -514,7 +530,6 @@ function validate() {
   errors.nik     = ''
   errors.captcha = ''
   let valid = true
-
   if (!form.nik.trim()) {
     errors.nik = 'NIK wajib diisi.'
     valid = false
@@ -522,7 +537,6 @@ function validate() {
     errors.nik = 'NIK harus terdiri dari 16 digit angka.'
     valid = false
   }
-
   if (!form.captcha.trim()) {
     errors.captcha = 'Jawaban verifikasi wajib diisi.'
     valid = false
@@ -530,11 +544,10 @@ function validate() {
     errors.captcha = 'Jawaban salah. Soal telah diperbarui, coba lagi.'
     valid = false
   }
-
   return valid
 }
 
-// ── Pencarian Dual API — Promise.allSettled ──────────
+// ── Pencarian Dual API ──────────────────────────────
 async function handleSearch() {
   if (!validate()) {
     if (form.captcha.trim() !== captcha.answer) refreshCaptcha()
@@ -545,19 +558,19 @@ async function handleSearch() {
   isSearching.value     = true
   mustahikRows.value    = []
   zawaData.value        = null
+  zawaDesil.value       = null
   apiError.value        = ''
   searchDone.value      = false
   lastSearchedNik.value = nik
   mustahikLoading.value = true
   zawaLoading.value     = true
 
-  // Jalankan kedua API secara paralel — jika satu gagal, tetap tampilkan yang berhasil
   const [mustahikResult, zawaResult] = await Promise.allSettled([
     MustahikService.getDetailByNik(nik),
     MustahikService.getZawaAnggotaByNik(nik),
   ])
 
-  // Proses hasil mustahik
+  // Mustahik
   if (mustahikResult.status === 'fulfilled') {
     const res = mustahikResult.value
     if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
@@ -566,20 +579,28 @@ async function handleSearch() {
   } else {
     const e = mustahikResult.reason
     if (e?.response?.status !== 404) {
-      // 404 = normal (tidak ditemukan), error lain tampilkan
       apiError.value = e?.response?.data?.message || 'Error saat mengambil data mustahik.'
     }
   }
   mustahikLoading.value = false
 
-  // Proses hasil ZAWA
+  // DTSEN / ZAWA
   if (zawaResult.status === 'fulfilled') {
-    const anggota = zawaResult.value // fetchBaselineAnggotaByNik sudah return objek / null
+    const anggota = zawaResult.value
     if (anggota && typeof anggota === 'object') {
       zawaData.value = anggota
+      // Ambil desil dari data keluarga via NKK
+      const nkk = anggota.nomor_kartu_keluarga
+      if (nkk) {
+        try {
+          const keluarga = await fetchBaselineKeluargaByNkk(nkk)
+          zawaDesil.value = keluarga?.desil_nasional ?? null
+        } catch {
+          zawaDesil.value = null
+        }
+      }
     }
   }
-  // ZAWA gagal/tidak ditemukan → zawaData tetap null (panel "Tidak Terdata" muncul)
   zawaLoading.value = false
 
   isSearching.value = false
@@ -592,6 +613,16 @@ function formatRupiah(n) {
   const num = parseFloat(n)
   if (!n || isNaN(num)) return 'Rp 0'
   return 'Rp ' + num.toLocaleString('id-ID')
+}
+
+function formatTanggal(val) {
+  if (!val) return '-'
+  try {
+    const d = new Date(val)
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
+  } catch {
+    return val
+  }
 }
 </script>
 
