@@ -130,20 +130,28 @@ import { computed, onMounted } from 'vue'
 import Button from 'primevue/button'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { maskNik } from '@/utils/formatter'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
-  loading:        { type: Boolean, default: false },
-  error:          { type: String,  default: '' },
-  rows:           { type: Array,   default: () => [] },
-  columns:        { type: Array,   default: () => [] },
-  meta:           { type: Object,  default: () => ({}) },
-  historyStack:   { type: Array,   default: () => [] },
-  emptyHint:      { type: String,  default: 'Tidak ada data.' },
-  title:          { type: String,  default: 'Data' },
-  type:           { type: String,  default: 'anggota' },
-  userIdentifier: { type: String,  default: 'CONFIDENTIAL' },
+  loading:      { type: Boolean, default: false },
+  error:        { type: String,  default: '' },
+  rows:         { type: Array,   default: () => [] },
+  columns:      { type: Array,   default: () => [] },
+  meta:         { type: Object,  default: () => ({}) },
+  historyStack: { type: Array,   default: () => [] },
+  emptyHint:    { type: String,  default: 'Tidak ada data.' },
+  title:        { type: String,  default: 'Data' },
+  type:         { type: String,  default: 'anggota' },
 })
 defineEmits(['next', 'prev', 'detail'])
+
+// Ambil email user langsung dari auth store — tidak butuh prop dari parent
+const authStore = useAuthStore()
+const userIdentifier = computed(() => {
+  const u = authStore.user
+  if (!u) return ''
+  return u.email || u.tuser_email || u.notelp || u.user_id || ''
+})
 
 const NIK_COLS = new Set([
   'nomor_induk_kependudukan', 'nik',
