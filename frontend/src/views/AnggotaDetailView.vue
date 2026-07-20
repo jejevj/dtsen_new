@@ -64,8 +64,8 @@
             <template v-if="slot.type === 'disab'">
               <div :class="slot.groups.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
-                  <div style="position:relative;z-index:1;">
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <!-- Disabilitas: pakai tabel badge -->
                     <template v-if="isDisabGroup(group)">
@@ -109,8 +109,8 @@
             <template v-else-if="slot.type === 'stat'">
               <div style="display:flex;flex-direction:column;gap:16px;">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
-                  <div style="position:relative;z-index:1;">
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <div class="grid-stat">
                       <div v-for="field in group.fields" :key="field.field_key" class="stat-box" :style="statBoxBg(field.field_key, data[field.field_key])">
@@ -138,8 +138,8 @@
             <template v-else>
               <div :class="slot.groups.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
-                  <div style="position:relative;z-index:1;">
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <table class="info-table">
                       <tbody>
@@ -208,8 +208,8 @@
             <template v-for="(rowPair, ri) in pairedKeluargaGroups" :key="'kk-'+ri">
               <div :class="rowPair.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-kk-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-kk-'+slugGroup(group.group)+')'" /></svg></div>
-                  <div style="position:relative;z-index:1;">
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-kk-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-kk-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <table class="info-table">
                       <tbody>
@@ -537,8 +537,6 @@ watch(
 
 /**
  * Helper terpusat: format nilai field untuk ditampilkan.
- * Menangani semua field spesial agar tidak ada raw ISO string yang lolos
- * di render path manapun (normal, disab-pair, dll).
  */
 function renderFieldValue(key, val) {
   if (key === 'tanggal_lahir')                                    return formatUsia(val)
@@ -549,10 +547,6 @@ function renderFieldValue(key, val) {
   return resolveValue(key, val)
 }
 
-/**
- * Hitung usia bulat (tahun penuh) dari tanggal lahir hingga hari ini.
- * Toleran terhadap format ISO (2004-03-25T00:00:00Z) maupun plain date (2004-03-25).
- */
 function formatUsia(v) {
   if (!v) return '-'
   const lahir = new Date(String(v))
@@ -579,7 +573,8 @@ onMounted(() => init(String(route.params.nik)))
 @media(max-width:768px) { .grid-2 { grid-template-columns:1fr; } .grid-stat { grid-template-columns:1fr 1fr; } }
 .detail-card { background:white; border-radius:14px; border:1px solid #f1f5f9; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
 .wm-card { position:relative; overflow:hidden; }
-.wm-overlay { position:absolute; inset:0; z-index:0; pointer-events:none; user-select:none; }
+/* z-index:2 → overlay DI DEPAN konten card */
+.wm-overlay { position:absolute; inset:0; z-index:2; pointer-events:none; user-select:none; }
 .wm-svg { display:block; width:100%; height:100%; }
 .section-title { font-size:13px; font-weight:700; color:#374151; margin:0 0 14px; display:flex; align-items:center; gap:6px; }
 .info-table { width:100%; border-collapse:collapse; }
