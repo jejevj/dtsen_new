@@ -86,13 +86,16 @@
                         </tbody>
                       </table>
                     </template>
-                    <!-- Non-disab yang dipasangkan (misal Lainnya): pakai tabel biasa -->
+                    <!-- Non-disab yang dipasangkan (misal Lainnya): pakai tabel biasa + renderFieldValue -->
                     <template v-else>
                       <table class="info-table">
                         <tbody>
                           <tr v-for="field in group.fields" :key="field.field_key">
                             <td class="td-label">{{ field.field_label }}</td>
-                            <td class="td-value">{{ resolveValue(field.field_key, data[field.field_key]) }}</td>
+                            <td class="td-value">
+                              <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
+                              <span v-else>{{ renderFieldValue(field.field_key, data[field.field_key]) }}</span>
+                            </td>
                           </tr>
                         </tbody>
                       </table>
@@ -143,15 +146,8 @@
                         <tr v-for="field in group.fields" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
                           <td class="td-value">
-                            <template v-if="isNikField(field.field_key)">
-                              <span style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
-                            </template>
-                            <template v-else-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">{{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}</template>
-                            <template v-else-if="field.field_key === 'tanggal_lahir'">{{ formatUsia(data[field.field_key]) }}</template>
-                            <template v-else-if="field.field_key === 'omzet_usaha_utama'">{{ data[field.field_key] ? formatRupiah(data[field.field_key]) : '-' }}</template>
-                            <template v-else-if="field.field_key === 'jumlah_usaha'">{{ data[field.field_key] != null ? data[field.field_key] + ' usaha' : '-' }}</template>
-                            <template v-else-if="field.field_key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama'">{{ data[field.field_key] ?? '-' }} orang</template>
-                            <template v-else>{{ resolveValue(field.field_key, data[field.field_key]) }}</template>
+                            <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
+                            <span v-else>{{ renderFieldValue(field.field_key, data[field.field_key]) }}</span>
                           </td>
                         </tr>
                       </tbody>
@@ -333,10 +329,6 @@ const DISAB_KEYS = new Set([
 ])
 const STAT_GROUPS = new Set(['Sosial Ekonomi', 'Bansos'])
 
-/**
- * Apakah sebuah group adalah group disabilitas (konten-nya badge disabilitas)?
- * Dipakai di template untuk memilih render tabel disab vs tabel biasa.
- */
 function isDisabGroup(group) {
   const name = (group.group ?? '').toLowerCase()
   if (name.includes('disabilitas')) return true
@@ -345,29 +337,15 @@ function isDisabGroup(group) {
     fields.filter(f => DISAB_KEYS.has(f.field_key)).length / fields.length >= 0.5
 }
 
-/**
- * Tipe slot untuk groupSlots.
- * 'disab'  → bisa dipasangkan (col-6) dengan group lain; render konten pakai isDisabGroup()
- * 'stat'   → stat box besar
- * 'normal' → tabel info biasa, dipasangkan 2 per row
- *
- * PERUBAHAN: group 'Lainnya' tidak lagi masuk STAT_GROUPS → masuk 'normal'
- * sehingga akan dipasangkan dengan Disabilitas secara otomatis.
- */
 function groupType(group) {
   if (isDisabGroup(group)) return 'disab'
   if (STAT_GROUPS.has(group.group)) return 'stat'
   return 'normal'
 }
 
-/**
- * Susun slots. 'disab' & 'normal' keduanya masuk antrian pairing
- * sehingga Disabilitas + Lainnya bisa satu baris (grid-2).
- */
 const groupSlots = computed(() => {
   const slots = []
-  // antrian untuk pairing (normal & disab dicampur)
-  const pairBuf = []  // { type, group }
+  const pairBuf = []
 
   function flushPair() {
     while (pairBuf.length >= 2) {
@@ -391,7 +369,6 @@ const groupSlots = computed(() => {
       flushPair()
       statBuf.push(g)
     } else {
-      // 'normal' dan 'disab' keduanya masuk pairBuf
       flushStat()
       pairBuf.push({ type: t, group: g })
       if (pairBuf.length === 2) {
@@ -559,19 +536,32 @@ watch(
 )
 
 /**
+ * Helper terpusat: format nilai field untuk ditampilkan.
+ * Menangani semua field spesial agar tidak ada raw ISO string yang lolos
+ * di render path manapun (normal, disab-pair, dll).
+ */
+function renderFieldValue(key, val) {
+  if (key === 'tanggal_lahir')                                    return formatUsia(val)
+  if (key === 'kelas_tertinggi_yang_diduduki')                    return val != null ? 'Kelas ' + val : '-'
+  if (key === 'omzet_usaha_utama')                                return val ? formatRupiah(val) : '-'
+  if (key === 'jumlah_usaha')                                     return val != null ? val + ' usaha' : '-'
+  if (key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama')     return (val ?? '-') + ' orang'
+  return resolveValue(key, val)
+}
+
+/**
  * Hitung usia bulat (tahun penuh) dari tanggal lahir hingga hari ini.
- * Contoh output: "22 tahun"
+ * Toleran terhadap format ISO (2004-03-25T00:00:00Z) maupun plain date (2004-03-25).
  */
 function formatUsia(v) {
   if (!v) return '-'
-  const str = String(v).includes('T') ? v : v + 'T00:00:00'
-  const lahir = new Date(str)
+  const lahir = new Date(String(v))
   if (isNaN(lahir.getTime())) return String(v)
   const today = new Date()
   let usia = today.getFullYear() - lahir.getFullYear()
-  const bulanBelum = today.getMonth() < lahir.getMonth() ||
+  const belumUltah = today.getMonth() < lahir.getMonth() ||
     (today.getMonth() === lahir.getMonth() && today.getDate() < lahir.getDate())
-  if (bulanBelum) usia--
+  if (belumUltah) usia--
   return usia + ' tahun'
 }
 
