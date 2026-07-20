@@ -181,13 +181,21 @@ function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-// Urutan paksa: Aset Bergerak → Aset Tidak Bergerak → Fasilitas Rumah selalu di akhir
-const KK_GROUP_ORDER = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
+/**
+ * Urutan paksa group keluarga:
+ * semua group selain 3 card aset tampil sesuai urutan API,
+ * lalu tepat setelah "Kondisi Rumah" sisipkan:
+ *   Aset Bergerak → Aset Tidak Bergerak → Fasilitas Rumah
+ * Group lain sesudah Kondisi Rumah (misal Ternak) tetap mengikuti di belakang.
+ */
+const PINNED_AFTER_KONDISI_RUMAH = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
 function reorderKeluargaGroups(groups) {
-  const pinnedNames = new Set(KK_GROUP_ORDER)
+  const pinnedNames = new Set(PINNED_AFTER_KONDISI_RUMAH)
   const rest   = groups.filter(g => !pinnedNames.has(g.group))
-  const pinned = KK_GROUP_ORDER.map(name => groups.find(g => g.group === name)).filter(Boolean)
-  return [...rest, ...pinned]
+  const pinned = PINNED_AFTER_KONDISI_RUMAH.map(name => groups.find(g => g.group === name)).filter(Boolean)
+  const anchorIdx = rest.findIndex(g => g.group === 'Kondisi Rumah')
+  const insertAt  = anchorIdx >= 0 ? anchorIdx + 1 : rest.length
+  return [...rest.slice(0, insertAt), ...pinned, ...rest.slice(insertAt)]
 }
 
 const orderedKeluargaGroups = computed(() => reorderKeluargaGroups(keluargaGroups.value))
