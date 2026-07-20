@@ -60,28 +60,44 @@
         <template v-if="detailGroups.length">
           <template v-for="(slot, si) in groupSlots" :key="si">
 
-            <!-- Disabilitas: selalu tabel penuh, tidak dipasangkan -->
+            <!-- Disabilitas: tabel khusus, tapi bisa dipasangkan col-6 -->
             <template v-if="slot.type === 'disab'">
-              <div class="detail-card wm-card">
-                <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(slot.groups[0].group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(slot.groups[0].group)+')'" /></svg></div>
-                <div style="position:relative;z-index:1;">
-                  <p class="section-title"><i :class="groupIcon(slot.groups[0].group)"></i> {{ slot.groups[0].group }}</p>
-                  <table class="disab-table">
-                    <thead>
-                      <tr>
-                        <th class="disab-th">Aspek</th>
-                        <th class="disab-th" style="text-align:right;">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="field in slot.groups[0].fields" :key="field.field_key" class="disab-tr">
-                        <td class="disab-td-aspek">{{ stripDisabPrefix(field.field_label) }}</td>
-                        <td class="disab-td-status">
-                          <span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+              <div :class="slot.groups.length === 2 ? 'grid-2' : ''">
+                <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div style="position:relative;z-index:1;">
+                    <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
+                    <!-- Disabilitas: pakai tabel badge -->
+                    <template v-if="isDisabGroup(group)">
+                      <table class="disab-table">
+                        <thead>
+                          <tr>
+                            <th class="disab-th">Aspek</th>
+                            <th class="disab-th" style="text-align:right;">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="field in group.fields" :key="field.field_key" class="disab-tr">
+                            <td class="disab-td-aspek">{{ stripDisabPrefix(field.field_label) }}</td>
+                            <td class="disab-td-status">
+                              <span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </template>
+                    <!-- Non-disab yang dipasangkan (misal Lainnya): pakai tabel biasa -->
+                    <template v-else>
+                      <table class="info-table">
+                        <tbody>
+                          <tr v-for="field in group.fields" :key="field.field_key">
+                            <td class="td-label">{{ field.field_label }}</td>
+                            <td class="td-value">{{ resolveValue(field.field_key, data[field.field_key]) }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </template>
+                  </div>
                 </div>
               </div>
             </template>
@@ -131,7 +147,7 @@
                               <span style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
                             </template>
                             <template v-else-if="field.field_key === 'kelas_tertinggi_yang_diduduki'">{{ data[field.field_key] != null ? 'Kelas ' + data[field.field_key] : '-' }}</template>
-                            <template v-else-if="field.field_key === 'tanggal_lahir'">{{ formatTanggal(data[field.field_key]) }}</template>
+                            <template v-else-if="field.field_key === 'tanggal_lahir'">{{ formatUsia(data[field.field_key]) }}</template>
                             <template v-else-if="field.field_key === 'omzet_usaha_utama'">{{ data[field.field_key] ? formatRupiah(data[field.field_key]) : '-' }}</template>
                             <template v-else-if="field.field_key === 'jumlah_usaha'">{{ data[field.field_key] != null ? data[field.field_key] + ' usaha' : '-' }}</template>
                             <template v-else-if="field.field_key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama'">{{ data[field.field_key] ?? '-' }} orang</template>
@@ -315,42 +331,76 @@ const DISAB_KEYS = new Set([
   'mengingat_berkonsentrasi', 'mengurus_diri',
   'belajar_kemampuan_intelektual', 'pengendalian_perilaku', 'kesedihan_depresi',
 ])
-const STAT_GROUPS = new Set(['Sosial Ekonomi', 'Lainnya', 'Bansos'])
+const STAT_GROUPS = new Set(['Sosial Ekonomi', 'Bansos'])
 
-function groupType(group) {
+/**
+ * Apakah sebuah group adalah group disabilitas (konten-nya badge disabilitas)?
+ * Dipakai di template untuk memilih render tabel disab vs tabel biasa.
+ */
+function isDisabGroup(group) {
   const name = (group.group ?? '').toLowerCase()
-  if (name.includes('disabilitas')) return 'disab'
+  if (name.includes('disabilitas')) return true
   const fields = group.fields ?? []
-  if (fields.length && fields.filter(f => DISAB_KEYS.has(f.field_key)).length / fields.length >= 0.5) return 'disab'
+  return fields.length > 0 &&
+    fields.filter(f => DISAB_KEYS.has(f.field_key)).length / fields.length >= 0.5
+}
+
+/**
+ * Tipe slot untuk groupSlots.
+ * 'disab'  → bisa dipasangkan (col-6) dengan group lain; render konten pakai isDisabGroup()
+ * 'stat'   → stat box besar
+ * 'normal' → tabel info biasa, dipasangkan 2 per row
+ *
+ * PERUBAHAN: group 'Lainnya' tidak lagi masuk STAT_GROUPS → masuk 'normal'
+ * sehingga akan dipasangkan dengan Disabilitas secara otomatis.
+ */
+function groupType(group) {
+  if (isDisabGroup(group)) return 'disab'
   if (STAT_GROUPS.has(group.group)) return 'stat'
   return 'normal'
 }
 
+/**
+ * Susun slots. 'disab' & 'normal' keduanya masuk antrian pairing
+ * sehingga Disabilitas + Lainnya bisa satu baris (grid-2).
+ */
 const groupSlots = computed(() => {
   const slots = []
-  const normals = []
-  function flushNormals() {
-    while (normals.length) slots.push({ type: 'normal', groups: normals.splice(0, 2) })
+  // antrian untuk pairing (normal & disab dicampur)
+  const pairBuf = []  // { type, group }
+
+  function flushPair() {
+    while (pairBuf.length >= 2) {
+      const pair = pairBuf.splice(0, 2)
+      slots.push({ type: 'disab', groups: pair.map(p => p.group) })
+    }
+    if (pairBuf.length === 1) {
+      const p = pairBuf.splice(0, 1)[0]
+      slots.push({ type: p.type, groups: [p.group] })
+    }
   }
+
   let statBuf = []
   function flushStat() {
     if (statBuf.length) { slots.push({ type: 'stat', groups: [...statBuf] }); statBuf = [] }
   }
+
   for (const g of detailGroups.value) {
     const t = groupType(g)
-    if (t === 'disab') {
-      flushNormals(); flushStat()
-      slots.push({ type: 'disab', groups: [g] })
-    } else if (t === 'stat') {
-      flushNormals()
+    if (t === 'stat') {
+      flushPair()
       statBuf.push(g)
     } else {
+      // 'normal' dan 'disab' keduanya masuk pairBuf
       flushStat()
-      normals.push(g)
-      if (normals.length === 2) flushNormals()
+      pairBuf.push({ type: t, group: g })
+      if (pairBuf.length === 2) {
+        const pair = pairBuf.splice(0, 2)
+        slots.push({ type: 'disab', groups: pair.map(p => p.group) })
+      }
     }
   }
-  flushNormals(); flushStat()
+  flushPair(); flushStat()
   return slots
 })
 
@@ -508,12 +558,23 @@ watch(
   (newNik) => { if (newNik) init(String(newNik)) },
 )
 
-function formatTanggal(v) {
+/**
+ * Hitung usia bulat (tahun penuh) dari tanggal lahir hingga hari ini.
+ * Contoh output: "22 tahun"
+ */
+function formatUsia(v) {
   if (!v) return '-'
   const str = String(v).includes('T') ? v : v + 'T00:00:00'
-  const d = new Date(str)
-  return isNaN(d.getTime()) ? String(v) : d.toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' })
+  const lahir = new Date(str)
+  if (isNaN(lahir.getTime())) return String(v)
+  const today = new Date()
+  let usia = today.getFullYear() - lahir.getFullYear()
+  const bulanBelum = today.getMonth() < lahir.getMonth() ||
+    (today.getMonth() === lahir.getMonth() && today.getDate() < lahir.getDate())
+  if (bulanBelum) usia--
+  return usia + ' tahun'
 }
+
 function formatRupiah(n) {
   if (!n && n !== 0) return '-'
   return 'Rp ' + Number(n).toLocaleString('id-ID')
