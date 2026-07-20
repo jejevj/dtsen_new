@@ -230,18 +230,19 @@ const userInitials = computed(() =>
   userDisplayName.value.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 )
 
+// FIX: gunakan /laporan bukan /report agar isActive() cocok dengan route yang terdaftar
 const navItems = [
   { to: '/dashboard',     label: 'Dashboard',              icon: 'pi pi-home'       },
-  { to: '/data-baseline', label: 'Data DTSEN',          icon: 'pi pi-database'   },
+  { to: '/data-baseline', label: 'Data DTSEN',             icon: 'pi pi-database'   },
   { to: '/mustahik',      label: 'Data Penerima Manfaat',  icon: 'pi pi-users'      },
-  { to: '/report',        label: 'Pemeriksaan DTSEN',      icon: 'pi pi-chart-line' },
+  { to: '/laporan',       label: 'Pemeriksaan DTSEN',      icon: 'pi pi-chart-line' },
 ]
 
 const pageLabels = {
   '/dashboard':     'Dashboard',
   '/data-baseline': 'Data DTSEN',
   '/mustahik':      'Data Mustahik',
-  '/report':        'Pemeriksaan DTSEN',
+  '/laporan':       'Pemeriksaan DTSEN',
 }
 const currentPageLabel = computed(() => pageLabels[route.path] || 'Halaman')
 

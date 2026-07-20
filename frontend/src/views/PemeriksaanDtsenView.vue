@@ -14,7 +14,7 @@
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div class="flex items-center gap-2 mb-5">
             <i class="pi pi-search text-primary-600 text-lg"></i>
-            <h2 class="text-base font-semibold text-gray-800">Cari Data Penduduk</h2>
+            <h2 class="text-base font-semibold text-gray-800">Cari Data Mustahik</h2>
           </div>
 
           <form @submit.prevent="handleSearch">
@@ -31,37 +31,32 @@
               <small v-if="errors.nik" class="p-error text-xs">{{ errors.nik }}</small>
             </div>
 
-            <!-- CAPTCHA -->
+            <!-- CAPTCHA ARITMATIKA (sama seperti LoginModal) -->
             <div class="mb-5">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Kode Keamanan (CAPTCHA)</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Verifikasi Keamanan</label>
               <div class="flex items-center gap-3 mb-2">
-                <!-- CAPTCHA Display -->
-                <div class="relative select-none">
-                  <canvas
-                    ref="captchaCanvas"
-                    width="160"
-                    height="52"
-                    class="rounded-lg border border-gray-200"
-                    style="letter-spacing: 4px;"
-                  />
+                <div class="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 select-none flex-shrink-0">
+                  <span class="font-mono font-bold text-primary-700 tracking-wider text-base">{{ captcha.question }}</span>
+                  <button
+                    type="button"
+                    @click="refreshCaptcha"
+                    :class="['flex items-center p-0.5 text-gray-400 hover:text-primary-600 transition-colors', captchaRefreshing && 'animate-spin']" 
+                    title="Ganti soal"
+                    aria-label="Ganti soal captcha"
+                  >
+                    <i class="pi pi-refresh text-sm"></i>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  @click="refreshCaptcha"
-                  class="flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 font-medium transition-colors"
-                  title="Muat ulang CAPTCHA"
-                >
-                  <i class="pi pi-refresh" :class="{ 'animate-spin': captchaRefreshing }"></i>
-                  <span>Refresh</span>
-                </button>
+                <InputText
+                  v-model="form.captcha"
+                  class="flex-1"
+                  placeholder="Jawaban"
+                  inputmode="numeric"
+                  maxlength="4"
+                  :class="{ 'p-invalid': errors.captcha }"
+                  autocomplete="off"
+                />
               </div>
-              <InputText
-                v-model="form.captcha"
-                class="w-full"
-                placeholder="Ketik teks di atas"
-                :class="{ 'p-invalid': errors.captcha }"
-                autocomplete="off"
-              />
               <small v-if="errors.captcha" class="p-error text-xs">{{ errors.captcha }}</small>
             </div>
 
@@ -94,22 +89,22 @@
             <li class="flex gap-3">
               <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">2</span>
               <div>
-                <p class="text-sm font-medium text-gray-700">Masukkan Kode CAPTCHA</p>
-                <p class="text-xs text-gray-500 mt-0.5">Ketik teks yang tampil pada gambar CAPTCHA. Kode bersifat case-sensitive. Jika sulit dibaca, klik tombol Refresh.</p>
+                <p class="text-sm font-medium text-gray-700">Jawab Verifikasi Aritmatika</p>
+                <p class="text-xs text-gray-500 mt-0.5">Selesaikan soal matematika sederhana yang tampil. Klik ikon refresh jika ingin soal baru.</p>
               </div>
             </li>
             <li class="flex gap-3">
               <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">3</span>
               <div>
                 <p class="text-sm font-medium text-gray-700">Klik Periksa Data</p>
-                <p class="text-xs text-gray-500 mt-0.5">Sistem akan mencocokkan NIK dengan basis data DTSEN dan menampilkan status kelayakan.</p>
+                <p class="text-xs text-gray-500 mt-0.5">Sistem akan mencocokkan NIK dengan basis data DTSEN dan menampilkan hasil pemeriksaan.</p>
               </div>
             </li>
             <li class="flex gap-3">
               <span class="flex-shrink-0 w-6 h-6 rounded-full bg-primary-100 text-primary-700 text-xs font-bold flex items-center justify-center">4</span>
               <div>
                 <p class="text-sm font-medium text-gray-700">Baca Hasil Pemeriksaan</p>
-                <p class="text-xs text-gray-500 mt-0.5">Hasil akan menampilkan status: <strong>Layak</strong> (Desil 1–4), <strong>Tidak Memenuhi Kriteria</strong> (Desil 5–10), atau <strong>Data Tidak Ditemukan</strong>.</p>
+                <p class="text-xs text-gray-500 mt-0.5">Hasil menampilkan riwayat penerimaan zakat lengkap dari LAZ yang terdaftar.</p>
               </div>
             </li>
           </ol>
@@ -125,85 +120,166 @@
 
       <!-- ============ HASIL PENCARIAN ============ -->
 
-      <!-- Kondisi 1: Data ditemukan + desil 1-4 (LAYAK) -->
+      <!-- Loading state -->
       <transition name="fade-slide">
-        <div v-if="result && result.status === 'layak'" class="bg-white rounded-xl shadow-sm border border-green-200 overflow-hidden">
-          <!-- Banner -->
-          <div class="bg-green-50 border-b border-green-200 px-6 py-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <i class="pi pi-check-circle text-green-600 text-xl"></i>
+        <div v-if="isSearching" class="bg-white rounded-xl shadow-sm border border-gray-100 p-10 flex flex-col items-center gap-3">
+          <i class="pi pi-spin pi-spinner text-primary-600" style="font-size: 2rem"></i>
+          <p class="text-gray-500 text-sm">Mencari data NIK {{ lastSearchedNik }}...</p>
+        </div>
+      </transition>
+
+      <!-- Error API -->
+      <transition name="fade-slide">
+        <div v-if="apiError && !isSearching" class="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
+          <div class="bg-red-50 border-b border-red-200 px-6 py-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+              <i class="pi pi-times-circle text-red-600 text-xl"></i>
             </div>
             <div>
-              <h3 class="font-semibold text-green-800">Data Ditemukan — Layak sebagai Penerima Manfaat</h3>
-              <p class="text-sm text-green-600">Penduduk ini terdaftar dalam DTSEN pada Desil {{ result.data.desil }} dan memenuhi kriteria penerima zakat.</p>
-            </div>
-            <span class="ml-auto px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full border border-green-300">DESIL {{ result.data.desil }}</span>
-          </div>
-
-          <!-- Detail Data -->
-          <div class="p-6">
-            <h4 class="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Informasi Penduduk</h4>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-              <div v-for="field in detailFields" :key="field.key">
-                <p class="text-xs text-gray-400 mb-0.5">{{ field.label }}</p>
-                <p class="text-sm font-medium text-gray-800">{{ formatField(field.key, result.data) }}</p>
-              </div>
-            </div>
-
-            <div class="mt-6 pt-5 border-t border-gray-100">
-              <h4 class="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Informasi Bantuan</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div class="bg-green-50 rounded-lg p-4 border border-green-100">
-                  <p class="text-xs text-gray-500 mb-1">Nominal Bantuan</p>
-                  <p class="text-lg font-bold text-green-700">{{ formatCurrency(result.data.nominal) }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                  <p class="text-xs text-gray-500 mb-1">Keterangan</p>
-                  <p class="text-sm font-medium text-gray-700">{{ result.data.keterangan || '-' }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                  <p class="text-xs text-gray-500 mb-1">Jumlah Tanggungan</p>
-                  <p class="text-sm font-medium text-gray-700">{{ result.data.jumlah_tanggungan }} orang</p>
-                </div>
-              </div>
+              <h3 class="font-semibold text-red-800">{{ apiError }}</h3>
+              <p class="text-sm text-red-600">NIK: {{ lastSearchedNik }}</p>
             </div>
           </div>
         </div>
       </transition>
 
-      <!-- Kondisi 2: Data ditemukan tapi desil 5-10 (TIDAK LAYAK) -->
+      <!-- Data ditemukan: tampilkan tabel riwayat penerimaan -->
       <transition name="fade-slide">
-        <div v-if="result && result.status === 'tidak_layak'" class="bg-white rounded-xl shadow-sm border border-yellow-200 overflow-hidden">
-          <div class="bg-yellow-50 border-b border-yellow-200 px-6 py-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-              <i class="pi pi-exclamation-triangle text-yellow-600 text-xl"></i>
+        <div v-if="mustahikRows.length > 0 && !isSearching" class="space-y-4">
+
+          <!-- Identity header card -->
+          <div class="bg-white rounded-xl shadow-sm border border-green-200 overflow-hidden">
+            <div class="bg-green-50 border-b border-green-200 px-6 py-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <i class="pi pi-check-circle text-green-600 text-xl"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-green-800">Data Ditemukan</h3>
+                <p class="text-sm text-green-600">NIK <strong>{{ lastSearchedNik }}</strong> terdaftar dalam basis data DTSEN.</p>
+              </div>
+              <span class="ml-auto px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full border border-green-300">
+                {{ mustahikRows.length }} Riwayat
+              </span>
             </div>
-            <div>
-              <h3 class="font-semibold text-yellow-800">Data Ditemukan — Tidak Memenuhi Kriteria</h3>
-              <p class="text-sm text-yellow-700">Penduduk ini terdaftar dalam DTSEN pada Desil {{ result.data.desil }}, namun <strong>tidak termasuk dalam kelompok penerima manfaat</strong> (hanya Desil 1–4).</p>
-            </div>
-            <span class="ml-auto px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full border border-yellow-300">DESIL {{ result.data.desil }}</span>
-          </div>
-          <div class="p-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
-              <div v-for="field in basicFields" :key="field.key">
-                <p class="text-xs text-gray-400 mb-0.5">{{ field.label }}</p>
-                <p class="text-sm font-medium text-gray-800">{{ formatField(field.key, result.data) }}</p>
+
+            <!-- Identitas Pribadi -->
+            <div class="p-6 pb-4">
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Identitas Pribadi</h4>
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
+                <div>
+                  <p class="text-xs text-gray-400">Nama Lengkap</p>
+                  <p class="text-sm font-semibold text-gray-800">{{ identity.nama_lengkap || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">NIK</p>
+                  <p class="text-sm font-medium text-gray-800">{{ lastSearchedNik }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Jenis Kelamin</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.jenis_kelamin || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Tanggal Lahir</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.lahir_tanggal || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Agama</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.agama || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Alamat Domisili</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.alamat_domisili || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Provinsi Domisili</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.provinsi_nama || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Kab/Kota Domisili</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.kabkota_nama || '-' }}</p>
+                </div>
               </div>
             </div>
-            <div class="mt-5 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <p class="text-sm text-yellow-800">
-                <i class="pi pi-info-circle mr-2"></i>
-                Kriteria penerima manfaat DTSEN adalah penduduk yang masuk dalam kelompok <strong>Desil 1 hingga Desil 4</strong>. Penduduk ini berada di Desil {{ result.data.desil }} sehingga tidak berhak menerima bantuan pada periode ini.
-              </p>
+
+            <!-- Alamat KTP -->
+            <div class="px-6 pb-6">
+              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Alamat KTP</h4>
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
+                <div>
+                  <p class="text-xs text-gray-400">Alamat KTP</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.ktp_alamat || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Provinsi KTP</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.ktp_provinsi_nama || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Kab/Kota KTP</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.ktp_kabkota_nama || '-' }}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400">Kecamatan KTP</p>
+                  <p class="text-sm font-medium text-gray-800">{{ identity.ktp_kecamatan_nama || '-' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel riwayat penerimaan -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100">
+              <h4 class="text-sm font-semibold text-gray-700">Riwayat Penerimaan Zakat / Bantuan</h4>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">LAZ</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Skala</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipe</th>
+                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Nominal</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Terima</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                  <tr v-for="(row, i) in mustahikRows" :key="i" class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-gray-400 text-xs">{{ i + 1 }}</td>
+                    <td class="px-4 py-3">
+                      <p class="font-medium text-gray-800">{{ row.laz_nama || '-' }}</p>
+                      <p class="text-xs text-gray-400">{{ row.laz_kode }}</p>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span class="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">{{ row.skala || '-' }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">{{ row.program_nama || '-' }}</td>
+                    <td class="px-4 py-3">
+                      <span :class="[
+                        'px-2 py-0.5 text-xs rounded-full font-medium',
+                        row.tipe_penerimaan === 'langsung' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
+                      ]">{{ row.tipe_penerimaan || '-' }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-right font-semibold text-gray-800">{{ formatRupiah(row.rupiah) }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ row.tanggal_terima || '-' }}</td>
+                  </tr>
+                </tbody>
+                <tfoot class="bg-gray-50 border-t border-gray-200">
+                  <tr>
+                    <td colspan="5" class="px-4 py-3 text-xs font-semibold text-gray-500 text-right">Total Diterima</td>
+                    <td class="px-4 py-3 text-right font-bold text-green-700">{{ formatRupiah(totalRupiah) }}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         </div>
       </transition>
 
-      <!-- Kondisi 3: Data tidak ditemukan -->
+      <!-- Data tidak ditemukan -->
       <transition name="fade-slide">
-        <div v-if="result && result.status === 'not_found'" class="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
+        <div v-if="notFound && !isSearching" class="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
           <div class="bg-red-50 border-b border-red-200 px-6 py-4 flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
               <i class="pi pi-times-circle text-red-600 text-xl"></i>
@@ -240,106 +316,71 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { MOCK_MUSTAHIK } from '@/data/mockMustahik'
+import MustahikService from '@/services/mustahik'
 
 // ── State ──────────────────────────────────────────
-const form = reactive({ nik: '', captcha: '' })
-const errors = reactive({ nik: '', captcha: '' })
-const isSearching = ref(false)
-const result = ref(null)
+const form            = reactive({ nik: '', captcha: '' })
+const errors          = reactive({ nik: '', captcha: '' })
+const isSearching     = ref(false)
+const mustahikRows    = ref([])
 const lastSearchedNik = ref('')
-const captchaCanvas = ref(null)
-const captchaText = ref('')
+const notFound        = ref(false)
+const apiError        = ref('')
 const captchaRefreshing = ref(false)
 
-// ── CAPTCHA ─────────────────────────────────────────
-const CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
-
-function generateCaptchaText(len = 6) {
-  let s = ''
-  for (let i = 0; i < len; i++) s += CAPTCHA_CHARS[Math.floor(Math.random() * CAPTCHA_CHARS.length)]
-  return s
+// ── CAPTCHA ARITMATIKA (sama persis dengan LoginModal) ──────────────
+function generateCaptcha() {
+  const ops = ['+', '-', 'x']
+  const op  = ops[Math.floor(Math.random() * ops.length)]
+  let a, b, answer
+  if (op === '+') {
+    a = Math.floor(Math.random() * 20) + 1
+    b = Math.floor(Math.random() * 20) + 1
+    answer = a + b
+  } else if (op === '-') {
+    a = Math.floor(Math.random() * 20) + 10
+    b = Math.floor(Math.random() * 10) + 1
+    answer = a - b
+  } else {
+    a = Math.floor(Math.random() * 9) + 2
+    b = Math.floor(Math.random() * 9) + 2
+    answer = a * b
+  }
+  return { question: `${a} ${op} ${b} = ?`, answer: String(answer) }
 }
 
-function drawCaptcha(text) {
-  const canvas = captchaCanvas.value
-  if (!canvas) return
-  const ctx = canvas.getContext('2d')
-  const W = canvas.width
-  const H = canvas.height
+const captcha = reactive(generateCaptcha())
 
-  // Background gradient
-  const grad = ctx.createLinearGradient(0, 0, W, H)
-  grad.addColorStop(0, '#f0f7ff')
-  grad.addColorStop(1, '#e8f4fd')
-  ctx.fillStyle = grad
-  ctx.fillRect(0, 0, W, H)
-
-  // Noise lines
-  for (let i = 0; i < 5; i++) {
-    ctx.strokeStyle = `rgba(${Math.random()*80|0},${Math.random()*80|0},${Math.random()*200|0},0.25)`
-    ctx.lineWidth = 1
-    ctx.beginPath()
-    ctx.moveTo(Math.random() * W, Math.random() * H)
-    ctx.lineTo(Math.random() * W, Math.random() * H)
-    ctx.stroke()
-  }
-
-  // Noise dots
-  for (let i = 0; i < 40; i++) {
-    ctx.fillStyle = `rgba(${Math.random()*100|0},${Math.random()*100|0},${Math.random()*200|0},0.2)`
-    ctx.beginPath()
-    ctx.arc(Math.random() * W, Math.random() * H, Math.random() * 2 + 0.5, 0, Math.PI * 2)
-    ctx.fill()
-  }
-
-  // Characters
-  const charW = W / (text.length + 1)
-  for (let i = 0; i < text.length; i++) {
-    ctx.save()
-    const x = charW * (i + 0.8) + Math.random() * 4 - 2
-    const y = H / 2 + Math.random() * 6 - 3
-    ctx.translate(x, y)
-    ctx.rotate((Math.random() - 0.5) * 0.4)
-    const fontSize = 22 + Math.random() * 6 | 0
-    ctx.font = `${Math.random() > 0.5 ? 'bold ' : ''}${fontSize}px "Courier New", monospace`
-    const hue = Math.random() * 60 | 0
-    ctx.fillStyle = `hsl(${200 + hue}, 70%, 30%)`
-    ctx.fillText(text[i], 0, 0)
-    ctx.restore()
-  }
-
-  // Border
-  ctx.strokeStyle = '#cbd5e1'
-  ctx.lineWidth = 1
-  ctx.strokeRect(0, 0, W, H)
-}
-
-async function refreshCaptcha() {
+function refreshCaptcha() {
   captchaRefreshing.value = true
-  form.captcha = ''
-  errors.captcha = ''
-  captchaText.value = generateCaptchaText()
-  await nextTick()
-  drawCaptcha(captchaText.value)
+  const next = generateCaptcha()
+  captcha.question = next.question
+  captcha.answer   = next.answer
+  form.captcha     = ''
+  errors.captcha   = ''
   setTimeout(() => { captchaRefreshing.value = false }, 400)
 }
+// ──────────────────────────────────────────────────
 
-onMounted(async () => {
-  await nextTick()
-  captchaText.value = generateCaptchaText()
-  drawCaptcha(captchaText.value)
+// ── Computed ───────────────────────────────────────
+const identity = computed(() => {
+  // Ambil baris pertama yang punya nama_lengkap (sebelum LAG dedup set null)
+  return mustahikRows.value[0] || {}
 })
+
+const totalRupiah = computed(() =>
+  mustahikRows.value.reduce((sum, r) => sum + (parseFloat(r.rupiah) || 0), 0)
+)
 
 // ── Validasi ────────────────────────────────────────
 function validate() {
-  let valid = true
-  errors.nik = ''
+  errors.nik     = ''
   errors.captcha = ''
+  let valid = true
 
   if (!form.nik.trim()) {
     errors.nik = 'NIK wajib diisi.'
@@ -350,80 +391,55 @@ function validate() {
   }
 
   if (!form.captcha.trim()) {
-    errors.captcha = 'Kode CAPTCHA wajib diisi.'
+    errors.captcha = 'Jawaban verifikasi wajib diisi.'
     valid = false
-  } else if (form.captcha.trim() !== captchaText.value) {
-    errors.captcha = 'Kode CAPTCHA tidak sesuai. Silakan coba lagi.'
+  } else if (form.captcha.trim() !== captcha.answer) {
+    errors.captcha = 'Jawaban salah. Soal telah diperbarui, coba lagi.'
     valid = false
   }
 
   return valid
 }
 
-// ── Pencarian ────────────────────────────────────────
-function handleSearch() {
+// ── Pencarian — panggil API real ─────────────────────
+async function handleSearch() {
   if (!validate()) {
-    if (form.captcha !== captchaText.value) refreshCaptcha()
+    if (form.captcha.trim() !== captcha.answer) refreshCaptcha()
     return
   }
 
-  isSearching.value = true
-  result.value = null
-  lastSearchedNik.value = form.nik.trim()
+  const nik = form.nik.trim()
+  isSearching.value     = true
+  mustahikRows.value    = []
+  notFound.value        = false
+  apiError.value        = ''
+  lastSearchedNik.value = nik
 
-  setTimeout(() => {
-    const found = MOCK_MUSTAHIK.find(m => m.nik === form.nik.trim())
+  try {
+    const res = await MustahikService.getDetailByNik(nik)
 
-    if (!found) {
-      result.value = { status: 'not_found' }
-    } else if (found.desil >= 1 && found.desil <= 4) {
-      result.value = { status: 'layak', data: found }
+    if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+      mustahikRows.value = res.data
     } else {
-      result.value = { status: 'tidak_layak', data: found }
+      notFound.value = true
     }
-
+  } catch (e) {
+    if (e?.response?.status === 404) {
+      notFound.value = true
+    } else {
+      apiError.value = e?.response?.data?.message || 'Terjadi kesalahan saat menghubungi server. Coba lagi.'
+    }
+  } finally {
     isSearching.value = false
-    // Refresh CAPTCHA setelah setiap pencarian berhasil
     refreshCaptcha()
-  }, 800)
+  }
 }
 
-// ── Format Helpers ───────────────────────────────────
-const detailFields = [
-  { key: 'nama',             label: 'Nama Lengkap' },
-  { key: 'nik',              label: 'NIK' },
-  { key: 'jenis_kelamin',    label: 'Jenis Kelamin' },
-  { key: 'usia',             label: 'Usia' },
-  { key: 'kab_kota',         label: 'Kabupaten/Kota' },
-  { key: 'provinsi',         label: 'Provinsi' },
-  { key: 'kecamatan',        label: 'Kecamatan' },
-  { key: 'kelurahan',        label: 'Kelurahan' },
-  { key: 'pekerjaan',        label: 'Pekerjaan' },
-  { key: 'penghasilan',      label: 'Penghasilan/Bulan' },
-  { key: 'status_pernikahan',label: 'Status Pernikahan' },
-  { key: 'agama',            label: 'Agama' },
-]
-
-const basicFields = [
-  { key: 'nama',          label: 'Nama Lengkap' },
-  { key: 'nik',           label: 'NIK' },
-  { key: 'jenis_kelamin', label: 'Jenis Kelamin' },
-  { key: 'usia',          label: 'Usia' },
-  { key: 'kab_kota',      label: 'Kabupaten/Kota' },
-  { key: 'provinsi',      label: 'Provinsi' },
-]
-
-function formatField(key, data) {
-  const val = data[key]
-  if (key === 'jenis_kelamin') return val === 'm' ? 'Laki-laki' : 'Perempuan'
-  if (key === 'usia') return val + ' tahun'
-  if (key === 'penghasilan') return formatCurrency(val)
-  return val || '-'
-}
-
-function formatCurrency(n) {
-  if (!n) return 'Rp 0'
-  return 'Rp ' + n.toLocaleString('id-ID')
+// ── Format ───────────────────────────────────────────
+function formatRupiah(n) {
+  const num = parseFloat(n)
+  if (!n || isNaN(num)) return 'Rp 0'
+  return 'Rp ' + num.toLocaleString('id-ID')
 }
 </script>
 
@@ -434,5 +450,5 @@ function formatCurrency(n) {
 .fade-slide-leave-to     { opacity: 0; transform: translateY(-8px); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
-.animate-spin { animation: spin 0.6s linear infinite; }
+.animate-spin { animation: spin 0.4s linear infinite; }
 </style>
