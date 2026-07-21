@@ -207,7 +207,7 @@
           </div>
         </div>
 
-        <!-- Desil breakdown cards — warna asli dari desilStats (iconBg per desil) -->
+        <!-- Desil breakdown cards -->
         <div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
             <div v-for="d in desilStats" :key="d.label"
@@ -344,7 +344,7 @@
           </div>
         </div>
 
-        <!-- Bidang Program Cards — warna asli dari bidangColors (back + border) -->
+        <!-- Bidang Program Cards -->
         <div class="grid-3" style="display:grid;gap:16px;">
           <div
             v-for="(bidang, i) in bidangProgram"
@@ -662,11 +662,13 @@ onBeforeUnmount(() => { ro?.disconnect() })
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+  background: transparent !important;
 }
 .wm-svg {
   display: block;
   width: 100%;
   height: 100%;
+  background: transparent;
 }
 /* Konten selalu di atas overlay watermark */
 .wm-content {
