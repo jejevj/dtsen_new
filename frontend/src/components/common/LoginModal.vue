@@ -12,8 +12,8 @@
                 stroke="white" stroke-width="2" fill="none"/>
               <path d="M16 20 L20 16 L24 20 L20 24 Z" fill="white"/>
             </svg>
-            <h2 id="lm-title">Masuk ke DTSEN</h2>
-            <p class="lm-subtitle">Sistem Data Terpadu Sosial Ekonomi Nasional</p>
+            <h2 id="lm-title">Masuk ke Satu Data ZIS DSKL</h2>
+            <p class="lm-subtitle">Halaman pemantauan pendistribusian dan pendayagunaan ZIS DSKL yang terukur dan tepat sasaran.</p>
             <button class="lm-close" @click="handleClose" aria-label="Tutup">
               <svg viewBox="0 0 20 20" fill="none">
                 <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
