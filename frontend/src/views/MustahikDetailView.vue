@@ -515,7 +515,7 @@ function maskNIK(nik) {
 }
 
 function desilLabel(d) {
-  return { 1: 'Sangat Miskin', 2: 'Miskin', 3: 'Hampir Miskin', 4: 'Rentan Miskin' }[d] || '-'
+  return { 1: '', 2: '', 3: '', 4: '' }[d] || '-'
 }
 
 function keteranganBadges(ket) {

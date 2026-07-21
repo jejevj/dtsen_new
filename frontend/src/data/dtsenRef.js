@@ -48,10 +48,10 @@ export const STATUS_BEKERJA = {
 }
 
 export const DESIL_LABEL = {
-  1: 'Desil 1 — Sangat Miskin',
-  2: 'Desil 2 — Miskin',
-  3: 'Desil 3 — Hampir Miskin',
-  4: 'Desil 4 — Rentan Miskin',
+  1: 'Desil 1',
+  2: 'Desil 2',
+  3: 'Desil 3',
+  4: 'Desil 4',
 }
 
 export const DESIL_COLOR = {

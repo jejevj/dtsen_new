@@ -22,7 +22,7 @@
             <SelectButton v-model="filters.skala" :options="skalaOptions" option-label="label" option-value="value" />
           </div>
           <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium">Desil Kemiskinan</label>
+            <label class="text-sm font-medium">Desil</label>
             <div class="flex flex-wrap gap-2">
               <ToggleButton
                 v-for="d in 11" :key="d-1"
@@ -70,7 +70,7 @@
           </template>
         </Card>
         <Card class="shadow-sm">
-          <template #title>Distribusi Desil Kemiskinan</template>
+          <template #title>Distribusi Desil</template>
           <template #content>
             <Chart type="bar" :data="desilChart" :options="desilOptions" style="height: 240px" />
           </template>

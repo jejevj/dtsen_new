@@ -213,16 +213,16 @@ function groupIcon(g) { return GROUP_ICONS[g] ?? 'pi pi-list' }
 
 const DESIL_COLORS = [
   null,
-  { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'Sangat Miskin' },
-  { bg:'#fff7ed', border:'#fed7aa', text:'#9a3412', icon:'#fb923c', label:'Miskin' },
-  { bg:'#fefce8', border:'#fde68a', text:'#92400e', icon:'#fbbf24', label:'Hampir Miskin' },
-  { bg:'#fefce8', border:'#fde68a', text:'#a16207', icon:'#fbbf24', label:'Rentan Miskin' },
-  { bg:'#f0fdf4', border:'#bbf7d0', text:'#166534', icon:'#4ade80', label:'Menengah Bawah' },
-  { bg:'#f0fdf4', border:'#bbf7d0', text:'#15803d', icon:'#22c55e', label:'Menengah' },
-  { bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', icon:'#10b981', label:'Menengah Atas' },
-  { bg:'#eff6ff', border:'#bfdbfe', text:'#1e40af', icon:'#60a5fa', label:'Sejahtera' },
-  { bg:'#eff6ff', border:'#bfdbfe', text:'#1d4ed8', icon:'#3b82f6', label:'Sangat Sejahtera' },
-  { bg:'#f5f3ff', border:'#ddd6fe', text:'#4c1d95', icon:'#a78bfa', label:'Paling Sejahtera' },
+  { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'Desil 1' },
+  { bg:'#fff7ed', border:'#fed7aa', text:'#9a3412', icon:'#fb923c', label:'Desil 2' },
+  { bg:'#fefce8', border:'#fde68a', text:'#92400e', icon:'#fbbf24', label:'Desil 3' },
+  { bg:'#fefce8', border:'#fde68a', text:'#a16207', icon:'#fbbf24', label:'Desil 4' },
+  { bg:'#f0fdf4', border:'#bbf7d0', text:'#166534', icon:'#4ade80', label:'Desil 5' },
+  { bg:'#f0fdf4', border:'#bbf7d0', text:'#15803d', icon:'#22c55e', label:'Desil 6' },
+  { bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', icon:'#10b981', label:'Desil 7' },
+  { bg:'#eff6ff', border:'#bfdbfe', text:'#1e40af', icon:'#60a5fa', label:'Desil 8' },
+  { bg:'#eff6ff', border:'#bfdbfe', text:'#1d4ed8', icon:'#3b82f6', label:'Desil 9' },
+  { bg:'#f5f3ff', border:'#ddd6fe', text:'#4c1d95', icon:'#a78bfa', label:'Desil 10' },
 ]
 function _desilIdx(v) {
   const n = parseInt(String(v ?? '').trim())

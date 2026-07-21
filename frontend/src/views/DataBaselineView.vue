@@ -189,7 +189,7 @@
 
             <!-- Filter Desil Kemiskinan (hardcode, langsung kirim ke backend) -->
             <div class="flex flex-col gap-1 min-w-[200px]">
-              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Desil Kemiskinan</label>
+              <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Desil</label>
               <Select
                 v-model="keluarga.desil"
                 :options="desilOptions"
@@ -302,7 +302,7 @@
               <div v-if="activeTab === 'keluarga'" class="space-y-3">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Kesejahteraan</p>
                 <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Desil Kemiskinan</label>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">Desil</label>
                   <Select
                     v-model="keluarga.desil"
                     :options="desilOptions"
@@ -419,16 +419,16 @@ const router = useRouter()
 
 // Opsi Desil Kemiskinan (hardcode, tidak butuh konfigurasi DB)
 const desilOptions = [
-  { value: '1',  label: 'Desil 1 – Sangat Miskin' },
-  { value: '2',  label: 'Desil 2 – Miskin' },
-  { value: '3',  label: 'Desil 3 – Hampir Miskin' },
-  { value: '4',  label: 'Desil 4 – Rentan Miskin' },
+  { value: '1',  label: 'Desil 1 ' },
+  { value: '2',  label: 'Desil 2 ' },
+  { value: '3',  label: 'Desil 3 ' },
+  { value: '4',  label: 'Desil 4 ' },
   { value: '5',  label: 'Desil 5' },
   { value: '6',  label: 'Desil 6' },
   { value: '7',  label: 'Desil 7' },
   { value: '8',  label: 'Desil 8' },
   { value: '9',  label: 'Desil 9' },
-  { value: '10', label: 'Desil 10 – Tidak Miskin' },
+  { value: '10', label: 'Desil 10 ' },
 ]
 
 function goToAnggotaDetail(row) {

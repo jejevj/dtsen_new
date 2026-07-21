@@ -106,11 +106,11 @@
           <div class="mt-5 pt-4 border-t border-gray-100 space-y-2">
             <div class="flex items-start gap-2">
               <span class="mt-0.5 w-3 h-3 rounded-full bg-blue-400 flex-shrink-0"></span>
-              <p class="text-xs text-gray-500"><strong class="text-gray-700">Terdata di DTSEN</strong> — NIK tercatat dalam basis data sebagai anggota keluarga miskin/rentan.</p>
+              <p class="text-xs text-gray-500"><strong class="text-gray-700">Terdata di DTSEN</strong> — NIK tercatat dalam basis data sebagai anggota keluarga.</p>
             </div>
             <div class="flex items-start gap-2">
               <span class="mt-0.5 w-3 h-3 rounded-full bg-green-400 flex-shrink-0"></span>
-              <p class="text-xs text-gray-500"><strong class="text-gray-700">Penerima Manfaat</strong> — NIK terdaftar sebagai mustahik penerima zakat/bantuan LAZ.</p>
+              <p class="text-xs text-gray-500"><strong class="text-gray-700">Penerima Manfaat</strong> — NIK terdaftar sebagai penerima manfaat Lembaga.</p>
             </div>
           </div>
           <div class="mt-3">
@@ -172,7 +172,7 @@
                     ★ {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
                   </span>
                 </div>
-                <p class="text-sm text-blue-600">NIK <strong>{{ lastSearchedNik }}</strong> tercatat sebagai anggota keluarga miskin/rentan dalam basis data DTSEN.</p>
+                <p class="text-sm text-blue-600">NIK <strong>{{ lastSearchedNik }}</strong> tercatat sebagai anggota keluarga dalam basis data DTSEN.</p>
               </div>
             </div>
 
@@ -250,7 +250,7 @@
                   D{{ zawaDesil }}
                 </div>
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider" :style="{ color: DESIL_COLOR[zawaDesil]?.text }">Desil Kemiskinan</p>
+                  <p class="text-xs font-semibold uppercase tracking-wider" :style="{ color: DESIL_COLOR[zawaDesil]?.text }">Desil</p>
                   <p class="text-base font-extrabold" :style="{ color: DESIL_COLOR[zawaDesil]?.text }">
                     {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
                   </p>
