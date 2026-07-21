@@ -125,6 +125,17 @@
                 <i class="pi pi-map-marker" style="font-size:10px;margin-right:3px;"></i>
                 {{ row.kecamatan }}, {{ row.kab_kota }} · {{ row.provinsi }}
               </p>
+              <!-- NIK & No KK masked -->
+              <div style="display:flex;gap:16px;margin-top:4px;flex-wrap:wrap;">
+                <span v-if="row.nik" style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+                  <i class="pi pi-id-card" style="font-size:10px;"></i>
+                  <span style="font-family:monospace;letter-spacing:.04em;">{{ maskNik(row.nik) }}</span>
+                </span>
+                <span v-if="row.no_kk || row.kk || row.nomor_kartu_keluarga" style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+                  <i class="pi pi-home" style="font-size:10px;"></i>
+                  <span style="font-family:monospace;letter-spacing:.04em;">{{ maskNik(row.no_kk || row.kk || row.nomor_kartu_keluarga) }}</span>
+                </span>
+              </div>
             </div>
 
             <!-- Nominal -->
@@ -155,7 +166,7 @@
 import { ref, computed } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { MOCK_MUSTAHIK, DESIL_COLORS } from '@/data/mockMustahik'
-import { formatRupiah } from '@/utils/formatter'
+import { formatRupiah, maskNik } from '@/utils/formatter'
 
 const searchQuery  = ref('')
 const showAdvanced = ref(false)
