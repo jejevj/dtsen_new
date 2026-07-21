@@ -40,7 +40,7 @@
     <!-- Legend -->
     <div v-if="!loading" style="position:absolute;bottom:16px;right:16px;background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:12px 14px;z-index:1000;min-width:140px;">
       <p style="font-size:11px;font-weight:700;color:#374151;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.05em;">
-        {{ metric === 'mustahik' ? 'Jml. Mustahik' : 'Penyaluran' }}
+        {{ metric === 'mustahik' ? 'Jml. Mustahik' : 'Pendistribusian' }}
       </p>
       <div v-for="step in currentLegend" :key="step.label" style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
         <div :style="{ width:'14px', height:'10px', borderRadius:'3px', background:step.color, flexShrink:0 }"></div>
@@ -100,9 +100,10 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/,
 const GEO_LEVEL3_API = `${API_BASE}/geo/level3`
 
 const props = defineProps({
-  mapData: { type: Array,  default: () => [] },
-  height:  { type: String, default: '480px' },
-  metric:  { type: String, default: 'mustahik' },
+  mapData:{ type: Array,  default: () => [] },
+  height: { type: String, default: '480px' },
+  metric: { type: String, default: 'mustahik' },
+  tahun:  { type: [String, Number], default: new Date().getFullYear() },
 })
 
 const mapRef               = ref(null)
@@ -176,8 +177,7 @@ function normKab(str = '') {
 function normProv(str = '') { return str.toLowerCase().trim() }
 function normMapData(str = '') {
   return str.toLowerCase()
-    .replace(/kabupaten /g, 'kab. ').replace(/daerah istimewa /g, 'di ')
-    .replace(/daerah khusus ibukota /g, 'dki ').replace(/kepulauan /g, 'kep. ')
+    .replace(/kabupaten /g, 'kab. ').replace(/kepulauan /g, 'kep. ')
     .trim()
 }
 function normKec(str = '') { return str.toLowerCase().trim() }
@@ -193,17 +193,41 @@ const GEOJSON_KABKOTA = [
 ]
 
 const PROV_NAME_TO_KODE = {
-  'aceh':'11','sumatera utara':'12','sumatera barat':'13','riau':'14','jambi':'15',
-  'sumatera selatan':'16','bengkulu':'17','lampung':'18',
-  'kepulauan bangka belitung':'19','bangka belitung':'19','kepulauan riau':'21',
-  'dki jakarta':'31','jawa barat':'32','jawa tengah':'33','di yogyakarta':'34',
-  'jawa timur':'35','banten':'36','bali':'51',
-  'nusa tenggara barat':'52','nusa tenggara timur':'53',
-  'kalimantan barat':'61','kalimantan tengah':'62','kalimantan selatan':'63',
-  'kalimantan timur':'64','kalimantan utara':'65',
-  'sulawesi utara':'71','sulawesi tengah':'72','sulawesi selatan':'73',
-  'sulawesi tenggara':'74','gorontalo':'75','sulawesi barat':'76',
-  'maluku':'81','maluku utara':'82','papua barat':'91','papua':'94',
+  'aceh' : '11',
+  'sumatera utara' : '12',
+  'sumatera barat' : '13',
+  'riau' : '14',
+  'jambi' : '15',
+  'sumatera selatan' : '16',
+  'bengkulu' : '17',
+  'lampung' : '18',
+  'kepulauan bangka belitung' : '19',
+  'bangka-belitung' : '19',
+  'kepulauan riau' : '21',
+  'jakarta raya' : '31',
+  'jawa barat' : '32',
+  'jawa tengah' : '33',
+  'yogyakarta' : '34',
+  'jawa timur' : '35',
+  'banten' : '36',
+  'bali' : '51',
+  'nusa tenggara barat' : '52',
+  'nusa tenggara timur' : '53',
+  'kalimantan barat' : '61',
+  'kalimantan tengah' : '62',
+  'kalimantan selatan' : '63',
+  'kalimantan timur' : '64',
+  'kalimantan utara' : '65',
+  'sulawesi utara' : '71',
+  'sulawesi tengah' : '72',
+  'sulawesi selatan' : '73',
+  'sulawesi tenggara' : '74',
+  'gorontalo' : '75',
+  'sulawesi barat' : '76',
+  'maluku' : '81',
+  'maluku utara' : '82',
+  'papua barat' : '92',
+  'papua' : '91',
 }
 
 async function fetchGeoJSON(urls) {
@@ -254,7 +278,7 @@ async function getKecamatanGeoJSON(kabkotaNama, provinsiNama) {
 
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}))
-      console.error('[Map] Backend geo/level3 error:', res.status, errBody.error || '')
+      //console.error('[Map] Backend geo/level3 error:', res.status, errBody.error || '')
       return null
     }
 
@@ -291,7 +315,7 @@ async function getKecamatanGeoJSON(kabkotaNama, provinsiNama) {
     return result
 
   } catch (e) {
-    console.error('[Map] Gagal fetch kecamatan GeoJSON dari backend:', e)
+    //console.error('[Map] Gagal fetch kecamatan GeoJSON dari backend:', e)
     return null
   }
 }
@@ -375,7 +399,7 @@ async function drillDownKabkota(provinsiKode, provinsiNama, clickedLayer) {
   kecamatanData.value        = []
   if (clickedLayer) leafletMap.fitBounds(clickedLayer.getBounds(), { padding: [40, 40] })
   try {
-    const data = await ReportService.getMapDataKabkota(provinsiKode)
+    const data = await ReportService.getMapDataKabkota(props.tahun, provinsiKode)
     kabkotaData.value = Array.isArray(data) ? data : []
   } catch { kabkotaData.value = [] }
   const fullGeo = await getKabkotaGeoJSON()
@@ -413,7 +437,7 @@ function renderKabkotaLayer(geojson) {
       layer.on({
         mouseover(e) { e.target.setStyle({ weight: 2, fillOpacity: 1, color: '#15803d' }); hovered.value = { nama: raw, ...data } },
         mouseout(e)  { geojsonLayer.resetStyle(e.target); hovered.value = null },
-        click()      { drillDownKecamatan(data.kabkota_kode || null, raw, layer) },
+        // click()      { drillDownKecamatan(data.kabkota_kode || null, raw, layer) },
       })
     },
   }).addTo(leafletMap)
@@ -428,7 +452,7 @@ async function drillDownKecamatan(kabkotaKode, kabkotaNama, clickedLayer) {
   selectedKabkotaNama.value = kabkotaNama
   if (clickedLayer) leafletMap.fitBounds(clickedLayer.getBounds(), { padding: [40, 40] })
   try {
-    const data = await ReportService.getMapDataKecamatan(kabkotaKode)
+    const data = await ReportService.getMapDataKecamatan(props.tahun, kabkotaKode)
     kecamatanData.value = Array.isArray(data) ? data : []
   } catch { kecamatanData.value = [] }
 
@@ -498,7 +522,7 @@ async function drillUp(toLevel) {
     selectedProvinsiKode.value = null; selectedProvinsiNama.value = ''
     selectedKabkotaKode.value  = null; selectedKabkotaNama.value  = ''
     kabkotaData.value = []; kecamatanData.value = []
-    leafletMap.setView([-2.5, 118], 4)
+    leafletMap.setView([-2.5, 118], 5)
     await renderProvinsiLayer()
   } else if (toLevel === 2) {
     currentLevel.value = 2
@@ -529,7 +553,7 @@ async function initMap() {
     L = (await import('leaflet')).default || (await import('leaflet'))
     await import('leaflet/dist/leaflet.css')
     leafletMap = L.map(mapRef.value, {
-      center: [-2.5, 118], zoom: 4, zoomControl: false,
+      center: [-2.5, 118], zoom: 5, zoomControl: false,
       scrollWheelZoom: false, attributionControl: false, dragging: true,
     })
     L.control.zoom({ position: 'topright' }).addTo(leafletMap)
@@ -539,7 +563,7 @@ async function initMap() {
     await renderProvinsiLayer()
     loading.value = false
   } catch (e) {
-    console.error('[Map] Init error:', e)
+    //console.error('[Map] Init error:', e)
     loading.value = false; error.value = true
   }
 }

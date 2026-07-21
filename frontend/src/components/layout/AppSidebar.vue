@@ -8,7 +8,7 @@
     <!-- Logo -->
     <div class="flex items-center gap-3 px-4 py-5 border-b border-primary-700">
       <i class="pi pi-chart-bar text-secondary text-2xl"></i>
-      <span v-if="!collapsed" class="font-bold text-lg tracking-tight">DTSEN</span>
+      <span v-if="!collapsed" class="font-bold text-lg tracking-tight">Satu Data ZIS DSKL</span>
     </div>
 
     <!-- Navigation -->

@@ -11,14 +11,14 @@
       <div class="flex items-center h-16 px-4 border-b border-primary-800 gap-3 flex-shrink-0">
         <img
           src="https://simzat.kemenag.go.id/simzat/apps/assets/images/ico.png"
-          alt="DTSEN Logo"
+          alt="Satu Data ZIS DSKL"
           class="flex-shrink-0"
           style="width:32px;height:32px;border-radius:8px;object-fit:contain;"
         />
         <transition name="fade">
           <div v-if="sidebarOpen" class="overflow-hidden whitespace-nowrap">
-            <div class="font-bold text-white text-sm tracking-tight leading-none">DTSEN</div>
-            <div class="text-green-400 text-[10px] leading-none mt-0.5">Zakat</div>
+            <div class="font-bold text-white text-sm tracking-tight leading-none">Satu Data</div>
+            <div class="text-green-400 text-[10px] leading-none mt-0.5">ZIS DSKL</div>
           </div>
         </transition>
       </div>
@@ -76,7 +76,7 @@
             @click="sidebarOpen = !sidebarOpen"
           />
           <div class="hidden sm:flex items-center gap-1.5 text-sm">
-            <span class="text-slate-400">DTSEN</span>
+            <span class="text-slate-400">Satu Data ZIS DSKL</span>
             <i class="pi pi-angle-right text-slate-300" style="font-size: 0.7rem"></i>
             <span class="font-medium text-slate-700">{{ currentPageLabel }}</span>
           </div>
