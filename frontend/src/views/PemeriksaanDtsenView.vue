@@ -164,7 +164,6 @@
               <div class="flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
                   <h3 class="font-semibold text-blue-800">Terdata di DTSEN</h3>
-                  <span class="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-bold rounded-full border border-blue-300">DTSEN</span>
                   <!-- Desil Badge — highlighted -->
                   <span v-if="zawaDesil"
                     :style="{ background: DESIL_COLOR[zawaDesil]?.bg, color: DESIL_COLOR[zawaDesil]?.text, border: '1.5px solid ' + DESIL_COLOR[zawaDesil]?.border }"
@@ -242,23 +241,7 @@
                 </div>
               </div>
 
-              <!-- Desil Card — highlight besar -->
-              <div v-if="zawaDesil" class="mt-5 rounded-xl border-2 px-5 py-4 flex items-center gap-4"
-                :style="{ background: DESIL_COLOR[zawaDesil]?.bg, borderColor: DESIL_COLOR[zawaDesil]?.border }">
-                <div class="w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-xl flex-shrink-0"
-                  :style="{ background: DESIL_COLOR[zawaDesil]?.border, color: DESIL_COLOR[zawaDesil]?.text }">
-                  D{{ zawaDesil }}
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider" :style="{ color: DESIL_COLOR[zawaDesil]?.text }">Desil</p>
-                  <p class="text-base font-extrabold" :style="{ color: DESIL_COLOR[zawaDesil]?.text }">
-                    {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
-                  </p>
-                  <p class="text-xs mt-0.5" :style="{ color: DESIL_COLOR[zawaDesil]?.text, opacity: 0.75 }">
-                    No. KK: {{ zawaData.nomor_kartu_keluarga || '-' }}
-                  </p>
-                </div>
-              </div>
+              <!-- Desil Card — highlight besar --> 
             </div>
           </div>
         </transition>
@@ -295,9 +278,8 @@
               <div class="flex-1">
                 <div class="flex items-center gap-2">
                   <h3 class="font-semibold text-green-800">Penerima Manfaat</h3>
-                  <span class="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-bold rounded-full border border-green-300">MUSTAHIK</span>
                 </div>
-                <p class="text-sm text-green-600">NIK <strong>{{ lastSearchedNik }}</strong> terdaftar sebagai penerima zakat/bantuan LAZ.</p>
+                <p class="text-sm text-green-600">NIK <strong>{{ lastSearchedNik }}</strong> terdaftar sebagai penerima zakat/bantuan.</p>
               </div>
               <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full border border-green-300 flex-shrink-0">
                 {{ mustahikRows.length }} Riwayat
