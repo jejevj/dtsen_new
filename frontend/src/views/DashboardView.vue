@@ -55,7 +55,7 @@
         <!-- hero grid: 2 tabel baseline -->
         <div class="hero-grid" style="display:grid;gap:16px;">
 
-          <div class="detail-card wm-wrap" style="display:flex;flex-direction:column;padding-left:0;padding-right:0;padding-bottom:0;">
+          <div class="detail-card wm-card">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -67,7 +67,7 @@
                 <rect width="100%" height="100%" fill="url(#wm-base-wilayah)" />
               </svg>
             </div>
-            <div class="wm-content">
+            <div class="wm-content" style="display:flex;flex-direction:column;">
               <p class="section-title" style="padding-left:10px;padding-right:10px;">
                 <i class="pi pi-map"></i> Sebaran Mustahik Berdasarkan Data Baseline
                 <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(wilayahBase.length) }}&ensp;</span>
@@ -88,7 +88,7 @@
             </div>
           </div>
 
-          <div class="detail-card wm-wrap" style="display:flex;flex-direction:column;padding-left:0;padding-right:0;padding-bottom:0;">
+          <div class="detail-card wm-card">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -100,7 +100,7 @@
                 <rect width="100%" height="100%" fill="url(#wm-base-desil)" />
               </svg>
             </div>
-            <div class="wm-content">
+            <div class="wm-content" style="display:flex;flex-direction:column;">
               <p class="section-title" style="padding-left:10px;padding-right:10px;">
                 <i class="pi pi-map"></i> Sebaran Mustahik per Desil Berdasarkan Data Baseline
                 <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(desilBase.length) }}&ensp;</span>
@@ -127,7 +127,7 @@
         </div>
 
         <!-- Tabel: Distribusi per Wilayah -->
-        <div class="detail-card wm-wrap" style="display:flex;flex-direction:column;padding-left:0;padding-right:0;padding-bottom:0;">
+        <div class="detail-card wm-card" style="padding-left:0;padding-right:0;padding-bottom:0;">
           <div class="wm-overlay" aria-hidden="true">
             <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -164,7 +164,7 @@
         </div>
 
         <!-- Tabel: Distribusi per Desil -->
-        <div class="detail-card wm-wrap" style="display:flex;flex-direction:column;padding-left:0;padding-right:0;padding-bottom:0;">
+        <div class="detail-card wm-card" style="padding-left:0;padding-right:0;padding-bottom:0;">
           <div class="wm-overlay" aria-hidden="true">
             <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -210,19 +210,20 @@
         <!-- Desil breakdown cards -->
         <div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
+            <!-- d.wmId = slug tanpa spasi, d.lightBg = warna sedikit lebih muda dari borderColor -->
             <div v-for="d in desilStats" :key="d.label"
-              class="wm-wrap"
+              class="wm-card"
               style="border-radius:14px;padding:18px;text-align:center;"
-              :style="{ background:d.iconBg, border:'1px solid ' + d.borderColor }">
+              :style="{ background: d.lightBg, border:'1px solid ' + d.borderColor }">
               <div class="wm-overlay" aria-hidden="true">
                 <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                   <defs>
-                    <pattern :id="'wm-desil-'+d.label" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                    <pattern :id="'wm-desil-'+d.wmId" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
                       <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
                       <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                     </pattern>
                   </defs>
-                  <rect width="100%" height="100%" :fill="'url(#wm-desil-'+d.label+')'" />
+                  <rect width="100%" height="100%" :fill="'url(#wm-desil-'+d.wmId+')'" />
                 </svg>
               </div>
               <div class="wm-content">
@@ -240,16 +241,16 @@
 
         <!-- Stat Cards -->
         <div class="grid-1-2-1">
-          <div v-for="stat in statCards" :key="stat.label" class="stat-card wm-wrap">
+          <div v-for="stat in statCards" :key="stat.label" class="stat-card wm-card">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                  <pattern :id="'wm-stat-'+stat.label" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                  <pattern :id="'wm-stat-'+stat.wmId" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
                     <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
                     <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                   </pattern>
                 </defs>
-                <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.label+')'" />
+                <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.wmId+')'" />
               </svg>
             </div>
             <div class="wm-content">
@@ -265,7 +266,7 @@
 
         <!-- Charts row -->
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
-          <div class="card-box wm-wrap">
+          <div class="card-box wm-card">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -286,7 +287,7 @@
               </div>
             </div>
           </div>
-          <div class="card-box wm-wrap">
+          <div class="card-box wm-card">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -306,7 +307,7 @@
         </div>
 
         <!-- Tabel: Sebaran Usia -->
-        <div class="detail-card wm-wrap" style="display:flex;flex-direction:column;padding-left:0;padding-right:0;">
+        <div class="detail-card wm-card" style="padding-left:0;padding-right:0;">
           <div class="wm-overlay" aria-hidden="true">
             <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -349,7 +350,7 @@
           <div
             v-for="(bidang, i) in bidangProgram"
             :key="bidang.bidang_label"
-            class="wm-wrap"
+            class="wm-card"
             style="border-radius:16px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
             :style="{ background:bidangColors[i%bidangColors.length].back, border:bidangColors[i%bidangColors.length].bordersize+' solid '+bidangColors[i%bidangColors.length].border }"
           >
@@ -550,11 +551,37 @@ async function resetOption() {
   }
 }
 
+// wmId = slug aman untuk ID SVG (tanpa spasi)
+// lightBg = warna lebih muda dari stroke/borderColor masing-masing desil
 const desilStats = computed(() => [
-  { label:'Desil 1', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), iconBg:'#fcdcdc', iconColor:'#dc2626', borderColor:'#fca5a5', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0),0)) },
-  { label:'Desil 2', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), iconBg:'#faeedc', iconColor:'#e68c05', borderColor:'#fcd34d', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_2||0),0)) },
-  { label:'Desil 3', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), iconBg:'#faf1d9', iconColor:'#f5be27', borderColor:'#fde68a', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_3||0),0)) },
-  { label:'Desil 4', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), iconBg:'#f0fdf4', iconColor:'#16a34a', borderColor:'#86efac', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_4||0),0)) },
+  {
+    label:'Desil 1', wmId:'desil-1',
+    base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_1||0),0)),
+    iconColor:'#dc2626', borderColor:'#fca5a5', lightBg:'#fff5f5',
+    lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0),0)),
+    agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0),0))
+  },
+  {
+    label:'Desil 2', wmId:'desil-2',
+    base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_2||0),0)),
+    iconColor:'#e68c05', borderColor:'#fcd34d', lightBg:'#fffbeb',
+    lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_2||0),0)),
+    agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_2||0),0))
+  },
+  {
+    label:'Desil 3', wmId:'desil-3',
+    base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_3||0),0)),
+    iconColor:'#f5be27', borderColor:'#fde68a', lightBg:'#fefce8',
+    lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_3||0),0)),
+    agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_3||0),0))
+  },
+  {
+    label:'Desil 4', wmId:'desil-4',
+    base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_4||0),0)),
+    iconColor:'#16a34a', borderColor:'#86efac', lightBg:'#f0fdf4',
+    lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_4||0),0)),
+    agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_4||0),0))
+  },
 ])
 
 const desilBarData = computed(() => ({
@@ -567,10 +594,11 @@ const desilBarData = computed(() => ({
   ], backgroundColor:['#ef4444','#f97316','#eab308','#22c55e'], borderRadius:6 }],
 }))
 
+// wmId = slug aman untuk ID SVG pada stat cards
 const statCards = computed(() => [
-  { label:'Penerima Manfaat', value:formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_all||0),0)), sub:'Seluruh Desil', icon:'pi pi-users', iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'Pendistribusian dan Pendayagunaan', value:formatRupiah(wilayahData.value.reduce((t,i)=>t+Number(i.rupiah_all||0),0)), sub:'Total nilai bantuan pada seluruh Desil', icon:'pi pi-wallet', iconBg:'#faf5ff', iconColor:'#7c3aed' },
-  { label:'Cakupan Wilayah', value:formatAngka(wilayahData.value.filter(i=>i.mustahik!==0).length)+'', sub:'dari '+formatAngka(wilayahBase.value.length)+' wilayah pengajuan', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Penerima Manfaat',                    wmId:'penerima-manfaat',     value:formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_all||0),0)),                              sub:'Seluruh Desil',                          icon:'pi pi-users',       iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Pendistribusian dan Pendayagunaan',   wmId:'pendistribusian',      value:formatRupiah(wilayahData.value.reduce((t,i)=>t+Number(i.rupiah_all||0),0)),                         sub:'Total nilai bantuan pada seluruh Desil',  icon:'pi pi-wallet',      iconBg:'#faf5ff', iconColor:'#7c3aed' },
+  { label:'Cakupan Wilayah',                     wmId:'cakupan-wilayah',      value:formatAngka(wilayahData.value.filter(i=>i.mustahik!==0).length)+'',                                sub:'dari '+formatAngka(wilayahBase.value.length)+' wilayah pengajuan', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
 ])
 
 const bidangProgram = computed(() => {
@@ -651,7 +679,7 @@ onBeforeUnmount(() => { ro?.disconnect() })
   gap: 24px;
 }
 /* ===== WATERMARK ===== */
-.wm-wrap {
+.wm-card {
   position: relative;
   overflow: hidden;
 }
@@ -668,7 +696,8 @@ onBeforeUnmount(() => { ro?.disconnect() })
   display: block;
   width: 100%;
   height: 100%;
-  background: transparent;
+  background: transparent !important;
+  fill: none;
 }
 /* Konten selalu di atas overlay watermark */
 .wm-content {
