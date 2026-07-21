@@ -55,7 +55,23 @@
           <i class="pi pi-inbox text-3xl mb-3 block opacity-30"></i>
           Tidak ada data penerima manfaat yang sesuai filter.
         </div>
-        <div v-else class="overflow-x-auto">
+        <!-- Tabel dengan watermark DO NOT COPY -->
+        <div v-else class="overflow-x-auto wm-table-wrap">
+          <!-- SVG Watermark Overlay -->
+          <div class="wm-overlay" aria-hidden="true">
+            <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="wm-mustahik" x="0" y="0" width="320" height="120"
+                  patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                  <text x="10" y="40" font-family="Inter, sans-serif" font-size="14"
+                    font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                  <text x="10" y="70" font-family="Inter, sans-serif" font-size="13"
+                    font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-mustahik)" />
+            </svg>
+          </div>
           <table class="w-full text-sm">
             <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
@@ -75,7 +91,7 @@
                 class="hover:bg-slate-50 transition-colors">
                 <td class="px-5 py-3 text-slate-400">{{ (pagination.page - 1) * pagination.perPage + i + 1 }}</td>
                 <td class="px-5 py-3 font-medium text-slate-800">{{ row.nama_lengkap ?? '-' }}</td>
-                <td class="px-5 py-3 text-slate-600 font-mono text-xs">{{ row.nik ?? '-' }}</td>
+                <td class="px-5 py-3 text-slate-600 font-mono text-xs">{{ maskNik(row.nik) }}</td>
                 <td class="px-5 py-3">
                   <span :class="row.jenis_kelamin === 'm' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'"
                     class="px-2 py-0.5 rounded-full text-xs font-semibold" >
@@ -84,7 +100,6 @@
                 </td>
                 <td class="px-5 py-3 text-slate-600">{{ row.provinsi_nama ?? '-' }}</td>
                 <td class="px-5 py-3 text-slate-600">{{ row.kabkota_nama ?? '-' }}</td>
-                
                 <td class="px-5 py-3">{{ row.usia ?? '-' }} Tahun</td>
                 <td class="px-5 py-3">
                   {{ row.desil > 0 ? row.desil : 'N/A' }}
@@ -286,18 +301,17 @@ import InputText   from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Select      from 'primevue/select'
 import DatePicker  from 'primevue/datepicker'
-// import { fetchFilterFields } from '@/services/tampilanDtsenService'
 import api                   from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { watch } from 'vue'
 import Slider from 'primevue/slider'
+import { maskNik } from '@/utils/formatter'
 
 // ── Drawer state ──────────────────────────────────────────────────────────────
 const showFilter    = ref(false)
 const filterLoading = ref(false)
 const filterError   = ref('')
 const filterFields  = ref([])
-// const activeFilters = reactive({})
 const globalSearch  = ref('')
 const authStore = useAuthStore()
 const provinsiOptions = ref([])
@@ -313,6 +327,12 @@ const programOptions = ref([])
 
 const usiaTouched = ref(false)
 const penyaluranTouched = ref(false)
+
+const userIdentifier = computed(() => {
+  const u = authStore.user
+  if (!u) return 'CONFIDENTIAL'
+  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
+})
 
 const activeFilters = reactive({
   skala_laz:'',
@@ -786,7 +806,7 @@ const groupedFilterFields = computed(() => {
 
 
 
-// ── Tabel ─────────────────────────────────────────────────────────────────────
+// ── Tabel ──────────────────────────────────────────────────────────────────────────────
 const tableLoading = ref(false)
 const tableError   = ref('')
 const rows         = ref([])
@@ -825,8 +845,6 @@ async function fetchMustahik(page = 1) {
             params[k] = v
         }
     }
-    console.log('globalSearch =', globalSearch.value)
-    console.log('params =', params)
     const res = await api.get('/mustahik', { params })
     const d = res.data
 
@@ -870,7 +888,6 @@ function resetFilter() {
 function changePage(p) { fetchMustahik(p) }
 
 onMounted(() => {
-  // loadFilterFields()
   fetchMustahik(1)
   loadProvinsi()
   loadLaz()
@@ -889,6 +906,25 @@ onMounted(() => {
 .slide-right-leave-active { transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1); }
 .slide-right-enter-from   { transform: translateX(100%); }
 .slide-right-leave-to     { transform: translateX(100%); }
+
+/* ===== WATERMARK ===== */
+.wm-table-wrap {
+  position: relative;
+  overflow-x: auto;
+}
+.wm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.wm-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 
 .filter-group{
     background:#fff;
