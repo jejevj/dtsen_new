@@ -52,24 +52,18 @@
       <template v-if="activeTab === 'anggota'">
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm px-5 py-4">
           <div class="flex flex-wrap items-end gap-4">
-
-            <!-- Provinsi -->
             <div class="flex flex-col gap-1 min-w-[200px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Provinsi</label>
               <Select
                 v-model="anggota.provinsi"
                 :options="provinsiOptions"
-                option-label="label"
-                option-value="slug"
+                option-label="label" option-value="slug"
                 placeholder="Pilih Provinsi…"
-                class="w-full text-sm"
-                :loading="wilayahLoading"
+                class="w-full text-sm" :loading="wilayahLoading"
                 filter show-clear
                 @change="handleAnggotaProvinsiChange"
               />
             </div>
-
-            <!-- Kabkota -->
             <div v-if="anggota.provinsi" class="flex flex-col gap-1 min-w-[220px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kabupaten / Kota</label>
               <Select
@@ -82,8 +76,6 @@
                 @change="handleAnggotaKabkotaChange"
               />
             </div>
-
-            <!-- Kecamatan -->
             <div v-if="anggota.kabkota" class="flex flex-col gap-1 min-w-[220px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kecamatan</label>
               <Select
@@ -95,28 +87,15 @@
                 filter show-clear
               />
             </div>
-
-            <!-- Tombol Tampilkan & Reset -->
             <div class="flex gap-2 pb-0.5">
-              <Button
-                label="Tampilkan" icon="pi pi-search" size="small"
-                :loading="anggota.loading"
-                @click="loadAnggota()"
-              />
-              <Button
-                label="Reset" icon="pi pi-times" size="small"
-                severity="secondary" outlined
-                @click="resetAnggota"
-              />
+              <Button label="Tampilkan" icon="pi pi-search" size="small" :loading="anggota.loading" @click="loadAnggota()" />
+              <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined @click="resetAnggota" />
             </div>
           </div>
-
-          <!-- Badge filter aktif -->
           <div v-if="activeFilterCount > 0" class="mt-3 flex items-center gap-2 flex-wrap">
             <span class="text-xs text-slate-500">Filter aktif:</span>
             <span
-              v-for="(item, idx) in activeFiltersBadges"
-              :key="idx"
+              v-for="(item, idx) in activeFiltersBadges" :key="idx"
               class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 text-xs font-semibold rounded-full"
             >
               {{ item.label }}: {{ item.display }}
@@ -126,16 +105,13 @@
             </span>
           </div>
         </div>
-
         <BaselineTable
           type="anggota"
           :loading="anggota.loading" :error="anggota.error"
           :rows="anggota.rows" :columns="anggota.columns"
           :meta="anggota.meta" :history-stack="anggota.historyStack"
-          empty-hint="Tidak ada data yang sesuai."
-          title="Data Anggota"
-          @next="nextAnggota" @prev="prevAnggota"
-          @detail="goToAnggotaDetail"
+          empty-hint="Tidak ada data yang sesuai." title="Data Anggota"
+          @next="nextAnggota" @prev="prevAnggota" @detail="goToAnggotaDetail"
         />
       </template>
 
@@ -143,24 +119,18 @@
       <template v-if="activeTab === 'keluarga'">
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm px-5 py-4">
           <div class="flex flex-wrap items-end gap-4">
-
-            <!-- Provinsi -->
             <div class="flex flex-col gap-1 min-w-[200px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Provinsi</label>
               <Select
                 v-model="keluarga.provinsi"
                 :options="provinsiOptions"
-                option-label="label"
-                option-value="slug"
+                option-label="label" option-value="slug"
                 placeholder="Pilih Provinsi…"
-                class="w-full text-sm"
-                :loading="wilayahLoading"
+                class="w-full text-sm" :loading="wilayahLoading"
                 filter show-clear
                 @change="handleKeluargaProvinsiChange"
               />
             </div>
-
-            <!-- Kabkota -->
             <div v-if="keluarga.provinsi" class="flex flex-col gap-1 min-w-[220px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kabupaten / Kota</label>
               <Select
@@ -173,8 +143,6 @@
                 @change="handleKeluargaKabkotaChange"
               />
             </div>
-
-            <!-- Kecamatan -->
             <div v-if="keluarga.kabkota" class="flex flex-col gap-1 min-w-[220px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Kecamatan</label>
               <Select
@@ -186,42 +154,25 @@
                 filter show-clear
               />
             </div>
-
-            <!-- Filter Desil Kemiskinan (hardcode, langsung kirim ke backend) -->
             <div class="flex flex-col gap-1 min-w-[200px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Desil</label>
               <Select
                 v-model="keluarga.desil"
                 :options="desilOptions"
-                option-label="label"
-                option-value="value"
+                option-label="label" option-value="value"
                 placeholder="Semua Desil"
-                class="w-full text-sm"
-                show-clear
+                class="w-full text-sm" show-clear
               />
             </div>
-
-            <!-- Tombol Tampilkan & Reset -->
             <div class="flex gap-2 pb-0.5">
-              <Button
-                label="Tampilkan" icon="pi pi-search" size="small"
-                :loading="keluarga.loading"
-                @click="loadKeluarga()"
-              />
-              <Button
-                label="Reset" icon="pi pi-times" size="small"
-                severity="secondary" outlined
-                @click="resetKeluarga"
-              />
+              <Button label="Tampilkan" icon="pi pi-search" size="small" :loading="keluarga.loading" @click="loadKeluarga()" />
+              <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined @click="resetKeluarga" />
             </div>
           </div>
-
-          <!-- Badge filter aktif -->
           <div v-if="activeFilterCount > 0" class="mt-3 flex items-center gap-2 flex-wrap">
             <span class="text-xs text-slate-500">Filter aktif:</span>
             <span
-              v-for="(item, idx) in activeFiltersBadges"
-              :key="idx"
+              v-for="(item, idx) in activeFiltersBadges" :key="idx"
               class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 text-xs font-semibold rounded-full"
             >
               {{ item.label }}: {{ item.display }}
@@ -231,57 +182,40 @@
             </span>
           </div>
         </div>
-
         <BaselineTable
           type="keluarga"
           :loading="keluarga.loading" :error="keluarga.error"
           :rows="keluarga.rows" :columns="keluarga.columns"
           :meta="keluarga.meta" :history-stack="keluarga.historyStack"
-          empty-hint="Tidak ada data yang sesuai."
-          title="Data Keluarga"
-          @next="nextKeluarga" @prev="prevKeluarga"
-          @detail="goToKeluargaDetail"
+          empty-hint="Tidak ada data yang sesuai." title="Data Keluarga"
+          @next="nextKeluarga" @prev="prevKeluarga" @detail="goToKeluargaDetail"
         />
       </template>
 
     </div>
 
-    <!-- ===== DRAWER FILTER (dari kanan) ===== -->
+    <!-- ===== DRAWER FILTER ===== -->
     <teleport to="body">
-      <!-- Backdrop -->
       <transition name="fade-backdrop">
-        <div
-          v-if="showFilter"
-          class="fixed inset-0 bg-black/30 z-40"
-          @click="showFilter = false"
-        />
+        <div v-if="showFilter" class="fixed inset-0 bg-black/30 z-40" @click="showFilter = false" />
       </transition>
 
-      <!-- Panel -->
       <transition name="slide-right">
-        <div
-          v-if="showFilter"
-          class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col"
-        >
-          <!-- Header drawer -->
+        <div v-if="showFilter" class="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-50 flex flex-col">
+
+          <!-- Header -->
           <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <div class="flex items-center gap-2">
               <i class="pi pi-filter text-primary-600"></i>
               <span class="font-semibold text-slate-800">Filter Pencarian</span>
-              <span
-                v-if="activeFilterCount > 0"
-                class="px-2 py-0.5 bg-primary-600 text-white text-xs font-bold rounded-full"
-              >{{ activeFilterCount }}</span>
+              <span v-if="activeFilterCount > 0" class="px-2 py-0.5 bg-primary-600 text-white text-xs font-bold rounded-full">{{ activeFilterCount }}</span>
             </div>
-            <button
-              class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition"
-              @click="showFilter = false"
-            >
+            <button class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition" @click="showFilter = false">
               <i class="pi pi-times text-sm"></i>
             </button>
           </div>
 
-          <!-- Body drawer (scrollable) -->
+          <!-- Body -->
           <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
 
             <div v-if="!currentProvinsi" class="flex items-center gap-2 text-amber-600 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm">
@@ -298,7 +232,8 @@
             </div>
 
             <template v-else>
-              <!-- Filter Desil hardcode untuk tab Keluarga -->
+
+              <!-- Desil — hardcode, keluarga only -->
               <div v-if="activeTab === 'keluarga'" class="space-y-3">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Kesejahteraan</p>
                 <div>
@@ -306,42 +241,16 @@
                   <Select
                     v-model="keluarga.desil"
                     :options="desilOptions"
-                    option-label="label"
-                    option-value="value"
+                    option-label="label" option-value="value"
                     placeholder="Semua Desil"
-                    class="w-full text-sm"
-                    show-clear
+                    class="w-full text-sm" show-clear
                   />
                 </div>
               </div>
 
-              <!-- Section Ternak (slider range) — hanya tab keluarga -->
-              <div v-if="activeTab === 'keluarga'" class="space-y-4">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ternak</p>
-
-                <div v-for="tf in TERNAK_FIELDS" :key="tf.key" class="space-y-2">
-                  <div class="flex items-center justify-between">
-                    <label class="text-xs font-medium text-slate-600">{{ tf.label }}</label>
-                    <span class="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
-                      {{ ternakSliders[tf.key][0] }} – {{ ternakSliders[tf.key][1] }}
-                    </span>
-                  </div>
-                  <Slider
-                    v-model="ternakSliders[tf.key]"
-                    :range="true"
-                    :min="0"
-                    :max="100"
-                    :step="1"
-                    class="w-full"
-                  />
-                  <div class="flex justify-between text-[10px] text-slate-400">
-                    <span>0</span><span>100</span>
-                  </div>
-                </div>
-              </div>
-
+              <!-- Grup dari DB — semua grup KECUALI yang semua field-nya ternak -->
               <div
-                v-for="(groupFields, groupName) in groupedFilterFields"
+                v-for="(groupFields, groupName) in groupedFilterFieldsNoTernak"
                 :key="groupName"
                 class="space-y-3"
               >
@@ -350,24 +259,17 @@
                 <div v-for="field in groupFields" :key="field.field_key">
                   <label class="block text-xs font-medium text-slate-600 mb-1">{{ field.field_label }}</label>
 
-                  <!-- Ternak fields dari DB config: skip — sudah ditangani slider di atas -->
-                  <template v-if="isTernakField(field.field_key)">
-                    <!-- rendered by slider section above, skip here -->
-                  </template>
-
                   <Select
-                    v-else-if="field.refs && field.refs.length"
+                    v-if="field.refs && field.refs.length"
                     v-model="currentFilters[field.field_key]"
                     :options="[{ ref_value: '', ref_label: 'Semua' }, ...field.refs]"
-                    option-label="ref_label"
-                    option-value="ref_value"
+                    option-label="ref_label" option-value="ref_value"
                     :placeholder="'Semua ' + field.field_label"
-                    class="w-full text-sm"
-                    show-clear
+                    class="w-full text-sm" show-clear
                   />
 
                   <InputNumber
-                    v-else-if="(field.field_type === 'Integer' || field.field_type === 'Float')"
+                    v-else-if="field.field_type === 'Integer' || field.field_type === 'Float'"
                     v-model="currentFilters[field.field_key]"
                     :placeholder="field.field_label"
                     class="w-full"
@@ -380,8 +282,7 @@
                     v-model="currentFilters[field.field_key]"
                     :placeholder="field.field_label"
                     date-format="dd/mm/yy"
-                    class="w-full"
-                    show-button-bar
+                    class="w-full" show-button-bar
                   />
 
                   <InputText
@@ -393,32 +294,41 @@
                 </div>
               </div>
 
+              <!-- Ternak slider — SELALU paling bawah, keluarga only -->
+              <div v-if="activeTab === 'keluarga'" class="space-y-4">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ternak</p>
+                <div v-for="tf in TERNAK_FIELDS" :key="tf.key" class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs font-medium text-slate-600">{{ tf.label }}</label>
+                    <span class="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                      {{ ternakSliders[tf.key][0] }} – {{ ternakSliders[tf.key][1] }}
+                    </span>
+                  </div>
+                  <Slider
+                    v-model="ternakSliders[tf.key]"
+                    :range="true" :min="0" :max="100" :step="1"
+                    class="w-full"
+                  />
+                  <div class="flex justify-between text-[10px] text-slate-400">
+                    <span>0</span><span>100</span>
+                  </div>
+                </div>
+              </div>
+
               <div v-if="activeTab !== 'keluarga' && !filterFields.length" class="text-sm text-slate-400 py-4">
                 <i class="pi pi-info-circle mr-1"></i>
                 Belum ada field filter yang dikonfigurasi.
               </div>
+
             </template>
           </div>
 
-          <!-- Footer drawer -->
+          <!-- Footer -->
           <div class="px-5 py-4 border-t border-slate-100 flex gap-2">
-            <Button
-              label="Terapkan"
-              icon="pi pi-check"
-              class="flex-1"
-              size="small"
-              :disabled="!currentProvinsi"
-              @click="applyFilter"
-            />
-            <Button
-              label="Reset"
-              icon="pi pi-times"
-              size="small"
-              severity="secondary"
-              outlined
-              @click="resetFilter"
-            />
+            <Button label="Terapkan" icon="pi pi-check" class="flex-1" size="small" :disabled="!currentProvinsi" @click="applyFilter" />
+            <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined @click="resetFilter" />
           </div>
+
         </div>
       </transition>
     </teleport>
@@ -438,11 +348,8 @@ import Select        from 'primevue/select'
 import DatePicker    from 'primevue/datepicker'
 import Slider        from 'primevue/slider'
 import {
-  fetchBaselineProvinsi,
-  fetchKabkotaByBps,
-  fetchKecamatan,
-  fetchBaselineAnggota,
-  fetchBaselineKeluarga,
+  fetchBaselineProvinsi, fetchKabkotaByBps, fetchKecamatan,
+  fetchBaselineAnggota, fetchBaselineKeluarga,
 } from '@/services/baselineService'
 import { fetchFilterFields } from '@/services/tampilanDtsenService'
 
@@ -458,7 +365,6 @@ const TERNAK_FIELDS = [
 ]
 const TERNAK_KEYS = new Set(TERNAK_FIELDS.map(f => f.key))
 
-// ternakSliders: { [key]: [min, max] } — default 0–100 = "semua / tidak difilter"
 const ternakSliders = reactive(
   Object.fromEntries(TERNAK_FIELDS.map(f => [f.key, [0, 100]]))
 )
@@ -467,31 +373,23 @@ function isTernakField(fieldKey) {
   return TERNAK_KEYS.has(fieldKey)
 }
 
-/** Konversi nilai slider [min, max] → string untuk API backend.
- *  [0, 100] → tidak dikirim (default, tidak difilter)
- *  [n, n]   → "n"  (exact)
- *  [0, m]   → "0-m"
- *  [n, 100] → ">n-1" tidak cocok, kirim "n-100"
- *  [n, m]   → "n-m"
- */
 function sliderToApiValue(min, max) {
-  if (min === 0 && max === 100) return null  // default → tidak filter
+  if (min === 0 && max === 100) return null
   if (min === max) return String(min)
   return `${min}-${max}`
 }
 
-// Opsi Desil Kemiskinan (hardcode, tidak butuh konfigurasi DB)
 const desilOptions = [
-  { value: '1',  label: 'Desil 1 ' },
-  { value: '2',  label: 'Desil 2 ' },
-  { value: '3',  label: 'Desil 3 ' },
-  { value: '4',  label: 'Desil 4 ' },
+  { value: '1',  label: 'Desil 1' },
+  { value: '2',  label: 'Desil 2' },
+  { value: '3',  label: 'Desil 3' },
+  { value: '4',  label: 'Desil 4' },
   { value: '5',  label: 'Desil 5' },
   { value: '6',  label: 'Desil 6' },
   { value: '7',  label: 'Desil 7' },
   { value: '8',  label: 'Desil 8' },
   { value: '9',  label: 'Desil 9' },
-  { value: '10', label: 'Desil 10 ' },
+  { value: '10', label: 'Desil 10' },
 ]
 
 function goToAnggotaDetail(row) {
@@ -505,7 +403,6 @@ function goToKeluargaDetail(row) {
   router.push({ name: 'baseline-keluarga-detail', params: { nkk: String(nkk) } })
 }
 
-// ── Tabs
 const tabs = [
   { key: 'anggota',  label: 'Anggota',  icon: 'pi pi-users' },
   { key: 'keluarga', label: 'Keluarga', icon: 'pi pi-home' },
@@ -521,12 +418,10 @@ const currentProvinsi = computed(() =>
   activeTab.value === 'anggota' ? anggota.provinsi : keluarga.provinsi
 )
 
-// ── Provinsi (shared)
 const wilayahLoading  = ref(false)
 const provinsiOptions = ref([])
 
 function getProvinsiBps(slug) {
-  if (!slug) return null
   return provinsiOptions.value.find(p => p.slug === slug)?.kode ?? null
 }
 
@@ -536,12 +431,10 @@ async function loadWilayah() {
     const list = await fetchBaselineProvinsi()
     provinsiOptions.value = list
     if (list.length > 0) {
-      const defaultSlug = list[0].slug
-      const defaultBps  = list[0].kode
-      anggota.provinsi  = defaultSlug
-      keluarga.provinsi = defaultSlug
-      loadAnggotaKabkota(defaultBps)
-      loadKeluargaKabkota(defaultBps)
+      anggota.provinsi  = list[0].slug
+      keluarga.provinsi = list[0].slug
+      loadAnggotaKabkota(list[0].kode)
+      loadKeluargaKabkota(list[0].kode)
       loadAnggota()
       loadKeluarga()
     }
@@ -552,7 +445,6 @@ async function loadWilayah() {
   }
 }
 
-// ── Wilayah helpers — Anggota
 const anggotaKabkotaOptions   = ref([])
 const anggotaKecamatanOptions = ref([])
 const anggotaKabkotaLoading   = ref(false)
@@ -568,11 +460,9 @@ async function loadAnggotaKabkota(bpsKode) {
 }
 
 function handleAnggotaProvinsiChange() {
-  anggota.kabkota   = ''
-  anggota.kecamatan = ''
+  anggota.kabkota = ''; anggota.kecamatan = ''
   anggotaKecamatanOptions.value = []
-  const bps = getProvinsiBps(anggota.provinsi)
-  loadAnggotaKabkota(bps)
+  loadAnggotaKabkota(getProvinsiBps(anggota.provinsi))
   loadAnggota()
 }
 
@@ -587,7 +477,6 @@ function handleAnggotaKabkotaChange() {
     .finally(() => { anggotaKecamatanLoading.value = false })
 }
 
-// ── Wilayah helpers — Keluarga
 const keluargaKabkotaOptions   = ref([])
 const keluargaKecamatanOptions = ref([])
 const keluargaKabkotaLoading   = ref(false)
@@ -603,11 +492,9 @@ async function loadKeluargaKabkota(bpsKode) {
 }
 
 function handleKeluargaProvinsiChange() {
-  keluarga.kabkota   = ''
-  keluarga.kecamatan = ''
+  keluarga.kabkota = ''; keluarga.kecamatan = ''
   keluargaKecamatanOptions.value = []
-  const bps = getProvinsiBps(keluarga.provinsi)
-  loadKeluargaKabkota(bps)
+  loadKeluargaKabkota(getProvinsiBps(keluarga.provinsi))
   loadKeluarga()
 }
 
@@ -622,16 +509,11 @@ function handleKeluargaKabkotaChange() {
     .finally(() => { keluargaKecamatanLoading.value = false })
 }
 
-// ── Table state factory
 function makeTableState() {
   return reactive({
     loading: false, error: '',
     rows: [], columns: [],
-    search: '',
-    provinsi:  '',
-    kabkota:   '',
-    kecamatan: '',
-    desil:     '',   // filter desil khusus tab keluarga
+    search: '', provinsi: '', kabkota: '', kecamatan: '', desil: '',
     historyStack: [], currentCursor: null,
     meta: {
       label: '', totalItems: 0, totalPages: 1, currentPage: 1,
@@ -643,7 +525,6 @@ function makeTableState() {
 const anggota  = makeTableState()
 const keluarga = makeTableState()
 
-// ── Drawer Filter
 const showFilter    = ref(false)
 const filterLoading = ref(false)
 const filterError   = ref('')
@@ -656,15 +537,28 @@ const currentFilters = computed(() =>
   activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
 )
 
-// Hitung jumlah filter aktif: dari drawer + desil + ternak sliders (jika bukan default 0-100)
+/**
+ * groupedFilterFields — semua grup, TIDAK termasuk field ternak
+ * Grup yang seluruh isinya ternak akan kosong → disaring di computed ini
+ * sehingga header grup "Ternak" dari DB tidak ikut muncul.
+ */
+const groupedFilterFieldsNoTernak = computed(() => {
+  const groups = {}
+  for (const f of filterFields.value) {
+    if (isTernakField(f.field_key)) continue   // skip ternak — ditangani slider
+    const g = f.field_group || ''
+    if (!groups[g]) groups[g] = []
+    groups[g].push(f)
+  }
+  // Buang grup kosong (seharusnya tidak terjadi, tapi aman)
+  return Object.fromEntries(Object.entries(groups).filter(([, v]) => v.length > 0))
+})
+
 const activeFilterCount = computed(() => {
   const drawerCount = Object.values(currentFilters.value).filter(v => v !== '' && v != null).length
   const desilCount  = (activeTab.value === 'keluarga' && keluarga.desil) ? 1 : 0
   const ternakCount = activeTab.value === 'keluarga'
-    ? TERNAK_FIELDS.filter(f => {
-        const [mn, mx] = ternakSliders[f.key]
-        return !(mn === 0 && mx === 100)
-      }).length
+    ? TERNAK_FIELDS.filter(f => { const [mn, mx] = ternakSliders[f.key]; return !(mn === 0 && mx === 100) }).length
     : 0
   return drawerCount + desilCount + ternakCount
 })
@@ -681,12 +575,10 @@ function formatFilterValue(val) {
 
 const activeFiltersBadges = computed(() => {
   const result = []
-  // Badge desil untuk tab keluarga
   if (activeTab.value === 'keluarga' && keluarga.desil) {
     const opt = desilOptions.find(o => o.value === keluarga.desil)
     result.push({ key: '__desil__', label: 'Desil', display: opt?.label ?? keluarga.desil })
   }
-  // Badge ternak slider jika bukan default
   if (activeTab.value === 'keluarga') {
     for (const tf of TERNAK_FIELDS) {
       const [mn, mx] = ternakSliders[tf.key]
@@ -694,29 +586,18 @@ const activeFiltersBadges = computed(() => {
       result.push({ key: `__ternak__${tf.key}`, label: tf.label, display: `${mn} – ${mx}` })
     }
   }
-  // Badge dari drawer filter dinamis (skip ternak — sudah di atas)
   for (const f of filterFields.value) {
     if (isTernakField(f.field_key)) continue
     const val = currentFilters.value[f.field_key]
     if (val === '' || val == null) continue
     let display = formatFilterValue(val)
-    if (f.refs && f.refs.length) {
+    if (f.refs?.length) {
       const ref = f.refs.find(r => r.ref_value === String(val))
       if (ref) display = ref.ref_label
     }
     result.push({ key: f.field_key, label: f.field_label, display })
   }
   return result
-})
-
-const groupedFilterFields = computed(() => {
-  const groups = {}
-  for (const f of filterFields.value) {
-    const g = f.field_group || ''
-    if (!groups[g]) groups[g] = []
-    groups[g].push(f)
-  }
-  return groups
 })
 
 const filterKategori = computed(() =>
@@ -732,7 +613,7 @@ async function loadFilterFields() {
     filterFields.value = data
     const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
     for (const f of data) {
-      if (isTernakField(f.field_key)) continue  // ternak pakai slider, skip
+      if (isTernakField(f.field_key)) continue
       if (!(f.field_key in store)) store[f.field_key] = ''
     }
   } catch (e) {
@@ -754,8 +635,7 @@ watch(showFilter, (val) => {
 
 function applyFilter() {
   showFilter.value = false
-  if (activeTab.value === 'anggota') loadAnggota()
-  else loadKeluarga()
+  activeTab.value === 'anggota' ? loadAnggota() : loadKeluarga()
 }
 
 function resetFilter() {
@@ -763,28 +643,17 @@ function resetFilter() {
   for (const k of Object.keys(store)) store[k] = ''
   if (activeTab.value === 'keluarga') {
     keluarga.desil = ''
-    // Reset semua ternak slider ke default 0-100
-    for (const tf of TERNAK_FIELDS) {
-      ternakSliders[tf.key] = [0, 100]
-    }
+    for (const tf of TERNAK_FIELDS) ternakSliders[tf.key] = [0, 100]
   }
   showFilter.value = false
-  if (activeTab.value === 'anggota') loadAnggota()
-  else loadKeluarga()
+  activeTab.value === 'anggota' ? loadAnggota() : loadKeluarga()
 }
 
 function clearOneFilter(fieldKey) {
-  if (fieldKey === '__desil__') {
-    keluarga.desil = ''
-    loadKeluarga()
-    return
-  }
-  // Clear ternak slider badge
+  if (fieldKey === '__desil__') { keluarga.desil = ''; loadKeluarga(); return }
   if (fieldKey.startsWith('__ternak__')) {
-    const key = fieldKey.replace('__ternak__', '')
-    ternakSliders[key] = [0, 100]
-    loadKeluarga()
-    return
+    ternakSliders[fieldKey.replace('__ternak__', '')] = [0, 100]
+    loadKeluarga(); return
   }
   const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
   if (fieldKey in store) { store[fieldKey] = ''; applyFilter() }
@@ -798,27 +667,20 @@ function buildFilterParams(store) {
   return params
 }
 
-/** Tambahkan parameter ternak dari slider ke params API */
 function buildTernakParams() {
   const params = {}
   for (const tf of TERNAK_FIELDS) {
-    const [mn, mx] = ternakSliders[tf.key]
-    const val = sliderToApiValue(mn, mx)
+    const val = sliderToApiValue(...ternakSliders[tf.key])
     if (val !== null) params[tf.key] = val
   }
   return params
 }
 
-// ── Anggota
 async function loadAnggota(cursor = null) {
   if (!anggota.provinsi) return
   anggota.loading = true; anggota.error = ''
   try {
-    const params = {
-      provinsi: anggota.provinsi,
-      cursor:   cursor || undefined,
-      search:   anggota.search.trim() || undefined,
-    }
+    const params = { provinsi: anggota.provinsi, cursor: cursor || undefined, search: anggota.search.trim() || undefined }
     if (anggota.kabkota)   params.kabkota_kode   = anggota.kabkota
     if (anggota.kecamatan) params.kecamatan_kode = anggota.kecamatan
     Object.assign(params, buildFilterParams(anggotaFilters))
@@ -830,46 +692,26 @@ async function loadAnggota(cursor = null) {
     anggota.error = 'Gagal memuat: ' + (e?.response?.data?.error ?? e.message)
   } finally { anggota.loading = false }
 }
-function nextAnggota() {
-  anggota.historyStack.push(anggota.currentCursor)
-  loadAnggota(anggota.meta.nextCursor)
-}
-function prevAnggota() {
-  if (anggota.historyStack.length) loadAnggota(anggota.historyStack.pop())
-}
+function nextAnggota() { anggota.historyStack.push(anggota.currentCursor); loadAnggota(anggota.meta.nextCursor) }
+function prevAnggota() { if (anggota.historyStack.length) loadAnggota(anggota.historyStack.pop()) }
 function resetAnggota() {
   const first = provinsiOptions.value[0]
-  anggota.provinsi  = first?.slug ?? ''
-  anggota.kabkota   = ''
-  anggota.kecamatan = ''
-  anggota.search    = ''
-  anggota.rows = []; anggota.columns = []
-  anggota.historyStack = []; anggota.currentCursor = null
-  anggotaKabkotaOptions.value   = []
-  anggotaKecamatanOptions.value = []
+  anggota.provinsi = first?.slug ?? ''; anggota.kabkota = ''; anggota.kecamatan = ''; anggota.search = ''
+  anggota.rows = []; anggota.columns = []; anggota.historyStack = []; anggota.currentCursor = null
+  anggotaKabkotaOptions.value = []; anggotaKecamatanOptions.value = []
   for (const k of Object.keys(anggotaFilters)) anggotaFilters[k] = ''
-  Object.assign(anggota.meta, {
-    label:'', totalItems:0, totalPages:1, currentPage:1,
-    hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
-  })
+  Object.assign(anggota.meta, { label:'', totalItems:0, totalPages:1, currentPage:1, hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10 })
   if (first) { loadAnggotaKabkota(first.kode); loadAnggota() }
 }
 
-// ── Keluarga
 async function loadKeluarga(cursor = null) {
   if (!keluarga.provinsi) return
   keluarga.loading = true; keluarga.error = ''
   try {
-    const params = {
-      provinsi: keluarga.provinsi,
-      cursor:   cursor || undefined,
-      search:   keluarga.search.trim() || undefined,
-    }
+    const params = { provinsi: keluarga.provinsi, cursor: cursor || undefined, search: keluarga.search.trim() || undefined }
     if (keluarga.kabkota)   params.kabkota_kode   = keluarga.kabkota
     if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
-    // Kirim desil_nasional ke backend jika dipilih
     if (keluarga.desil)     params.desil_nasional  = keluarga.desil
-    // Kirim filter ternak dari slider
     Object.assign(params, buildTernakParams())
     Object.assign(params, buildFilterParams(keluargaFilters))
     const res = await fetchBaselineKeluarga(params)
@@ -880,30 +722,16 @@ async function loadKeluarga(cursor = null) {
     keluarga.error = 'Gagal memuat: ' + (e?.response?.data?.error ?? e.message)
   } finally { keluarga.loading = false }
 }
-function nextKeluarga() {
-  keluarga.historyStack.push(keluarga.currentCursor)
-  loadKeluarga(keluarga.meta.nextCursor)
-}
-function prevKeluarga() {
-  if (keluarga.historyStack.length) loadKeluarga(keluarga.historyStack.pop())
-}
+function nextKeluarga() { keluarga.historyStack.push(keluarga.currentCursor); loadKeluarga(keluarga.meta.nextCursor) }
+function prevKeluarga() { if (keluarga.historyStack.length) loadKeluarga(keluarga.historyStack.pop()) }
 function resetKeluarga() {
   const first = provinsiOptions.value[0]
-  keluarga.provinsi  = first?.slug ?? ''
-  keluarga.kabkota   = ''
-  keluarga.kecamatan = ''
-  keluarga.search    = ''
-  keluarga.desil     = ''
-  keluarga.rows = []; keluarga.columns = []
-  keluarga.historyStack = []; keluarga.currentCursor = null
-  keluargaKabkotaOptions.value   = []
-  keluargaKecamatanOptions.value = []
+  keluarga.provinsi = first?.slug ?? ''; keluarga.kabkota = ''; keluarga.kecamatan = ''; keluarga.search = ''; keluarga.desil = ''
+  keluarga.rows = []; keluarga.columns = []; keluarga.historyStack = []; keluarga.currentCursor = null
+  keluargaKabkotaOptions.value = []; keluargaKecamatanOptions.value = []
   for (const k of Object.keys(keluargaFilters)) keluargaFilters[k] = ''
   for (const tf of TERNAK_FIELDS) ternakSliders[tf.key] = [0, 100]
-  Object.assign(keluarga.meta, {
-    label:'', totalItems:0, totalPages:1, currentPage:1,
-    hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
-  })
+  Object.assign(keluarga.meta, { label:'', totalItems:0, totalPages:1, currentPage:1, hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10 })
   if (first) { loadKeluargaKabkota(first.kode); loadKeluarga() }
 }
 
