@@ -42,7 +42,7 @@ def list_mustahik():
 @jwt_required()
 def detail_mustahik(nik_hashed):
     """
-    Get detail mustahik berdasarkan hashed NIK (MD5)
+    Get detail mustahik berdasarkan hashed NIK
     ---
     tags:
       - Mustahik
@@ -53,7 +53,7 @@ def detail_mustahik(nik_hashed):
         name: nik_hashed
         type: string
         required: true
-        description: Hashed NIK mustahik (MD5)
+        description: Hashed NIK mustahik
     responses:
       200:
         description: Detail mustahik berhasil diambil
@@ -110,3 +110,17 @@ def detail_mustahik_by_nik(nik):
     if result.get('status_code') == 404:
         return jsonify(result), 404
     return jsonify(result), 200
+    return jsonify(result), 200
+
+@api_v1_bp.get('/mustahik/<string:nik_hashed>/riwayat')
+@jwt_required()
+def riwayat_mustahik(nik_hashed):
+    result = MustahikService.get_riwayat(nik_hashed)
+    return jsonify(result), 200
+
+@api_v1_bp.get("/mustahik/<string:nik_hashed>/program")
+@jwt_required()
+def program(nik_hashed):
+    result = MustahikService.get_program(nik_hashed)
+    return jsonify(result), 200
+    

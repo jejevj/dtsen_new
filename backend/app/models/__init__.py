@@ -5,6 +5,8 @@ from .program import Bidang, Program
 from .mustahik import Mustahik
 from .mustahik_bappenas import MustahikBappenas
 from .penerimaan import Penerimaan
+from .program import Program
+from .mustahik import Mustahik
 from .wilayah import Provinsi, KabKota, Kecamatan, Kelurahan
 from .tampilan_dtsen import TampilanDtsen
 from .t_dtsen_akses import TDtsenAkses
@@ -21,6 +23,8 @@ __all__ = [
     'Mustahik',
     'MustahikBappenas',
     'Penerimaan',
+    'Program',
+    'Mustahik',
     'Provinsi',
     'KabKota',
     'Kecamatan',
