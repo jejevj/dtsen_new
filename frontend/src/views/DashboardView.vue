@@ -67,22 +67,24 @@
                 <rect width="100%" height="100%" fill="url(#wm-base-wilayah)" />
               </svg>
             </div>
-            <p class="section-title" style="padding-left:10px;padding-right:10px;">
-              <i class="pi pi-map"></i> Sebaran Mustahik Berdasarkan Data Baseline
-              <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(wilayahBase.length) }}&ensp;</span>
-            </p>
-            <template v-if="wilayahBase.length">
-              <div style="overflow-x:auto;">
-                <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="wilayahBase" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_wilayahBase" @page="onPage_wilayahBase">
-                  <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_wilayahBase + slotProps.index + 1 }}</div></template></Column>
-                  <Column header="Wilayah" field="nama" sortable><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
-                  <Column header="Mustahik" field="baseline" sortable style="width:30%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.baseline ?? 0) }}</div></template></Column>
-                </DataTable>
+            <div class="wm-content">
+              <p class="section-title" style="padding-left:10px;padding-right:10px;">
+                <i class="pi pi-map"></i> Sebaran Mustahik Berdasarkan Data Baseline
+                <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(wilayahBase.length) }}&ensp;</span>
+              </p>
+              <template v-if="wilayahBase.length">
+                <div style="overflow-x:auto;">
+                  <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="wilayahBase" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_wilayahBase" @page="onPage_wilayahBase">
+                    <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_wilayahBase + slotProps.index + 1 }}</div></template></Column>
+                    <Column header="Wilayah" field="nama" sortable><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
+                    <Column header="Mustahik" field="baseline" sortable style="width:30%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.baseline ?? 0) }}</div></template></Column>
+                  </DataTable>
+                </div>
+              </template>
+              <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
+                <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+                Data Sebaran Mustahik Berdasarkan Data Baseline tidak ditemukan
               </div>
-            </template>
-            <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
-              <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-              Data Sebaran Mustahik Berdasarkan Data Baseline tidak ditemukan
             </div>
           </div>
 
@@ -98,25 +100,27 @@
                 <rect width="100%" height="100%" fill="url(#wm-base-desil)" />
               </svg>
             </div>
-            <p class="section-title" style="padding-left:10px;padding-right:10px;">
-              <i class="pi pi-map"></i> Sebaran Mustahik per Desil Berdasarkan Data Baseline
-              <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(desilBase.length) }}&ensp;</span>
-            </p>
-            <template v-if="desilBase.length">
-              <div style="overflow-x:auto;">
-                <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="desilBase" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_desilBase" @page="onPage_desilBase">
-                  <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_desilBase + slotProps.index + 1 }}</div></template></Column>
-                  <Column field="nama" sortable header="Provinsi"><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
-                  <Column field="desil_1" header="Desil 1" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_1 ?? 0) }}</div></template></Column>
-                  <Column field="desil_2" header="Desil 2" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_2 ?? 0) }}</div></template></Column>
-                  <Column field="desil_3" header="Desil 3" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_3 ?? 0) }}</div></template></Column>
-                  <Column field="desil_4" header="Desil 4" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_4 ?? 0) }}</div></template></Column>
-                </DataTable>
+            <div class="wm-content">
+              <p class="section-title" style="padding-left:10px;padding-right:10px;">
+                <i class="pi pi-map"></i> Sebaran Mustahik per Desil Berdasarkan Data Baseline
+                <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(desilBase.length) }}&ensp;</span>
+              </p>
+              <template v-if="desilBase.length">
+                <div style="overflow-x:auto;">
+                  <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="desilBase" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_desilBase" @page="onPage_desilBase">
+                    <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_desilBase + slotProps.index + 1 }}</div></template></Column>
+                    <Column field="nama" sortable header="Provinsi"><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
+                    <Column field="desil_1" header="Desil 1" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_1 ?? 0) }}</div></template></Column>
+                    <Column field="desil_2" header="Desil 2" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_2 ?? 0) }}</div></template></Column>
+                    <Column field="desil_3" header="Desil 3" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_3 ?? 0) }}</div></template></Column>
+                    <Column field="desil_4" header="Desil 4" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_4 ?? 0) }}</div></template></Column>
+                  </DataTable>
+                </div>
+              </template>
+              <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
+                <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+                Data Sebaran Mustahik per Desil Berdasarkan Data Baseline tidak ditemukan
               </div>
-            </template>
-            <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
-              <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-              Data Sebaran Mustahik per Desil Berdasarkan Data Baseline tidak ditemukan
             </div>
           </div>
 
@@ -135,25 +139,27 @@
               <rect width="100%" height="100%" fill="url(#wm-dist-wilayah)" />
             </svg>
           </div>
-          <p class="section-title" style="padding-left:10px;padding-right:10px;">
-            <i class="pi pi-map"></i> Pendistribusian dan Pendayagunaan per Wilayah
-            <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(wilayahData.length) }}&ensp;</span>
-          </p>
-          <template v-if="wilayahData.length">
-            <div style="overflow-x:auto;">
-              <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="wilayahData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_wilayahData" @page="onPage_wilayahData">
-                <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_wilayahData + slotProps.index + 1 }}</div></template></Column>
-                <Column field="lvl_1" sortable header="Provinsi"><template #body="{ data }">{{ data.lvl_1 ?? '-' }}</template></Column>
-                <Column field="lvl_2" sortable header="Kab/kota"><template #body="{ data }">{{ data.lvl_2 ?? '-' }}</template></Column>
-                <Column field="lvl_3" sortable header="Kecamatan"><template #body="{ data }">{{ data.lvl_3 ?? '-' }}</template></Column>
-                <Column field="mustahik" header="Mustahik" sortable style="width:10%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.mustahik ?? 0) }}</div></template></Column>
-                <Column field="rupiah" header="Total" sortable style="width:15%"><template #body="{ data }"><div class="text-right">{{ formatRupiah(data.rupiah ?? 0) }}</div></template></Column>
-              </DataTable>
+          <div class="wm-content">
+            <p class="section-title" style="padding-left:10px;padding-right:10px;">
+              <i class="pi pi-map"></i> Pendistribusian dan Pendayagunaan per Wilayah
+              <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(wilayahData.length) }}&ensp;</span>
+            </p>
+            <template v-if="wilayahData.length">
+              <div style="overflow-x:auto;">
+                <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="wilayahData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_wilayahData" @page="onPage_wilayahData">
+                  <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_wilayahData + slotProps.index + 1 }}</div></template></Column>
+                  <Column field="lvl_1" sortable header="Provinsi"><template #body="{ data }">{{ data.lvl_1 ?? '-' }}</template></Column>
+                  <Column field="lvl_2" sortable header="Kab/kota"><template #body="{ data }">{{ data.lvl_2 ?? '-' }}</template></Column>
+                  <Column field="lvl_3" sortable header="Kecamatan"><template #body="{ data }">{{ data.lvl_3 ?? '-' }}</template></Column>
+                  <Column field="mustahik" header="Mustahik" sortable style="width:10%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.mustahik ?? 0) }}</div></template></Column>
+                  <Column field="rupiah" header="Total" sortable style="width:15%"><template #body="{ data }"><div class="text-right">{{ formatRupiah(data.rupiah ?? 0) }}</div></template></Column>
+                </DataTable>
+              </div>
+            </template>
+            <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
+              <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+              Data Pendistribusian dan Pendayagunaan per Wilayah tidak ditemukan
             </div>
-          </template>
-          <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
-            <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-            Data Pendistribusian dan Pendayagunaan per Wilayah tidak ditemukan
           </div>
         </div>
 
@@ -170,39 +176,41 @@
               <rect width="100%" height="100%" fill="url(#wm-dist-desil)" />
             </svg>
           </div>
-          <p class="section-title" style="padding-left:10px;padding-right:10px;">
-            <i class="pi pi-map"></i> Pendistribusian dan Pendayagunaan per Desil
-            <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(desilData.length) }}&ensp;</span>
-          </p>
-          <template v-if="desilData.length">
-            <div style="overflow-x:auto;">
-              <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="desilData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_desilData" @page="onPage_desilData">
-                <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_desilData + slotProps.index + 1 }}</div></template></Column>
-                <Column field="nama" sortable header="Wilayah"><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
-                <Column field="desil_1" header="Desil 1" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_1 ?? 0) }}</div></template></Column>
-                <Column field="desil_2" header="Desil 2" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_2 ?? 0) }}</div></template></Column>
-                <Column field="desil_3" header="Desil 3" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_3 ?? 0) }}</div></template></Column>
-                <Column field="desil_4" header="Desil 4" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_4 ?? 0) }}</div></template></Column>
-                <Column field="desil_5" header="Desil 5" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_5 ?? 0) }}</div></template></Column>
-                <Column field="desil_6" header="Desil 6" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_6 ?? 0) }}</div></template></Column>
-                <Column field="desil_7" header="Desil 7" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_7 ?? 0) }}</div></template></Column>
-                <Column field="desil_8" header="Desil 8" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_8 ?? 0) }}</div></template></Column>
-                <Column field="desil_9" header="Desil 9" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_9 ?? 0) }}</div></template></Column>
-                <Column field="desil_10" header="Desil 10" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_10 ?? 0) }}</div></template></Column>
-                <Column field="desil_na" header="N/A" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_na ?? 0) }}</div></template></Column>
-              </DataTable>
+          <div class="wm-content">
+            <p class="section-title" style="padding-left:10px;padding-right:10px;">
+              <i class="pi pi-map"></i> Pendistribusian dan Pendayagunaan per Desil
+              <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(desilData.length) }}&ensp;</span>
+            </p>
+            <template v-if="desilData.length">
+              <div style="overflow-x:auto;">
+                <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="desilData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_desilData" @page="onPage_desilData">
+                  <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_desilData + slotProps.index + 1 }}</div></template></Column>
+                  <Column field="nama" sortable header="Wilayah"><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
+                  <Column field="desil_1" header="Desil 1" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_1 ?? 0) }}</div></template></Column>
+                  <Column field="desil_2" header="Desil 2" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_2 ?? 0) }}</div></template></Column>
+                  <Column field="desil_3" header="Desil 3" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_3 ?? 0) }}</div></template></Column>
+                  <Column field="desil_4" header="Desil 4" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_4 ?? 0) }}</div></template></Column>
+                  <Column field="desil_5" header="Desil 5" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_5 ?? 0) }}</div></template></Column>
+                  <Column field="desil_6" header="Desil 6" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_6 ?? 0) }}</div></template></Column>
+                  <Column field="desil_7" header="Desil 7" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_7 ?? 0) }}</div></template></Column>
+                  <Column field="desil_8" header="Desil 8" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_8 ?? 0) }}</div></template></Column>
+                  <Column field="desil_9" header="Desil 9" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_9 ?? 0) }}</div></template></Column>
+                  <Column field="desil_10" header="Desil 10" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_10 ?? 0) }}</div></template></Column>
+                  <Column field="desil_na" header="N/A" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_na ?? 0) }}</div></template></Column>
+                </DataTable>
+              </div>
+            </template>
+            <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
+              <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+              Data Sebaran Penerima Manfaat per Desil tidak ditemukan
             </div>
-          </template>
-          <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
-            <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-            Data Sebaran Penerima Manfaat per Desil tidak ditemukan
           </div>
         </div>
 
-        <!-- Desil breakdown cards (putih, warna hanya di badge icon dan teks) -->
+        <!-- Desil breakdown cards -->
         <div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
-            <div v-for="d in desilStats" :key="d.label" class="card-box wm-wrap" style="text-align:center;">
+            <div v-for="d in desilStats" :key="d.label" class="card-box wm-wrap" style="background:white;">
               <div class="wm-overlay" aria-hidden="true">
                 <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                   <defs>
@@ -214,24 +222,25 @@
                   <rect width="100%" height="100%" :fill="'url(#wm-desil-'+d.label+')'" />
                 </svg>
               </div>
-              <!-- Badge icon berwarna -->
-              <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:d.iconBg, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }">
-                <i class="pi pi-users" :style="{ color:d.iconColor, fontSize:'18px' }"></i>
+              <div class="wm-content" style="text-align:center;">
+                <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:d.iconBg, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }">
+                  <i class="pi pi-users" :style="{ color:d.iconColor, fontSize:'18px' }"></i>
+                </div>
+                <p style="font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px;color:#1e293b;">{{ d.label }}</p>
+                <p style="font-size:1.5rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.base_val }}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;">Mustahik Data Baseline</p>
+                <p style="font-size:1.5rem;font-weight:900;margin:0 0 2px;color:#1e293b;">{{ d.lap_val }}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;">Penerima Manfaat Lembaga</p>
+                <p style="font-size:1.1rem;font-weight:700;margin:0;color:#15803d;">{{ d.agg_val }}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Total Pendistribusian</p>
               </div>
-              <p style="font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px;color:#1e293b;">{{ d.label }}</p>
-              <p style="font-size:1.5rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.base_val }}</p>
-              <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;">Mustahik Data Baseline</p>
-              <p style="font-size:1.5rem;font-weight:900;margin:0 0 2px;color:#1e293b;">{{ d.lap_val }}</p>
-              <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;">Penerima Manfaat Lembaga</p>
-              <p style="font-size:1.1rem;font-weight:700;margin:0;color:#15803d;">{{ d.agg_val }}</p>
-              <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Total Pendistribusian</p>
             </div>
           </div>
         </div>
 
         <!-- Stat Cards -->
         <div class="grid-1-2-1">
-          <div v-for="stat in statCards" :key="stat.label" class="stat-card wm-wrap">
+          <div v-for="stat in statCards" :key="stat.label" class="stat-card wm-wrap" style="background:white;">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -243,18 +252,20 @@
                 <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.label+')'" />
               </svg>
             </div>
-            <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
-              <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+            <div class="wm-content">
+              <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+                <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+              </div>
+              <p style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 3px;">{{ stat.value }}</p>
+              <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
+              <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
             </div>
-            <p style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 3px;">{{ stat.value }}</p>
-            <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
-            <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
           </div>
         </div>
 
         <!-- Charts row -->
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
-          <div class="card-box wm-wrap">
+          <div class="card-box wm-wrap" style="background:white;">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -266,14 +277,16 @@
                 <rect width="100%" height="100%" fill="url(#wm-chart-gender)" />
               </svg>
             </div>
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
-            <Chart :key="'pie-'+chartKey" type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
-            <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
-              <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>Laki-laki: {{ formatAngka(genderDataM) }}</span>
-              <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>Perempuan: {{ formatAngka(genderDataF) }}</span>
+            <div class="wm-content">
+              <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
+              <Chart :key="'pie-'+chartKey" type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
+              <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
+                <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>Laki-laki: {{ formatAngka(genderDataM) }}</span>
+                <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>Perempuan: {{ formatAngka(genderDataF) }}</span>
+              </div>
             </div>
           </div>
-          <div class="card-box wm-wrap">
+          <div class="card-box wm-wrap" style="background:white;">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -285,8 +298,10 @@
                 <rect width="100%" height="100%" fill="url(#wm-chart-desil)" />
               </svg>
             </div>
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Penerima Manfaat per Desil</p>
-            <Chart :key="'bar-'+chartKey" type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
+            <div class="wm-content">
+              <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Penerima Manfaat per Desil</p>
+              <Chart :key="'bar-'+chartKey" type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
+            </div>
           </div>
         </div>
 
@@ -303,36 +318,39 @@
               <rect width="100%" height="100%" fill="url(#wm-usia)" />
             </svg>
           </div>
-          <p class="section-title" style="padding-left:10px;padding-right:10px;">
-            <i class="pi pi-map"></i> Sebaran Penerima Manfaat Berdasarkan Usia
-          </p>
-          <template v-if="usiaData.length">
-            <div style="overflow-x:auto;">
-              <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="usiaData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_usiaData" @page="onPage_usiaData">
-                <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_usiaData + slotProps.index + 1 }}</div></template></Column>
-                <Column header="Wilayah" field="nama" sortable><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
-                <Column header="Usia 0 - 10" field="usia_1" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_1 ?? 0) }}</div></template></Column>
-                <Column header="Usia 11 - 20" field="usia_2" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_2 ?? 0) }}</div></template></Column>
-                <Column header="Usia 21 - 30" field="usia_3" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_3 ?? 0) }}</div></template></Column>
-                <Column header="Usia 31 - 40" field="usia_4" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_4 ?? 0) }}</div></template></Column>
-                <Column header="Usia 41 - 50" field="usia_5" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_5 ?? 0) }}</div></template></Column>
-                <Column header="Usia 51 - 60" field="usia_6" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_6 ?? 0) }}</div></template></Column>
-                <Column header="Usia 60+" field="usia_7" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_7 ?? 0) }}</div></template></Column>
-              </DataTable>
+          <div class="wm-content">
+            <p class="section-title" style="padding-left:10px;padding-right:10px;">
+              <i class="pi pi-map"></i> Sebaran Penerima Manfaat Berdasarkan Usia
+            </p>
+            <template v-if="usiaData.length">
+              <div style="overflow-x:auto;">
+                <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="usiaData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_usiaData" @page="onPage_usiaData">
+                  <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_usiaData + slotProps.index + 1 }}</div></template></Column>
+                  <Column header="Wilayah" field="nama" sortable><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
+                  <Column header="Usia 0 - 10" field="usia_1" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_1 ?? 0) }}</div></template></Column>
+                  <Column header="Usia 11 - 20" field="usia_2" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_2 ?? 0) }}</div></template></Column>
+                  <Column header="Usia 21 - 30" field="usia_3" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_3 ?? 0) }}</div></template></Column>
+                  <Column header="Usia 31 - 40" field="usia_4" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_4 ?? 0) }}</div></template></Column>
+                  <Column header="Usia 41 - 50" field="usia_5" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_5 ?? 0) }}</div></template></Column>
+                  <Column header="Usia 51 - 60" field="usia_6" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_6 ?? 0) }}</div></template></Column>
+                  <Column header="Usia 60+" field="usia_7" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_7 ?? 0) }}</div></template></Column>
+                </DataTable>
+              </div>
+            </template>
+            <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
+              <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+              Data Sebaran Penerima Manfaat Berdasarkan Usia tidak ditemukan
             </div>
-          </template>
-          <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
-            <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-            Data Sebaran Penerima Manfaat Berdasarkan Usia tidak ditemukan
           </div>
         </div>
 
-        <!-- Bidang Program Cards (putih, warna hanya di icon badge) -->
+        <!-- Bidang Program Cards -->
         <div class="grid-3" style="display:grid;gap:16px;">
           <div
             v-for="(bidang, i) in bidangProgram"
             :key="bidang.bidang_label"
             class="card-box wm-wrap"
+            style="background:white;"
           >
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
@@ -345,12 +363,14 @@
                 <rect width="100%" height="100%" :fill="'url(#wm-bidang-'+i+')'" />
               </svg>
             </div>
-            <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:bidangColors[i%bidangColors.length].bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
-              <i :class="bidangIcons[i%bidangIcons.length]" :style="{ color:bidangColors[i%bidangColors.length].icon, fontSize:'18px' }"></i>
+            <div class="wm-content">
+              <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:bidangColors[i%bidangColors.length].bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+                <i :class="bidangIcons[i%bidangIcons.length]" :style="{ color:bidangColors[i%bidangColors.length].icon, fontSize:'18px' }"></i>
+              </div>
+              <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 4px;">{{ bidang.bidang_label }}</h3>
+              <p style="font-size:1.3rem;font-weight:800;color:#15803d;margin:0 0 4px;">{{ formatRupiah(bidang.total_penyaluran) }}</p>
+              <p style="font-size:11px;color:#94a3b8;margin:0 0 12px;">kepada {{ formatAngka(bidang.total_mustahik) }} Penerima Manfaat</p>
             </div>
-            <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 4px;">{{ bidang.bidang_label }}</h3>
-            <p style="font-size:1.3rem;font-weight:800;color:#15803d;margin:0 0 4px;">{{ formatRupiah(bidang.total_penyaluran) }}</p>
-            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px;">kepada {{ formatAngka(bidang.total_mustahik) }} Penerima Manfaat</p>
           </div>
         </div>
 
@@ -646,6 +666,11 @@ onBeforeUnmount(() => { ro?.disconnect() })
   display: block;
   width: 100%;
   height: 100%;
+}
+/* Konten selalu di atas overlay watermark */
+.wm-content {
+  position: relative;
+  z-index: 3;
 }
 /* ===== END WATERMARK ===== */
 :deep(.text-right) { text-align: right !important; }
