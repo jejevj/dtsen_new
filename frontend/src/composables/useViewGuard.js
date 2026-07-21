@@ -43,7 +43,7 @@ export function initViewGuard() {
     dispatchBlocked('Fitur drag tidak diizinkan pada halaman ini.')
   }, true)
 
-  // 4. Inject CSS: user-select none + cursor default pada seluruh halaman
+  // 4. Inject CSS: user-select none pada seluruh halaman
   const style = document.createElement('style')
   style.id = 'view-guard-style'
   style.textContent = `
@@ -66,28 +66,24 @@ export function initViewGuard() {
     const shift = e.shiftKey
     const key   = e.key
 
-    // F12
     if (key === 'F12') {
       e.preventDefault()
       dispatchBlocked('Akses Developer Tools tidak diizinkan.')
       return
     }
 
-    // Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (Chrome DevTools)
     if (ctrl && shift && ['i','I','j','J','c','C'].includes(key)) {
       e.preventDefault()
       dispatchBlocked('Akses Developer Tools tidak diizinkan.')
       return
     }
 
-    // Ctrl+U (View Page Source)
     if (ctrl && ['u','U'].includes(key)) {
       e.preventDefault()
       dispatchBlocked('Melihat sumber halaman tidak diizinkan.')
       return
     }
 
-    // Ctrl+S (Save page)
     if (ctrl && ['s','S'].includes(key)) {
       e.preventDefault()
       dispatchBlocked('Menyimpan halaman tidak diizinkan.')
@@ -95,20 +91,25 @@ export function initViewGuard() {
     }
   }, true)
 
-  // 6. DevTools open detection via debugger trap
-  //    Saat DevTools terbuka, debugger statement menyebabkan delay terdeteksi
-  //    dan halaman akan ditampilkan overlay peringatan.
+  // 6. DevTools open detection via window-size heuristic
+  //
+  //  Cara kerja:
+  //    Saat DevTools dibuka di sisi kanan/kiri → outerWidth - innerWidth > threshold
+  //    Saat DevTools dibuka di bawah/atas     → outerHeight - innerHeight > threshold
+  //  Threshold 160px memberi toleransi scrollbar & taskbar.
+  //  Pengecekan dilakukan setiap 1000ms (cukup responsif, tidak membuang CPU).
   ;(function devtoolsDetect() {
+    const THRESHOLD = 160  // px
     let devtoolsOpen = false
-    const threshold  = 160 // ms
+
+    function isDevtoolsOpen() {
+      const widthDiff  = window.outerWidth  - window.innerWidth
+      const heightDiff = window.outerHeight - window.innerHeight
+      return widthDiff > THRESHOLD || heightDiff > THRESHOLD
+    }
 
     function check() {
-      const start = performance.now()
-      // eslint-disable-next-line no-debugger
-      debugger
-      const delta = performance.now() - start
-
-      if (delta > threshold) {
+      if (isDevtoolsOpen()) {
         if (!devtoolsOpen) {
           devtoolsOpen = true
           dispatchBlocked('Developer Tools terdeteksi terbuka. Tutup untuk melanjutkan.')
@@ -120,10 +121,11 @@ export function initViewGuard() {
           hideDevtoolsWarning()
         }
       }
-      requestAnimationFrame(check)
     }
 
-    requestAnimationFrame(check)
+    // Cek langsung saat init (handle kasus DevTools sudah terbuka sebelum halaman load)
+    check()
+    setInterval(check, 1000)
   })()
 }
 
