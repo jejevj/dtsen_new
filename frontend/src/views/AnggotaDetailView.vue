@@ -46,7 +46,7 @@
           </div>
         </div>
 
-        <!-- ===== SECTION LABEL: DATA INDIVIDU ===== -->
+        <!-- ===== DIVIDER 1: DATA INDIVIDU ===== -->
         <div class="section-divider">
           <div class="section-divider-line"></div>
           <div class="section-divider-label">
@@ -56,7 +56,7 @@
           <div class="section-divider-line"></div>
         </div>
 
-        <!-- ===== FIELD GROUPS (individu) — render per-group ===== -->
+        <!-- ===== FIELD GROUPS (individu) ===== -->
         <template v-if="detailGroups.length">
           <template v-for="(slot, si) in groupSlots" :key="si">
 
@@ -68,18 +68,11 @@
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <template v-if="isDisabGroup(group)">
                       <table class="disab-table">
-                        <thead>
-                          <tr>
-                            <th class="disab-th">Aspek</th>
-                            <th class="disab-th" style="text-align:right;">Status</th>
-                          </tr>
-                        </thead>
+                        <thead><tr><th class="disab-th">Aspek</th><th class="disab-th" style="text-align:right;">Status</th></tr></thead>
                         <tbody>
                           <tr v-for="field in group.fields" :key="field.field_key" class="disab-tr">
                             <td class="disab-td-aspek">{{ stripDisabPrefix(field.field_label) }}</td>
-                            <td class="disab-td-status">
-                              <span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span>
-                            </td>
+                            <td class="disab-td-status"><span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span></td>
                           </tr>
                         </tbody>
                       </table>
@@ -159,7 +152,119 @@
           <i class="pi pi-spin pi-spinner"></i> Memuat konfigurasi tampilan…
         </div>
 
-        <!-- ===== SECTION DIVIDER: DATA KARTU KELUARGA ===== -->
+        <!-- ===== DIVIDER 2: DATA PENERIMAAN BANTUAN LEMBAGA ===== -->
+        <div class="section-divider section-divider--mustahik">
+          <div class="section-divider-line"></div>
+          <div class="section-divider-label section-divider-label--mustahik">
+            <i class="pi pi-wallet" style="font-size:12px;"></i>
+            <span>Data Penerimaan Bantuan Lembaga</span>
+          </div>
+          <div class="section-divider-line"></div>
+        </div>
+
+        <!-- ===== SECTION MUSTAHIK ===== -->
+        <div v-if="loadingMustahik" style="text-align:center;padding:24px;color:#94a3b8;font-size:13px;">
+          <i class="pi pi-spin pi-spinner"></i> Memuat data penerimaan bantuan…
+        </div>
+
+        <!-- Belum pernah menerima bantuan -->
+        <div v-else-if="mustahikRiwayat.length === 0" class="detail-card" style="display:flex;align-items:center;gap:16px;">
+          <div style="width:44px;height:44px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="pi pi-inbox" style="font-size:20px;color:#94a3b8;"></i>
+          </div>
+          <div>
+            <p style="font-size:13px;font-weight:700;color:#374151;margin:0;">Belum Pernah Menerima Bantuan</p>
+            <p style="font-size:12px;color:#94a3b8;margin:4px 0 0;">
+              <strong>{{ data.nama ?? 'Anggota ini' }}</strong> belum pernah menerima bantuan dari lembaga manapun.
+            </p>
+          </div>
+        </div>
+
+        <!-- Ada data mustahik -->
+        <template v-else>
+          <!-- Stat boxes -->
+          <div class="detail-card">
+            <p class="section-title"><i class="pi pi-chart-bar"></i> Ringkasan Penerimaan Bantuan</p>
+            <div class="grid-stat" style="grid-template-columns:repeat(3,1fr);">
+              <div class="stat-box" style="background:#f0fdf4;">
+                <p class="stat-label" style="color:#15803d;">Bantuan Tahun Ini</p>
+                <p class="stat-val" style="color:#15803d;">{{ formatRupiah(mustahikBantuanTahunIni) }}</p>
+              </div>
+              <div class="stat-box" style="background:#fdf4ff;">
+                <p class="stat-label" style="color:#7e22ce;">Total Kumulatif</p>
+                <p class="stat-val" style="color:#7e22ce;">{{ formatRupiah(mustahikBantuanTotal) }}</p>
+              </div>
+              <div class="stat-box" style="background:#eff6ff;">
+                <p class="stat-label" style="color:#1d4ed8;">LAZ Berkontribusi</p>
+                <p class="stat-val" style="color:#1d4ed8;">{{ mustahikTotalLaz }}</p>
+                <p style="font-size:10px;color:#94a3b8;margin:2px 0 0;">LAZ berbeda</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rekap per tahun -->
+          <div class="detail-card">
+            <p class="section-title"><i class="pi pi-history"></i> Ringkasan per Tahun</p>
+            <div style="overflow-x:auto;">
+              <table class="kk-table">
+                <thead>
+                  <tr>
+                    <th>Tahun</th>
+                    <th>Total Penerimaan</th>
+                    <th>Penerimaan Langsung</th>
+                    <th>Penerimaan Tidak Langsung</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in mustahikRekapTahun" :key="row.tahun">
+                    <td><strong>{{ row.tahun }}</strong></td>
+                    <td><span style="padding:2px 10px;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700;">{{ formatRupiah(row.total) }}</span></td>
+                    <td>{{ formatRupiah(row.langsung) }}</td>
+                    <td>{{ formatRupiah(row.tidakLangsung) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Riwayat detail -->
+          <div class="detail-card">
+            <p class="section-title"><i class="pi pi-list"></i> Riwayat Penerimaan Bantuan</p>
+            <div style="overflow-x:auto;">
+              <table class="kk-table">
+                <thead>
+                  <tr>
+                    <th>Tahun</th>
+                    <th>LAZ</th>
+                    <th>Periode</th>
+                    <th>Program</th>
+                    <th>Bidang</th>
+                    <th>Nominal</th>
+                    <th>Tipe Penerimaan</th>
+                    <th>Tanggal Cair</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(item, i) in mustahikRiwayat" :key="i">
+                    <td>{{ item.tahun }}</td>
+                    <td>
+                      <p style="font-weight:600;color:#374151;margin:0;">{{ item.laz || '-' }}</p>
+                      <p style="font-size:10px;color:#94a3b8;margin:0;">{{ item.laz_kode }}</p>
+                    </td>
+                    <td>{{ item.periode }}</td>
+                    <td>{{ item.program }}</td>
+                    <td>{{ item.bidang }}</td>
+                    <td><span style="padding:2px 8px;border-radius:99px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;">{{ formatRupiah(item.nominal) }}</span></td>
+                    <td>{{ item.metode }}</td>
+                    <td>{{ item.tanggal }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+
+        <!-- ===== DIVIDER 3: DATA KARTU KELUARGA ===== -->
         <div class="section-divider section-divider--kk">
           <div class="section-divider-line"></div>
           <div class="section-divider-label section-divider-label--kk">
@@ -272,13 +377,14 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import api from '@/services/api'
+import MustahikService from '@/services/mustahik'
 import { fetchBaselineProvinsi } from '@/services/baselineService'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
 
-const route     = useRoute()
-const router    = useRouter()
+const route  = useRoute()
+const router = useRouter()
 
 const loading        = ref(true)
 const data           = ref(null)
@@ -288,13 +394,40 @@ const loadingKK      = ref(false)
 const kkMembers      = ref([])
 const kkDetail       = ref(null)
 
+// ── Mustahik / Penerimaan Bantuan ──
+const loadingMustahik = ref(false)
+const mustahikRiwayat = ref([])   // raw array dari /mustahik/{nikHashed}/riwayat
+
 const { resolveValue, getDetailFields } = useBaselineRefs()
 const { userIdentifier } = useWatermark()
 
-const NIK_FIELDS = new Set([
-  'nomor_induk_kependudukan', 'nik',
-  'nomor_kartu_keluarga', 'nkk',
-])
+// ── Computed stats mustahik ──
+const mustahikBantuanTahunIni = computed(() => {
+  const tahun = new Date().getFullYear()
+  return mustahikRiwayat.value
+    .filter(r => Number(r.tahun) === tahun)
+    .reduce((s, r) => s + Number(r.nominal || 0), 0)
+})
+const mustahikBantuanTotal = computed(() =>
+  mustahikRiwayat.value.reduce((s, r) => s + Number(r.nominal || 0), 0)
+)
+const mustahikTotalLaz = computed(() =>
+  new Set(mustahikRiwayat.value.map(r => r.laz_kode).filter(Boolean)).size
+)
+const mustahikRekapTahun = computed(() => {
+  const map = {}
+  mustahikRiwayat.value.forEach(r => {
+    const t = r.tahun
+    const n = Number(r.nominal || 0)
+    if (!map[t]) map[t] = { tahun: t, total: 0, langsung: 0, tidakLangsung: 0 }
+    map[t].total += n
+    if (r.metode === 'Penerima Manfaat Langsung')      map[t].langsung      += n
+    if (r.metode === 'Penerima Manfaat Tidak Langsung') map[t].tidakLangsung += n
+  })
+  return Object.values(map).sort((a, b) => b.tahun - a.tahun)
+})
+
+const NIK_FIELDS = new Set(['nomor_induk_kependudukan', 'nik', 'nomor_kartu_keluarga', 'nkk'])
 function isNikField(key) { return NIK_FIELDS.has(key) }
 
 const PINNED_AFTER_KONDISI_RUMAH = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
@@ -322,7 +455,6 @@ function isDisabGroup(group) {
   return fields.length > 0 &&
     fields.filter(f => DISAB_KEYS.has(f.field_key)).length / fields.length >= 0.5
 }
-
 function groupType(group) {
   if (isDisabGroup(group)) return 'disab'
   if (STAT_GROUPS.has(group.group)) return 'stat'
@@ -332,7 +464,6 @@ function groupType(group) {
 const groupSlots = computed(() => {
   const slots = []
   const pairBuf = []
-
   function flushPair() {
     while (pairBuf.length >= 2) {
       const pair = pairBuf.splice(0, 2)
@@ -343,18 +474,14 @@ const groupSlots = computed(() => {
       slots.push({ type: p.type, groups: [p.group] })
     }
   }
-
   let statBuf = []
   function flushStat() {
     if (statBuf.length) { slots.push({ type: 'stat', groups: [...statBuf] }); statBuf = [] }
   }
-
   for (const g of detailGroups.value) {
     const t = groupType(g)
-    if (t === 'stat') {
-      flushPair()
-      statBuf.push(g)
-    } else {
+    if (t === 'stat') { flushPair(); statBuf.push(g) }
+    else {
       flushStat()
       pairBuf.push({ type: t, group: g })
       if (pairBuf.length === 2) {
@@ -393,19 +520,10 @@ const DISAB_LEVELS = {
   '2': { label: 'Ya, banyak kesulitan',      bg: '#fff7ed', color: '#c2410c' },
   '3': { label: 'Tidak bisa sama sekali',    bg: '#fef2f2', color: '#b91c1c' },
 }
-function disabBadgeLabel(v) {
-  const s = String(v ?? '').trim()
-  return (DISAB_LEVELS[s] ?? DISAB_LEVELS['0']).label
-}
+function disabBadgeLabel(v) { return (DISAB_LEVELS[String(v ?? '').trim()] ?? DISAB_LEVELS['0']).label }
 function disabBadgeStyle(v) {
-  const s = String(v ?? '').trim()
-  const lvl = DISAB_LEVELS[s] ?? DISAB_LEVELS['0']
-  return {
-    background: lvl.bg, color: lvl.color,
-    padding: '2px 10px', borderRadius: '99px',
-    fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap',
-    display: 'inline-block',
-  }
+  const lvl = DISAB_LEVELS[String(v ?? '').trim()] ?? DISAB_LEVELS['0']
+  return { background: lvl.bg, color: lvl.color, padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap', display: 'inline-block' }
 }
 
 const DESIL_COLORS = [
@@ -425,7 +543,7 @@ function _desilIdx(v) {
   const n = parseInt(String(v ?? '').trim())
   return (Number.isInteger(n) && n >= 1 && n <= 10) ? n : 0
 }
-function desilLabel(v) { return DESIL_COLORS[_desilIdx(v)]?.label ?? '' }
+function desilLabel(v)        { return DESIL_COLORS[_desilIdx(v)]?.label ?? '' }
 function desilBannerStyle(v) {
   const c = DESIL_COLORS[_desilIdx(v)]
   if (!c) return { background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'14px', padding:'18px 22px', color:'#64748b' }
@@ -452,8 +570,7 @@ const GROUP_ICONS = {
   'Sosial Ekonomi': 'pi pi-wallet', 'Bansos': 'pi pi-wallet', 'Lainnya': 'pi pi-list',
   'Kondisi Rumah': 'pi pi-home', 'Fasilitas Rumah': 'pi pi-home',
   'Aset Bergerak': 'pi pi-car', 'Aset Tidak Bergerak': 'pi pi-building',
-  'Ternak': 'pi pi-star', 'Info Keluarga': 'pi pi-users',
-  'Alamat': 'pi pi-map-marker',
+  'Ternak': 'pi pi-star', 'Info Keluarga': 'pi pi-users', 'Alamat': 'pi pi-map-marker',
 }
 function groupIcon(g) {
   if ((g ?? '').toLowerCase().includes('disabilitas')) return 'pi pi-accessibility'
@@ -478,6 +595,24 @@ async function loadData(nik) {
   } catch (e) { console.error('[AnggotaDetail] gagal load:', e) }
 }
 
+async function loadMustahikData(nik) {
+  loadingMustahik.value = true
+  mustahikRiwayat.value = []
+  try {
+    const detailRes = await MustahikService.getDetailByNik(nik)
+    const rows = detailRes?.data ?? []
+    if (rows.length === 0) return
+    const nikHashed = rows[0]?.nik_hashed ?? btoa(nik)
+    const riwayatRes = await MustahikService.getRiwayatByNikHashed(nikHashed)
+    mustahikRiwayat.value = riwayatRes?.data ?? []
+  } catch (e) {
+    // 404 = bukan mustahik, abaikan; error lain log saja
+    if (e?.response?.status !== 404) console.error('[AnggotaDetail] gagal load mustahik:', e)
+  } finally {
+    loadingMustahik.value = false
+  }
+}
+
 async function loadKKData(nkk) {
   if (!nkk) return
   loadingKK.value = true
@@ -499,10 +634,12 @@ async function loadKKData(nkk) {
 }
 
 async function init(nik) {
-  loading.value   = true
-  data.value      = null
-  kkMembers.value = []
-  kkDetail.value  = null
+  loading.value         = true
+  data.value            = null
+  kkMembers.value       = []
+  kkDetail.value        = null
+  mustahikRiwayat.value = []
+
   const [indGroups, kkGroups] = await Promise.all([
     getDetailFields('individu'),
     getDetailFields('keluarga'),
@@ -511,9 +648,12 @@ async function init(nik) {
   detailGroups.value   = indGroups
   keluargaGroups.value = kkGroups
   loading.value = false
-  if (data.value?.nomor_kartu_keluarga) {
-    loadKKData(data.value.nomor_kartu_keluarga)
-  }
+
+  // load paralel: KK + mustahik
+  const tasks = []
+  if (data.value?.nomor_kartu_keluarga) tasks.push(loadKKData(data.value.nomor_kartu_keluarga))
+  tasks.push(loadMustahikData(nik))
+  await Promise.allSettled(tasks)
 }
 
 watch(
@@ -585,9 +725,14 @@ onMounted(() => init(String(route.params.nik)))
 .kk-you-badge { display:inline-block; padding:1px 6px; border-radius:99px; font-size:10px; font-weight:700; background:#2563eb; color:white; margin-right:5px; vertical-align:middle; }
 .nik-link { color:#2563eb; text-decoration:underline; cursor:pointer; }
 .kk-table tbody tr:not(.kk-active-row):hover .nik-link { color:#1d4ed8; }
+/* Dividers */
 .section-divider { display:flex; align-items:center; gap:12px; margin:4px 0; }
 .section-divider-line { flex:1; height:1px; background:#e2e8f0; }
 .section-divider-label { display:flex; align-items:center; gap:6px; padding:5px 14px; border-radius:99px; background:#f1f5f9; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; white-space:nowrap; }
+/* Divider mustahik (hijau) */
+.section-divider--mustahik .section-divider-line { background:#bbf7d0; }
+.section-divider-label--mustahik { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+/* Divider KK (biru) */
 .section-divider--kk .section-divider-line { background:#bfdbfe; }
 .section-divider-label--kk { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
 </style>
