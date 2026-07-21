@@ -203,6 +203,7 @@ import Button from 'primevue/button'
 import Avatar from 'primevue/avatar'
 import Dialog from 'primevue/dialog'
 import { useAuthStore } from '@/stores/auth'
+import { useWatermark } from '@/composables/useWatermark'
 
 const route      = useRoute()
 const router     = useRouter()
@@ -213,24 +214,17 @@ const showUserMenu   = ref(false)
 const confirmVisible = ref(false)
 const loggingOut     = ref(false)
 
-const user = computed(() => authStore.user)
-
-const userIdentifier = computed(() => {
-  const u = user.value
-  if (!u) return 'CONFIDENTIAL'
-  return u.email || u.tuser_email || u.notelp || u.username || u.user_id || 'CONFIDENTIAL'
-})
+const { userIdentifier } = useWatermark()
 
 const userDisplayName = computed(() => authStore.userDisplayName || 'Admin')
 const userFirstName   = computed(() => userDisplayName.value.split(' ')[0])
 const userTypeLabel   = computed(() =>
-  user.value?.user_type === 'dtsen' ? 'LAZ / DTSEN' : 'Internal'
+  authStore.user?.user_type === 'dtsen' ? 'LAZ / DTSEN' : 'Internal'
 )
 const userInitials = computed(() =>
   userDisplayName.value.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 )
 
-// FIX: gunakan /laporan bukan /report agar isActive() cocok dengan route yang terdaftar
 const navItems = [
   { to: '/dashboard',     label: 'Dashboard',              icon: 'pi pi-home'       },
   { to: '/data-baseline', label: 'Data DTSEN',             icon: 'pi pi-database'   },

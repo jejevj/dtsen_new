@@ -130,7 +130,7 @@ import { computed, onMounted } from 'vue'
 import Button from 'primevue/button'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { maskNik } from '@/utils/formatter'
-import { useAuthStore } from '@/stores/auth'
+import { useWatermark } from '@/composables/useWatermark'
 
 const props = defineProps({
   loading:      { type: Boolean, default: false },
@@ -145,13 +145,7 @@ const props = defineProps({
 })
 defineEmits(['next', 'prev', 'detail'])
 
-// Ambil email user langsung dari auth store — tidak butuh prop dari parent
-const authStore = useAuthStore()
-const userIdentifier = computed(() => {
-  const u = authStore.user
-  if (!u) return ''
-  return u.email || u.tuser_email || u.notelp || u.user_id || ''
-})
+const { userIdentifier } = useWatermark()
 
 const NIK_COLS = new Set([
   'nomor_induk_kependudukan', 'nik',
