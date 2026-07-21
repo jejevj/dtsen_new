@@ -143,14 +143,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
+import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
 
 const route     = useRoute()
 const router    = useRouter()
-const authStore = useAuthStore()
 
 const loading        = ref(true)
 const loadingMembers = ref(false)
@@ -159,12 +158,7 @@ const kkMembers      = ref([])
 const keluargaGroups = ref([])
 
 const { resolveValue, getDetailFields } = useBaselineRefs()
-
-const userIdentifier = computed(() => {
-  const u = authStore.user
-  if (!u) return 'CONFIDENTIAL'
-  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
-})
+const { userIdentifier } = useWatermark()
 
 const NIK_FIELDS = new Set([
   'nomor_induk_kependudukan', 'nik',
@@ -181,13 +175,6 @@ function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-/**
- * Urutan paksa group keluarga:
- * semua group selain 3 card aset tampil sesuai urutan API,
- * lalu tepat setelah "Kondisi Rumah" sisipkan:
- *   Aset Bergerak → Aset Tidak Bergerak → Fasilitas Rumah
- * Group lain sesudah Kondisi Rumah (misal Ternak) tetap mengikuti di belakang.
- */
 const PINNED_AFTER_KONDISI_RUMAH = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
 function reorderKeluargaGroups(groups) {
   const pinnedNames = new Set(PINNED_AFTER_KONDISI_RUMAH)

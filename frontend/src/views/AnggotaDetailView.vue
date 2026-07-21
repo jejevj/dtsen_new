@@ -60,14 +60,12 @@
         <template v-if="detailGroups.length">
           <template v-for="(slot, si) in groupSlots" :key="si">
 
-            <!-- Disabilitas: tabel khusus, tapi bisa dipasangkan col-6 -->
             <template v-if="slot.type === 'disab'">
               <div :class="slot.groups.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
                   <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
                   <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
-                    <!-- Disabilitas: pakai tabel badge -->
                     <template v-if="isDisabGroup(group)">
                       <table class="disab-table">
                         <thead>
@@ -86,7 +84,6 @@
                         </tbody>
                       </table>
                     </template>
-                    <!-- Non-disab yang dipasangkan (misal Lainnya): pakai tabel biasa + renderFieldValue -->
                     <template v-else>
                       <table class="info-table">
                         <tbody>
@@ -105,7 +102,6 @@
               </div>
             </template>
 
-            <!-- Stat group -->
             <template v-else-if="slot.type === 'stat'">
               <div style="display:flex;flex-direction:column;gap:16px;">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
@@ -134,7 +130,6 @@
               </div>
             </template>
 
-            <!-- Normal: bisa 1 atau 2 kolom -->
             <template v-else>
               <div :class="slot.groups.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
@@ -183,7 +178,6 @@
         </div>
         <template v-else>
 
-          <!-- Banner desil -->
           <div v-if="kkDetail" class="desil-banner" :style="desilBannerStyle(kkDetail.desil_nasional)">
             <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <div :style="desilIconStyle(kkDetail.desil_nasional)">
@@ -203,7 +197,6 @@
             </div>
           </div>
 
-          <!-- Detail Keluarga groups -->
           <template v-if="kkDetail && keluargaGroups.length">
             <template v-for="(rowPair, ri) in pairedKeluargaGroups" :key="'kk-'+ri">
               <div :class="rowPair.length === 2 ? 'grid-2' : ''">
@@ -230,7 +223,6 @@
             </template>
           </template>
 
-          <!-- Tabel Anggota KK -->
           <div class="detail-card" style="display:flex;flex-direction:column;">
             <p class="section-title">
               <i class="pi pi-users"></i> Anggota dalam KK
@@ -279,15 +271,14 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import { fetchBaselineProvinsi } from '@/services/baselineService'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
+import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
 
 const route     = useRoute()
 const router    = useRouter()
-const authStore = useAuthStore()
 
 const loading        = ref(true)
 const data           = ref(null)
@@ -298,12 +289,7 @@ const kkMembers      = ref([])
 const kkDetail       = ref(null)
 
 const { resolveValue, getDetailFields } = useBaselineRefs()
-
-const userIdentifier = computed(() => {
-  const u = authStore.user
-  if (!u) return 'CONFIDENTIAL'
-  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
-})
+const { userIdentifier } = useWatermark()
 
 const NIK_FIELDS = new Set([
   'nomor_induk_kependudukan', 'nik',
@@ -535,9 +521,6 @@ watch(
   (newNik) => { if (newNik) init(String(newNik)) },
 )
 
-/**
- * Helper terpusat: format nilai field untuk ditampilkan.
- */
 function renderFieldValue(key, val) {
   if (key === 'tanggal_lahir')                                    return formatUsia(val)
   if (key === 'kelas_tertinggi_yang_diduduki')                    return val != null ? 'Kelas ' + val : '-'
@@ -573,7 +556,6 @@ onMounted(() => init(String(route.params.nik)))
 @media(max-width:768px) { .grid-2 { grid-template-columns:1fr; } .grid-stat { grid-template-columns:1fr 1fr; } }
 .detail-card { background:white; border-radius:14px; border:1px solid #f1f5f9; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
 .wm-card { position:relative; overflow:hidden; }
-/* z-index:2 → overlay DI DEPAN konten card */
 .wm-overlay { position:absolute; inset:0; z-index:2; pointer-events:none; user-select:none; }
 .wm-svg { display:block; width:100%; height:100%; }
 .section-title { font-size:13px; font-weight:700; color:#374151; margin:0 0 14px; display:flex; align-items:center; gap:6px; }
@@ -603,39 +585,9 @@ onMounted(() => init(String(route.params.nik)))
 .kk-you-badge { display:inline-block; padding:1px 6px; border-radius:99px; font-size:10px; font-weight:700; background:#2563eb; color:white; margin-right:5px; vertical-align:middle; }
 .nik-link { color:#2563eb; text-decoration:underline; cursor:pointer; }
 .kk-table tbody tr:not(.kk-active-row):hover .nik-link { color:#1d4ed8; }
-
-/* ── Section Divider ── */
-.section-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 4px 0;
-}
-.section-divider-line {
-  flex: 1;
-  height: 1px;
-  background: #e2e8f0;
-}
-.section-divider-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 14px;
-  border-radius: 99px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .6px;
-  white-space: nowrap;
-}
-.section-divider--kk .section-divider-line {
-  background: #bfdbfe;
-}
-.section-divider-label--kk {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
-}
+.section-divider { display:flex; align-items:center; gap:12px; margin:4px 0; }
+.section-divider-line { flex:1; height:1px; background:#e2e8f0; }
+.section-divider-label { display:flex; align-items:center; gap:6px; padding:5px 14px; border-radius:99px; background:#f1f5f9; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; white-space:nowrap; }
+.section-divider--kk .section-divider-line { background:#bfdbfe; }
+.section-divider-label--kk { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
 </style>
