@@ -21,9 +21,6 @@
               Berdasarkan Data Baseline DTSEN dan Laporan Penerima Manfaat
             </p>
           </div>
-          <!--
-          <span style="background:#fef3c7;color:#92400e;padding:4px 12px;border-radius:8px;font-size:11px;font-weight:600;">PROTOTYPE · Data Simulasi</span>
-          -->
         </div>
 
         <div class="bg-white border border-slate-200 rounded-2xl shadow-sm px-5 py-4">
@@ -108,7 +105,17 @@
         </div>     
         
         <div class="hero-grid" style="display:grid;gap:16px;">
-          <div class="detail-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;padding-bottom: 0px;">
+          <!-- Card: Sebaran Mustahik Baseline -->
+          <div class="detail-card wm-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;padding-bottom: 0px;">
+            <svg class="wm-svg" aria-hidden="true">
+              <defs>
+                <pattern id="wm-base-wilayah" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                  <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                  <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-base-wilayah)" />
+            </svg>
             <p class="section-title" style="padding-left: 10px;padding-right: 10px;">
             <i class="pi pi-map"></i> Sebaran Mustahik Berdasarkan Data Baseline
             <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;"
@@ -139,13 +146,11 @@
                       </div>
                     </template>
                   </Column>
-
                   <Column header="Wilayah" field="nama" sortable >
                     <template #body="{ data }">
                       {{ data.nama ?? '-' }}
                     </template>
                   </Column>
-
                   <Column header="Mustahik" field="nama" sortable style="width:30%">
                     <template #body="{ data }">
                       <div class="text-right">
@@ -162,7 +167,17 @@
             </div>
           </div>
 
-          <div class="detail-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;padding-bottom: 0px;">
+          <!-- Card: Sebaran Mustahik per Desil Baseline -->
+          <div class="detail-card wm-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;padding-bottom: 0px;">
+            <svg class="wm-svg" aria-hidden="true">
+              <defs>
+                <pattern id="wm-base-desil" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                  <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                  <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-base-desil)" />
+            </svg>
             <p class="section-title" style="padding-left: 10px;padding-right: 10px;">
               <i class="pi pi-map"></i> Sebaran Mustahik per Desil Berdasarkan Data Baseline
               <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;"
@@ -193,42 +208,29 @@
                       </div>
                     </template>
                   </Column>
-
                   <Column field="nama" sortable header="Provinsi">
                     <template #body="{ data }">
                       {{ data.nama ?? '-' }}
                     </template>
                   </Column>
-
                   <Column field="desil_1" header="Desil 1" sortable>
                     <template #body="{ data }">
-                      <div class="text-right">
-                        {{ formatAngka(data.desil_1 ?? 0) }}
-                      </div>
+                      <div class="text-right">{{ formatAngka(data.desil_1 ?? 0) }}</div>
                     </template>
                   </Column>
-
                   <Column field="desil_1" header="Desil 2" sortable>
                     <template #body="{ data }">
-                      <div class="text-right">
-                        {{ formatAngka(data.desil_2 ?? 0) }}
-                      </div>
+                      <div class="text-right">{{ formatAngka(data.desil_2 ?? 0) }}</div>
                     </template>
                   </Column>
-
                   <Column field="desil_1" header="Desil 3" sortable>
                     <template #body="{ data }">
-                      <div class="text-right">
-                        {{ formatAngka(data.desil_3 ?? 0) }}
-                      </div>
+                      <div class="text-right">{{ formatAngka(data.desil_3 ?? 0) }}</div>
                     </template>
                   </Column>
-
                   <Column field="desil_1" header="Desil 4" sortable>
                     <template #body="{ data }">
-                      <div class="text-right">
-                        {{ formatAngka(data.desil_4 ?? 0) }}
-                      </div>
+                      <div class="text-right">{{ formatAngka(data.desil_4 ?? 0) }}</div>
                     </template>
                   </Column>
                 </DataTable>
@@ -239,10 +241,19 @@
               Data Sebaran Mustahik per Desil Berdasarkan Data Baseline tidak ditemukan
             </div>
           </div>
-          
         </div>
 
-        <div class="detail-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;padding-bottom: 0px;">
+        <!-- Card: Pendistribusian per Wilayah -->
+        <div class="detail-card wm-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;padding-bottom: 0px;">
+          <svg class="wm-svg" aria-hidden="true">
+            <defs>
+              <pattern id="wm-dist-wilayah" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#wm-dist-wilayah)" />
+          </svg>
           <p class="section-title" style="padding-left: 10px;padding-right: 10px;">
             <i class="pi pi-map"></i> Pendistribusian dan Pendayagunaan per Wilayah
             <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;"
@@ -273,38 +284,23 @@
                     </div>
                   </template>
                 </Column>
-
                 <Column field="lvl_1" sortable header="Provinsi">
-                  <template #body="{ data }">
-                    {{ data.lvl_1 ?? '-' }}
-                  </template>
+                  <template #body="{ data }">{{ data.lvl_1 ?? '-' }}</template>
                 </Column>
-
                 <Column field="lvl_2" sortable header="Kab/kota">
-                  <template #body="{ data }">
-                    {{ data.lvl_2 ?? '-' }}
-                  </template>
+                  <template #body="{ data }">{{ data.lvl_2 ?? '-' }}</template>
                 </Column>
-
                 <Column field="lvl_3" sortable header="Kecamatan">
-                  <template #body="{ data }">
-                    {{ data.lvl_3 ?? '-' }}
-                  </template>
+                  <template #body="{ data }">{{ data.lvl_3 ?? '-' }}</template>
                 </Column>
-
                 <Column field="mustahik" header="Mustahik" sortable style="width:10%">
                   <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.mustahik ?? 0) }}
-                    </div>
+                    <div class="text-right">{{ formatAngka(data.mustahik ?? 0) }}</div>
                   </template>
                 </Column>
-
                 <Column field="rupiah" header="Total" sortable style="width:15%">
                   <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatRupiah(data.rupiah ?? 0) }}
-                    </div>
+                    <div class="text-right">{{ formatRupiah(data.rupiah ?? 0) }}</div>
                   </template>
                 </Column>
               </DataTable>
@@ -316,7 +312,17 @@
           </div>
         </div>
 
-        <div class="detail-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;padding-bottom: 0px;">
+        <!-- Card: Pendistribusian per Desil -->
+        <div class="detail-card wm-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;padding-bottom: 0px;">
+          <svg class="wm-svg" aria-hidden="true">
+            <defs>
+              <pattern id="wm-dist-desil" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#wm-dist-desil)" />
+          </svg>
           <p class="section-title" style="padding-left: 10px;padding-right: 10px;">
             <i class="pi pi-map"></i> Pendistribusian dan Pendayagunaan per Desil
             <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;"
@@ -342,106 +348,23 @@
               >
                 <Column header="No" style="width:1%">
                   <template #body="slotProps">
-                    <div class="text-center">
-                      {{ no_desilData + slotProps.index + 1 }}
-                    </div>
+                    <div class="text-center">{{ no_desilData + slotProps.index + 1 }}</div>
                   </template>
                 </Column>
-
                 <Column field="nama" sortable header="Wilayah">
-                  <template #body="{ data }">
-                    {{ data.nama ?? '-' }}
-                  </template>
+                  <template #body="{ data }">{{ data.nama ?? '-' }}</template>
                 </Column>
-
-                <Column field="desil_1" header="Desil 1" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_1 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_2" header="Desil 2" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_2 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_3" header="Desil 3" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_3 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_4" header="Desil 4" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_4 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_5" header="Desil 5" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_5 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_6" header="Desil 6" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_6 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_7" header="Desil 7" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_7 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_8" header="Desil 8" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_8 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_9" header="Desil 9" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_9 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_10" header="Desil 10" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_10 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column field="desil_na" header="N/A" sortable>
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.desil_na ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-                
+                <Column field="desil_1" header="Desil 1" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_1 ?? 0) }}</div></template></Column>
+                <Column field="desil_2" header="Desil 2" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_2 ?? 0) }}</div></template></Column>
+                <Column field="desil_3" header="Desil 3" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_3 ?? 0) }}</div></template></Column>
+                <Column field="desil_4" header="Desil 4" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_4 ?? 0) }}</div></template></Column>
+                <Column field="desil_5" header="Desil 5" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_5 ?? 0) }}</div></template></Column>
+                <Column field="desil_6" header="Desil 6" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_6 ?? 0) }}</div></template></Column>
+                <Column field="desil_7" header="Desil 7" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_7 ?? 0) }}</div></template></Column>
+                <Column field="desil_8" header="Desil 8" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_8 ?? 0) }}</div></template></Column>
+                <Column field="desil_9" header="Desil 9" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_9 ?? 0) }}</div></template></Column>
+                <Column field="desil_10" header="Desil 10" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_10 ?? 0) }}</div></template></Column>
+                <Column field="desil_na" header="N/A" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_na ?? 0) }}</div></template></Column>
               </DataTable>
             </div>
           </template>
@@ -453,52 +376,103 @@
 
         <!-- Desil breakdown cards -->
         <div>
-          <!-- <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 12px;">Distribusi Mustahik per Desil</p> -->
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
             <div v-for="d in desilStats" :key="d.label"
-              style="border-radius:14px;padding:18px;text-align:center;"
+              class="wm-card"
+              style="border-radius:14px;padding:18px;text-align:center;position:relative;overflow:hidden;"
               :style="{ background:d.iconBg, border:`1px `, borderColor:black}">
-              <p style="font-size:1.4rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;" :style="{ color:d.iconColor}">Desil {{ d.label }}</p>
-              <p style="font-size:1.4rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.base_val }}</p>
-              <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Mustahik Berdasarkan Data Baseline</p>
-              <p style="font-size:1.4rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.lap_val }}</p>
-              <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Penerima Manfaat Lembaga</p>
-              <p style="font-size:1.2rem;font-weight:600;margin:0;" :style="{ color:d.iconColor}">{{ d.agg_val }}</p>
-              <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Total Pendistribusian dan Pendayagunaan</p>
+              <svg class="wm-svg" aria-hidden="true">
+                <defs>
+                  <pattern :id="'wm-desil-card-'+d.label" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                    <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                    <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" :fill="'url(#wm-desil-card-'+d.label+')'" />
+              </svg>
+              <p style="font-size:1.4rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;position:relative;z-index:1;" :style="{ color:d.iconColor}">Desil {{ d.label }}</p>
+              <p style="font-size:1.4rem;font-weight:900;margin:0 0 2px;position:relative;z-index:1;" :style="{ color:d.iconColor}">{{ d.base_val }}</p>
+              <p style="font-size:11px;color:#64748b;margin:0 0 6px;position:relative;z-index:1;">Mustahik Berdasarkan Data Baseline</p>
+              <p style="font-size:1.4rem;font-weight:900;margin:0 0 2px;position:relative;z-index:1;" :style="{ color:d.iconColor}">{{ d.lap_val }}</p>
+              <p style="font-size:11px;color:#64748b;margin:0 0 6px;position:relative;z-index:1;">Penerima Manfaat Lembaga</p>
+              <p style="font-size:1.2rem;font-weight:600;margin:0;position:relative;z-index:1;" :style="{ color:d.iconColor}">{{ d.agg_val }}</p>
+              <p style="font-size:11px;color:#64748b;margin:0 0 6px;position:relative;z-index:1;">Total Pendistribusian dan Pendayagunaan</p>
             </div>
           </div>
         </div>
 
         <!-- Stat Cards -->
         <div class="grid-1-2-1">
-          <div v-for="stat in statCards" :key="stat.label" class="stat-card">
-            <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
-              <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+          <div v-for="stat in statCards" :key="stat.label" class="stat-card wm-card">
+            <svg class="wm-svg" aria-hidden="true">
+              <defs>
+                <pattern :id="'wm-stat-'+stat.label" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                  <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                  <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.label+')'" />
+            </svg>
+            <div style="position:relative;z-index:1;">
+              <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+                <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+              </div>
+              <p style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 3px;">{{ stat.value }}</p>
+              <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
+              <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
             </div>
-            <p style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 3px;">{{ stat.value }}</p>
-            <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
-            <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
           </div>
         </div>
 
         <!-- Charts row -->
-        <!-- key berubah saat lebar container berubah → Chart.js re-mount & resize otomatis -->
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
-          <div class="card-box">
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
-            <Chart :key="'pie-'+chartKey" type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
-            <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
-              <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>Laki-laki: {{ formatAngka(genderDataM) }}</span>
-              <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>Perempuan: {{ formatAngka(genderDataF) }}</span>
+          <div class="card-box wm-card">
+            <svg class="wm-svg" aria-hidden="true">
+              <defs>
+                <pattern id="wm-chart-gender" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                  <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                  <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-chart-gender)" />
+            </svg>
+            <div style="position:relative;z-index:1;">
+              <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
+              <Chart :key="'pie-'+chartKey" type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
+              <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
+                <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>Laki-laki: {{ formatAngka(genderDataM) }}</span>
+                <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>Perempuan: {{ formatAngka(genderDataF) }}</span>
+              </div>
             </div>
           </div>
-          <div class="card-box">
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Penerima Manfaat per Desil</p>
-            <Chart :key="'bar-'+chartKey" type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
+          <div class="card-box wm-card">
+            <svg class="wm-svg" aria-hidden="true">
+              <defs>
+                <pattern id="wm-chart-desil" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                  <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                  <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-chart-desil)" />
+            </svg>
+            <div style="position:relative;z-index:1;">
+              <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jumlah Penerima Manfaat per Desil</p>
+              <Chart :key="'bar-'+chartKey" type="bar" :data="desilBarData" :options="barOpts" style="height:200px;" />
+            </div>
           </div>
         </div>
 
-        <div class="detail-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;">
+        <!-- Card: Sebaran Usia -->
+        <div class="detail-card wm-card" style="display:flex;flex-direction:column;padding-left: 0px;padding-right: 0px;">
+          <svg class="wm-svg" aria-hidden="true">
+            <defs>
+              <pattern id="wm-usia" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#wm-usia)" />
+          </svg>
           <p class="section-title" style="padding-left: 10px;padding-right: 10px;">
             <i class="pi pi-map"></i> Sebaran Penerima Manfaat Berdasarkan Usia
             <span style="margin-left:auto;font-size:11px;font-weight:500;color:#94a3b8;font-family:monospace;"></span>
@@ -523,74 +497,19 @@
               >
                 <Column header="No" style="width:1%">
                   <template #body="slotProps">
-                    <div class="text-center">
-                      {{ no_usiaData + slotProps.index + 1 }}
-                    </div>
+                    <div class="text-center">{{ no_usiaData + slotProps.index + 1 }}</div>
                   </template>
                 </Column>
-
-                <Column header="Wilayah" field="nama" sortable >
-                  <template #body="{ data }">
-                    {{ data.nama ?? '-' }}
-                  </template>
+                <Column header="Wilayah" field="nama" sortable>
+                  <template #body="{ data }">{{ data.nama ?? '-' }}</template>
                 </Column>
-
-                <Column header="Usia 0 - 10" field="usia_1" sortable >
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.usia_1 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column header="Usia 11 - 20" field="usia_2" sortable >
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.usia_2 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column header="Usia 21 - 30" field="usia_3" sortable >
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.usia_3 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column header="Usia 31 - 40" field="usia_4" sortable >
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.usia_4 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column header="Usia 41 - 50" field="usia_5" sortable >
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.usia_5 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column header="Usia 51 - 60" field="usia_6" sortable >
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.usia_6 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
-                <Column header="Usia 60+" field="usia_7" sortable >
-                  <template #body="{ data }">
-                    <div class="text-right">
-                      {{ formatAngka(data.usia_7 ?? 0) }}
-                    </div>
-                  </template>
-                </Column>
-
+                <Column header="Usia 0 - 10" field="usia_1" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_1 ?? 0) }}</div></template></Column>
+                <Column header="Usia 11 - 20" field="usia_2" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_2 ?? 0) }}</div></template></Column>
+                <Column header="Usia 21 - 30" field="usia_3" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_3 ?? 0) }}</div></template></Column>
+                <Column header="Usia 31 - 40" field="usia_4" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_4 ?? 0) }}</div></template></Column>
+                <Column header="Usia 41 - 50" field="usia_5" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_5 ?? 0) }}</div></template></Column>
+                <Column header="Usia 51 - 60" field="usia_6" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_6 ?? 0) }}</div></template></Column>
+                <Column header="Usia 60+" field="usia_7" sortable><template #body="{ data }"><div class="text-right">{{ formatAngka(data.usia_7 ?? 0) }}</div></template></Column>
               </DataTable>
             </div>
           </template>
@@ -600,54 +519,31 @@
           </div>
         </div>
 
-        <!-- Sebaran Wilayah -->
-        <!--
-        <div class="card-box">
-          <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">
-            Sebaran Mustahik
-            <span style="font-weight:400;color:#94a3b8;">per {{ wilayahGroupLabel }}</span>
-          </p>
-          <div v-if="stats.by_provinsi.length === 0" style="text-align:center;padding:32px;color:#94a3b8;font-size:13px;">
-            Tidak ada data mustahik di wilayah ini.
-          </div>
-          <div v-else style="display:flex;gap:16px;flex-wrap:wrap;">
-            <div v-for="p in stats.by_provinsi" :key="p.nama"
-              style="flex:1;min-width:160px;background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0;">
-              <p style="font-size:12px;color:#64748b;margin:0 0 4px;">{{ p.nama }}</p>
-              <p style="font-size:1.4rem;font-weight:800;color:#1e293b;margin:0;">{{ p.jumlah }}</p>
-              <div style="margin-top:8px;background:#e2e8f0;border-radius:4px;height:6px;">
-                <div :style="{ width: stats.total_mustahik ? (p.jumlah/stats.total_mustahik*100)+'%' : '0%', height:'6px', borderRadius:'4px', background:'#3b82f6' }"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        -->
-
-        <!-- Quick nav -->
-        <!--
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;" class="quick-nav">
-          <div v-for="nav in quickNav" :key="nav.label" class="nav-card" @click="$router.push(nav.to)">
-            <div :style="{ width:'40px', height:'40px', borderRadius:'10px', background:nav.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'12px' }">
-              <i :class="nav.icon" :style="{ color:nav.iconColor, fontSize:'17px' }"></i>
-            </div>
-            <p style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 2px;">{{ nav.label }}</p>
-            <p style="font-size:12px;color:#94a3b8;margin:0;">{{ nav.desc }}</p>
-          </div>
-        </div>
-        -->
+        <!-- Bidang Program Cards -->
         <div class="grid-3" style="display:grid;gap:16px;">
           <div
             v-for="(bidang, i) in bidangProgram"
             :key="bidang.bidang_label"
-            style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
-            :style="{ background:bidangColors[i%bidangColors.length].back, borderRadius:'16px', border:bidangColors[i%bidangColors.length].bordersize + ' solid ' + bidangColors[i%bidangColors.length].border, padding:'24px', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }"
+            class="wm-card"
+            :style="{ background:bidangColors[i%bidangColors.length].back, borderRadius:'16px', border:bidangColors[i%bidangColors.length].bordersize + ' solid ' + bidangColors[i%bidangColors.length].border, padding:'24px', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', position:'relative', overflow:'hidden' }"
           >
-            <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:bidangColors[i%bidangColors.length].bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
-              <i :class="bidangIcons[i%bidangIcons.length]" :style="{ color:bidangColors[i%bidangColors.length].icon, fontSize:'18px' }"></i>
+            <svg class="wm-svg" aria-hidden="true">
+              <defs>
+                <pattern :id="'wm-bidang-'+i" x="0" y="0" width="220" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(-30)">
+                  <text x="0" y="20" class="wm-text">{{ userIdentifier }}</text>
+                  <text x="0" y="50" class="wm-text">{{ lazName }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" :fill="'url(#wm-bidang-'+i+')'" />
+            </svg>
+            <div style="position:relative;z-index:1;">
+              <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:bidangColors[i%bidangColors.length].bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+                <i :class="bidangIcons[i%bidangIcons.length]" :style="{ color:bidangColors[i%bidangColors.length].icon, fontSize:'18px' }"></i>
+              </div>
+              <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 4px;">{{ bidang.bidang_label }}</h3>
+              <p style="font-size:1.3rem;font-weight:800;color:#15803d;margin:0 0 4px;">{{ formatRupiah(bidang.total_penyaluran) }}</p>
+              <p style="font-size:11px;color:#94a3b8;margin:0 0 12px;">kepada {{ formatAngka(bidang.total_mustahik) }} Penerima Manfaat</p>
             </div>
-            <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 4px;">{{ bidang.bidang_label }}</h3>
-            <p style="font-size:1.3rem;font-weight:800;color:#15803d;margin:0 0 4px;">{{ formatRupiah(bidang.total_penyaluran) }}</p>
-            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px;">kepada {{ formatAngka(bidang.total_mustahik) }} Penerima Manfaat</p>
           </div>
         </div>
 
@@ -671,13 +567,10 @@ import { formatShort }  from '@/utils/formatter'
 import { formatAngka }  from '@/utils/formatter'
 import { DESIL_COLORS, getMockByWilayah, buildSummaryStats } from '@/data/mockMustahik'
 import ReportService from '@/services/report'
+import { useWatermark } from '@/composables/useWatermark'
 
 const authStore = useAuthStore()
-const userEmail = computed(() => {
-  const u = authStore.user
-  if (!u) return 'CONFIDENTIAL'
-  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
-})
+const { userIdentifier, lazName } = useWatermark()
 
 const selectedYear      = ref(new Date().getFullYear())
 const wilayahLoading    = ref(false)
@@ -708,21 +601,11 @@ const no_desilBase  = ref(0)
 const no_desilData  = ref(0)
 const no_usiaData   = ref(0)
 
-const onPage_wilayahBase = (event) => {
-  no_wilayahBase.value = event.first
-}
-const onPage_wilayahData = (event) => {
-  no_wilayahData.value = event.first
-}
-const onPage_desilBase = (event) => {
-  no_desilBase.value = event.first
-}
-const onPage_desilData = (event) => {
-  no_desilData.value = event.first
-}
-const onPage_usiaData = (event) => {
-  no_usiaData.value = event.first
-}
+const onPage_wilayahBase = (event) => { no_wilayahBase.value = event.first }
+const onPage_wilayahData = (event) => { no_wilayahData.value = event.first }
+const onPage_desilBase   = (event) => { no_desilBase.value   = event.first }
+const onPage_desilData   = (event) => { no_desilData.value   = event.first }
+const onPage_usiaData    = (event) => { no_usiaData.value    = event.first }
 
 const mustahikData_desil = computed(() =>
   desilData.value.reduce((total, item) => total + (item.desil_1 || 0) + (item.desil_2 || 0) + (item.desil_3 || 0) + (item.desil_4 || 0), 0)
@@ -767,32 +650,15 @@ onMounted(async () => {
 
   datatableLoading.value = false
 
-  if (paramLembagaRes.status === 'fulfilled')
-    paramLembaga.value = paramLembagaRes.value
-
-  if (paramTahunRes.status === 'fulfilled')
-    paramTahun.value = paramTahunRes.value
-
-  if (paramProvRes.status === 'fulfilled')
-    paramProv.value = paramProvRes.value
-
-  if (bidangRes.status === 'fulfilled')
-    bidangData.value = bidangRes.value
-  
-  if (usiaRes.status === 'fulfilled')
-    usiaData.value = usiaRes.value
-
-  if (basewilayahRes.status === 'fulfilled')
-    wilayahBase.value = basewilayahRes.value
-
-  if (datawilayahRes.status === 'fulfilled')
-    wilayahData.value = datawilayahRes.value
-
-  if (basedesilRes.status === 'fulfilled')
-    desilBase.value = basedesilRes.value
-
-  if (datadesilRes.status === 'fulfilled')
-    desilData.value = datadesilRes.value
+  if (paramLembagaRes.status === 'fulfilled') paramLembaga.value = paramLembagaRes.value
+  if (paramTahunRes.status   === 'fulfilled') paramTahun.value   = paramTahunRes.value
+  if (paramProvRes.status    === 'fulfilled') paramProv.value    = paramProvRes.value
+  if (bidangRes.status       === 'fulfilled') bidangData.value   = bidangRes.value
+  if (usiaRes.status         === 'fulfilled') usiaData.value     = usiaRes.value
+  if (basewilayahRes.status  === 'fulfilled') wilayahBase.value  = basewilayahRes.value
+  if (datawilayahRes.status  === 'fulfilled') wilayahData.value  = datawilayahRes.value
+  if (basedesilRes.status    === 'fulfilled') desilBase.value    = basedesilRes.value
+  if (datadesilRes.status    === 'fulfilled') desilData.value    = datadesilRes.value
 
   if (paramProv.length = 1)
     selectedProvinsi.value = paramProv.value[0].kode
@@ -828,23 +694,12 @@ async function loadData() {
     ReportService.getDashDataDesil(params),
   ])
  
-  if (bidangRes.status === 'fulfilled')
-    bidangData.value = bidangRes.value
-  
-  if (usiaRes.status === 'fulfilled')
-    usiaData.value = usiaRes.value
-
-  if (basewilayahRes.status === 'fulfilled')
-    wilayahBase.value = basewilayahRes.value
-
-  if (datawilayahRes.status === 'fulfilled')
-    wilayahData.value = datawilayahRes.value
-
-  if (basedesilRes.status === 'fulfilled')
-    desilBase.value = basedesilRes.value
-
-  if (datadesilRes.status === 'fulfilled')
-    desilData.value = datadesilRes.value
+  if (bidangRes.status      === 'fulfilled') bidangData.value  = bidangRes.value
+  if (usiaRes.status        === 'fulfilled') usiaData.value    = usiaRes.value
+  if (basewilayahRes.status === 'fulfilled') wilayahBase.value = basewilayahRes.value
+  if (datawilayahRes.status === 'fulfilled') wilayahData.value = datawilayahRes.value
+  if (basedesilRes.status   === 'fulfilled') desilBase.value   = basedesilRes.value
+  if (datadesilRes.status   === 'fulfilled') desilData.value   = datadesilRes.value
 
   datatableLoading.value = false
 }
@@ -853,9 +708,7 @@ async function optKabupaten() {
   const params = { email: authStore.user.email, provinsi_kode: selectedProvinsi.value }
   wilayahLoading.value = true
 
-  const [
-    paramkabRes,
-  ] = await Promise.allSettled([
+  const [ paramkabRes ] = await Promise.allSettled([
     ReportService.getDashParamkab(params)
   ])
  
@@ -874,9 +727,7 @@ async function optKecamatan() {
   const params = { email: authStore.user.email, kabkota_kode: selectedKabupaten.value }
   wilayahLoading.value = true
 
-  const [
-    paramkecRes,
-  ] = await Promise.allSettled([
+  const [ paramkecRes ] = await Promise.allSettled([
     ReportService.getDashParamkec(params)
   ])
  
@@ -890,8 +741,8 @@ async function optKecamatan() {
 
 async function resetOption() {
   selectedProvinsi.value  = null
-  selectedKabupaten.value  = null
-  selectedKecamatan.value  = null
+  selectedKabupaten.value = null
+  selectedKecamatan.value = null
 
   if (paramProv.length = 1)
     selectedProvinsi.value = paramProv.value[0].kode
@@ -1006,10 +857,7 @@ const genderChartData = computed(() => ({
   labels:['Laki-laki','Perempuan'],
   datasets:[
     { 
-      data:[
-        genderDataM, 
-        genderDataF
-      ], 
+      data:[ genderDataM, genderDataF ], 
       backgroundColor:['#3b82f6','#ec4899'], 
       borderWidth:0 
     }
@@ -1049,9 +897,6 @@ const quickNav = [
   { label:'Beranda',       desc:'Kembali ke halaman publik',       to:'/',          icon:'pi pi-globe',  iconBg:'#fff7ed', iconColor:'#ea580c' },
 ]
 
-// ── Fix: chart resize saat sidebar collapse ─────────────────────────────────
-// ResizeObserver memantau lebar container. Setiap kali lebar berubah (saat
-// sidebar expand/collapse), chartKey di-increment → Chart remount & fit ulang.
 const dashContent = ref(null)
 const chartKey    = ref(0)
 let   ro          = null
@@ -1063,7 +908,6 @@ onMounted(() => {
     const w = Math.round(entries[0].contentRect.width)
     if (w !== prevWidth) {
       prevWidth = w
-      // Tunda sedikit agar transisi sidebar selesai dulu (300ms)
       setTimeout(() => { chartKey.value++ }, 320)
     }
   })
@@ -1091,10 +935,26 @@ onBeforeUnmount(() => {
   user-select: none;
   -webkit-user-select: none;
 }
+.wm-card {
+  position: relative;
+  overflow: hidden;
+}
 .wm-svg {
-  display: block;
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 0;
+}
+.wm-text {
+  font-size: 11px;
+  fill: rgba(0, 0, 0, 0.045);
+  font-family: monospace;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 .dash-content {
   position: relative;
@@ -1126,7 +986,7 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 :deep(.p-paginator-current) {
-  margin-right: auto; /* pindah ke kiri */
+  margin-right: auto;
 }
 :deep(.p-paginator-prev),
 :deep(.p-paginator-next) {
@@ -1171,15 +1031,12 @@ onBeforeUnmount(() => {
     inset: 0;
     background: rgba(255,255,255,.7);
     backdrop-filter: blur(2px);
-
     display: flex;
     justify-content: center;
     align-items: flex-start;
-
     z-index: 100;
     border-radius: 12px;
 }
-
 .loading-box {
     display: flex;
     flex-direction: row;
@@ -1191,12 +1048,10 @@ onBeforeUnmount(() => {
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0,0,0,.1);
 }
-
 .loading-box i {
     font-size: 2rem;
     color: #16a34a;
 }
-
 .loading-box p {
     margin: 0;
     color: #475569;
