@@ -128,7 +128,7 @@
       <transition name="fade-slide">
         <div v-if="isSearching" class="bg-white rounded-xl shadow-sm border border-gray-100 p-10 flex flex-col items-center gap-3">
           <i class="pi pi-spin pi-spinner text-primary-600" style="font-size: 2rem"></i>
-          <p class="text-gray-500 text-sm">Memeriksa NIK <strong>{{ lastSearchedNik }}</strong> di dua sumber data...</p>
+          <p class="text-gray-500 text-sm">Memeriksa NIK <strong>{{ maskedLastNik }}</strong> di dua sumber data...</p>
         </div>
       </transition>
 
@@ -141,7 +141,7 @@
             </div>
             <div>
               <h3 class="font-semibold text-red-800">{{ apiError }}</h3>
-              <p class="text-sm text-red-600">NIK: {{ lastSearchedNik }}</p>
+              <p class="text-sm text-red-600">NIK: {{ maskedLastNik }}</p>
             </div>
           </div>
         </div>
@@ -171,7 +171,7 @@
                     ★ {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
                   </span>
                 </div>
-                <p class="text-sm text-blue-600"> <strong>{{ zawaData.nama || lastSearchedNik }}</strong> tercatat sebagai anggota keluarga dalam basis data DTSEN.</p>
+                <p class="text-sm text-blue-600"> <strong>{{ zawaData.nama || maskedLastNik }}</strong> tercatat sebagai anggota keluarga dalam basis data DTSEN.</p>
               </div>
             </div>
 
@@ -185,11 +185,11 @@
                 </div>
                 <div>
                   <p class="text-xs text-gray-400">NIK</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.nomor_induk_kependudukan || lastSearchedNik }}</p>
+                  <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskNik(zawaData.nomor_induk_kependudukan || lastSearchedNik) }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-gray-400">No. KK</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.nomor_kartu_keluarga || '-' }}</p>
+                  <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskNik(zawaData.nomor_kartu_keluarga) }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-gray-400">Jenis Kelamin</p>
@@ -240,8 +240,6 @@
                   <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_pemda != null ? (zawaData.pbi_pemda ? 'Ya' : 'Tidak') : '-' }}</p>
                 </div>
               </div>
-
-              <!-- Desil Card — highlight besar --> 
             </div>
           </div>
         </transition>
@@ -258,7 +256,7 @@
                   <p class="text-sm font-semibold text-gray-600">Tidak Terdata di DTSEN</p>
                   <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">DTSEN</span>
                 </div>
-                <p class="text-xs text-gray-400 mt-0.5">NIK <strong>{{ lastSearchedNik }}</strong> tidak ditemukan dalam basis data DTSEN.</p>
+                <p class="text-xs text-gray-400 mt-0.5">NIK <strong>{{ maskedLastNik }}</strong> tidak ditemukan dalam basis data DTSEN.</p>
               </div>
             </div>
           </div>
@@ -279,7 +277,7 @@
                 <div class="flex items-center gap-2">
                   <h3 class="font-semibold text-green-800">Penerima Manfaat</h3>
                 </div>
-                <p class="text-sm text-green-600">NIK <strong>{{ lastSearchedNik }}</strong> terdaftar sebagai penerima zakat/bantuan.</p>
+                <p class="text-sm text-green-600">NIK <strong>{{ maskedLastNik }}</strong> terdaftar sebagai penerima zakat/bantuan.</p>
               </div>
               <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full border border-green-300 flex-shrink-0">
                 {{ mustahikRows.length }} Riwayat
@@ -295,7 +293,7 @@
                 </div>
                 <div>
                   <p class="text-xs text-gray-400">NIK</p>
-                  <p class="text-sm font-medium text-gray-800">{{ lastSearchedNik }}</p>
+                  <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskedLastNik }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-gray-400">Jenis Kelamin</p>
@@ -409,7 +407,7 @@
                   <p class="text-sm font-semibold text-gray-600">Bukan Penerima Manfaat</p>
                   <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs font-medium rounded-full">MUSTAHIK</span>
                 </div>
-                <p class="text-xs text-gray-400 mt-0.5">NIK <strong>{{ lastSearchedNik }}</strong> tidak terdaftar sebagai mustahik penerima zakat/bantuan LAZ.</p>
+                <p class="text-xs text-gray-400 mt-0.5">NIK <strong>{{ maskedLastNik }}</strong> tidak terdaftar sebagai mustahik penerima zakat/bantuan LAZ.</p>
               </div>
             </div>
           </div>
@@ -423,7 +421,7 @@
               <i class="pi pi-exclamation-triangle text-amber-500 text-lg mt-0.5"></i>
               <div>
                 <p class="text-sm font-semibold text-amber-800">NIK Tidak Ditemukan di Kedua Sumber</p>
-                <p class="text-xs text-amber-700 mt-1">NIK <strong>{{ lastSearchedNik }}</strong> tidak terdaftar sebagai mustahik maupun dalam basis data DTSEN.</p>
+                <p class="text-xs text-amber-700 mt-1">NIK <strong>{{ maskedLastNik }}</strong> tidak terdaftar sebagai mustahik maupun dalam basis data DTSEN.</p>
                 <ul class="mt-2 text-xs text-amber-600 list-disc list-inside space-y-0.5">
                   <li>Periksa kembali NIK pada KTP</li>
                   <li>Terdapat kemungkinan kesalahan pengetikan</li>
@@ -453,6 +451,7 @@ import {
   PENDIDIKAN, STATUS_BEKERJA, DESIL_LABEL, DESIL_COLOR, resolveRef,
 } from '@/data/dtsenRef'
 import { fetchBaselineKeluargaByNkk } from '@/services/baselineService'
+import { maskNik } from '@/utils/formatter'
 
 // ── State ──────────────────────────────────────────
 const form              = reactive({ nik: '', captcha: '' })
@@ -467,6 +466,9 @@ const apiError          = ref('')
 const searchDone        = ref(false)
 const captchaRefreshing = ref(false)
 const zawaDesil         = ref(null)   // desil dari data keluarga
+
+// NIK yang ditampilkan ke UI selalu dalam bentuk masked
+const maskedLastNik = computed(() => maskNik(lastSearchedNik.value))
 
 // ── CAPTCHA ARITMATIKA ──────────────────────────────
 function generateCaptcha() {
