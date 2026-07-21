@@ -306,6 +306,10 @@ import { useAuthStore } from '@/stores/auth'
 import { watch } from 'vue'
 import Slider from 'primevue/slider'
 import { maskNik } from '@/utils/formatter'
+import { useWatermark } from '@/composables/useWatermark'
+
+// ── Watermark ─────────────────────────────────────────────────────────────────
+const { userIdentifier } = useWatermark()
 
 // ── Drawer state ──────────────────────────────────────────────────────────────
 const showFilter    = ref(false)
@@ -327,12 +331,6 @@ const programOptions = ref([])
 
 const usiaTouched = ref(false)
 const penyaluranTouched = ref(false)
-
-const userIdentifier = computed(() => {
-  const u = authStore.user
-  if (!u) return 'CONFIDENTIAL'
-  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
-})
 
 const activeFilters = reactive({
   skala_laz:'',

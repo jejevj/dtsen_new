@@ -222,12 +222,12 @@
           <div class="wm-overlay" aria-hidden="true">
             <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <pattern id="wm-riwayat" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                <pattern id="wm-rekap" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
                   <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
                   <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                 </pattern>
               </defs>
-              <rect width="100%" height="100%" fill="url(#wm-riwayat)" />
+              <rect width="100%" height="100%" fill="url(#wm-rekap)" />
             </svg>
           </div>
           <div style="position:relative;z-index:1;">
@@ -287,12 +287,12 @@
           <div class="wm-overlay" aria-hidden="true">
             <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <pattern id="wm-riwayat" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                <pattern id="wm-detail-riwayat" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
                   <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
                   <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                 </pattern>
               </defs>
-              <rect width="100%" height="100%" fill="url(#wm-riwayat)" />
+              <rect width="100%" height="100%" fill="url(#wm-detail-riwayat)" />
             </svg>
           </div>
           
@@ -359,10 +359,12 @@ import { formatRupiah } from '@/utils/formatter'
 import { useAuthStore } from '@/stores/auth'
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
-
 import Select from 'primevue/select'
+import { useWatermark } from '@/composables/useWatermark'
 
 const authStore = useAuthStore()
+const { userIdentifier } = useWatermark()
+
 const filterLaz = ref(authStore.user?.laz_kode || '')
 const route = useRoute()
 const mustahik = ref(null)
@@ -506,12 +508,6 @@ const DESIL_COLORS = {
     border: '#bfdbfe'
   }
 }
-
-const userIdentifier = computed(() => {
-  const u = authStore.user
-  if (!u) return 'CONFIDENTIAL'
-  return u.email || u.tuser_email || u.notelp || u.user_id || 'CONFIDENTIAL'
-})
 
 function maskNIK(nik) {
   if (!nik) return '-'
@@ -817,4 +813,3 @@ function fakeKodePos(id) {
           margin-right:8px;
       }
       </style>
-      <!-- Back -->
