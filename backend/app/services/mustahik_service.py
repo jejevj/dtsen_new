@@ -53,7 +53,6 @@ def _hitung_usia(tanggal_lahir):
     if not tanggal_lahir:
         return None
 
-    # jika masih berupa string
     if isinstance(tanggal_lahir, str):
         try:
             tanggal_lahir = datetime.strptime(tanggal_lahir, "%Y-%m-%d").date()
@@ -61,11 +60,9 @@ def _hitung_usia(tanggal_lahir):
             return None
 
     hari_ini = date.today()
-
     usia = hari_ini.year - tanggal_lahir.year
     if (hari_ini.month, hari_ini.day) < (tanggal_lahir.month, tanggal_lahir.day):
         usia -= 1
-
     return usia
 
 def _format_tanggal(d) -> str | None:
@@ -81,6 +78,76 @@ def _format_tanggal(d) -> str | None:
         return format_date(d, format='dd MMMM yyyy', locale='id_ID')
     except Exception:
         return str(d)
+
+# ── shared SQL builder ──────────────────────────────────────────────────────
+_DETAIL_SQL = """
+    SELECT
+        m.*,
+        l.laz_nama,
+        l.skala,
+        p.program_nama,
+        prov.provinsi_nama,
+        kab.kabkota_nama,
+        kec.kecamatan_nama,
+        kel.kelurahan_nama,
+        ktp_prov.provinsi_nama  AS ktp_provinsi_nama,
+        ktp_kab.kabkota_nama    AS ktp_kabkota_nama,
+        ktp_kec.kecamatan_nama  AS ktp_kecamatan_nama,
+        ktp_kel.kelurahan_nama  AS ktp_kelurahan_nama,
+        '1' AS desil
+    FROM t_mustahik m
+    INNER JOIN t_laz l ON m.laz_kode = l.laz_kode
+    INNER JOIN t_program p ON m.program_kode = p.program_kode
+    LEFT JOIN m_provinsi prov ON m.provinsi_kode = prov.provinsi_kode
+    LEFT JOIN m_kabkota kab ON m.kabkota_kode = kab.kabkota_kode
+    LEFT JOIN m_kecamatan kec ON m.kecamatan_kode = kec.kecamatan_kode
+    LEFT JOIN m_kelurahan kel ON m.kelurahan_kode = kel.kelurahan_kode
+    LEFT JOIN m_provinsi ktp_prov ON m.ktp_provinsi_kode = ktp_prov.provinsi_kode
+    LEFT JOIN m_kabkota ktp_kab ON m.ktp_kabkota_kode = ktp_kab.kabkota_kode
+    LEFT JOIN m_kecamatan ktp_kec ON m.ktp_kecamatan_kode = ktp_kec.kecamatan_kode
+    LEFT JOIN m_kelurahan ktp_kel ON m.ktp_kelurahan_kode = ktp_kel.kelurahan_kode
+    WHERE l.laz_status IN ('aktif','daftar_ulang')
+        AND m.nik = :nik
+    ORDER BY m.created_at DESC
+"""
+
+def _rows_to_detail_items(rows) -> list:
+    items = []
+    for row in rows:
+        nik_plain = str(row["nik"]) if row["nik"] else None
+        items.append({
+            "nik": nik_plain,
+            "nik_hashed": base64.urlsafe_b64encode(nik_plain.encode()).decode() if nik_plain else None,
+            "kk": row["kk"],
+            "nama_lengkap": row["nama_lengkap"],
+            "jenis_kelamin": GENDER_MAP.get(row["jenis_kelamin"], row["jenis_kelamin"]),
+            "lahir_tanggal": _format_tanggal(row["lahir_tanggal"]),
+            "agama": row["agama"],
+            "rupiah": str(row["rupiah"]),
+            "tipe_penerimaan": row["tipe_penerimaan"],
+            "tanggal_terima": str(row["tanggal_terima"]) if row["tanggal_terima"] else None,
+            "created_at": str(row["created_at"]) if row["created_at"] else None,
+            "laz_kode": row["laz_kode"],
+            "laz_nama": row["laz_nama"],
+            "skala": SKALA_MAP.get(row["skala"], str(row["skala"])) if row["skala"] else None,
+            "program_kode": row["program_kode"],
+            "program_nama": row["program_nama"],
+            "alamat_domisili": row["alamat_domisili"],
+            "provinsi_nama": row["provinsi_nama"],
+            "kabkota_nama": row["kabkota_nama"],
+            "kecamatan_nama": row["kecamatan_nama"],
+            "kelurahan_nama": row["kelurahan_nama"],
+            "ktp_alamat": row["ktp_alamat"],
+            "ktp_provinsi_nama": row["ktp_provinsi_nama"],
+            "ktp_kabkota_nama": row["ktp_kabkota_nama"],
+            "ktp_kecamatan_nama": row["ktp_kecamatan_nama"],
+            "ktp_kelurahan_nama": row["ktp_kelurahan_nama"],
+            "desil": row["desil"],
+            "usia": _hitung_usia(row["lahir_tanggal"]),
+            "tanggungan": row["tanggungan"],
+            "status_pernikahan": KAWIN_MAP.get(row["kawin_status"], row["kawin_status"]),
+        })
+    return items
 
 
 class MustahikService:
@@ -123,7 +190,6 @@ class MustahikService:
         if params.get("program_kode"):
             where.append("p.bidang_kode=:program_kode")
             bind["program_kode"] = params["program_kode"]
-
 
         if params.get("tipe_penerimaan"):
             where.append("m.tipe_penerimaan=:tipe_penerimaan")
@@ -173,7 +239,6 @@ class MustahikService:
             where.append("m.kelurahan_kode=:kel")
             bind["kel"] = params["kelurahan_kode_domisili"]
 
-       
         if params.get("provinsi_kode"):
             where.append("m.ktp_provinsi_kode=:ktp_prov")
             bind["ktp_prov"] = params["provinsi_kode"]
@@ -202,7 +267,6 @@ class MustahikService:
             """)
             bind["usia_max"] = params["usia_max"]
 
-
         if params.get("desil"):
             where.append("COALESCE(b.desil,1)=:desil")
             bind["desil"] = params["desil"]
@@ -212,10 +276,9 @@ class MustahikService:
             bind["program_nama"] = f"%{params['nama_program']}%"
 
         where_sql = " AND ".join(where)
-        page = int(params.get("page",1))
-        per_page = int(params.get("per_page",20))
-
-        offset = (page-1)*per_page
+        page = int(params.get("page", 1))
+        per_page = int(params.get("per_page", 20))
+        offset = (page - 1) * per_page
 
         bind["limit"] = per_page
         bind["offset"] = offset
@@ -229,7 +292,7 @@ class MustahikService:
             WHERE {where_sql}
         """)
 
-        total = db.session.execute(total_sql,bind).scalar()
+        total = db.session.execute(total_sql, bind).scalar()
 
         sql = text(f"""
         SELECT
@@ -258,19 +321,19 @@ class MustahikService:
         ORDER BY MAX(m.created_at) DESC
         LIMIT :limit OFFSET :offset
         """)
-        rows = db.session.execute(sql,bind).mappings().all()
-        items=[]
+        rows = db.session.execute(sql, bind).mappings().all()
+        items = []
         for row in rows:
             items.append({
-                "mustahik_id":row["mustahik_id"],
+                "mustahik_id": row["mustahik_id"],
                 "nik": _mask_nik(row["nik"]),
-                "nik_hashed":base64.urlsafe_b64encode(str(row["nik"]).encode()).decode(),
-                "nama_lengkap":row["nama_lengkap"],
-                "jenis_kelamin":row["jenis_kelamin"],
-                "usia":_hitung_usia(row["lahir_tanggal"]),
-                "provinsi_nama":row["provinsi_nama"],
-                "kabkota_nama":row["kabkota_nama"],
-                "desil":row["desil"]
+                "nik_hashed": base64.urlsafe_b64encode(str(row["nik"]).encode()).decode(),
+                "nama_lengkap": row["nama_lengkap"],
+                "jenis_kelamin": row["jenis_kelamin"],
+                "usia": _hitung_usia(row["lahir_tanggal"]),
+                "provinsi_nama": row["provinsi_nama"],
+                "kabkota_nama": row["kabkota_nama"],
+                "desil": row["desil"]
             })
         return {
             "data": items,
@@ -284,91 +347,35 @@ class MustahikService:
 
     @staticmethod
     def get_detail(nik_hashed: str) -> dict:
+        """Ambil detail mustahik berdasarkan NIK yang sudah di-encode base64."""
         nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
-        sql = text("""
-            SELECT
-                m.*,
-                l.laz_nama,
-                l.skala,
-                p.program_nama,
-                prov.provinsi_nama,
-                kab.kabkota_nama,
-                kec.kecamatan_nama,
-                kel.kelurahan_nama,
-                ktp_prov.provinsi_nama  AS ktp_provinsi_nama,
-                ktp_kab.kabkota_nama    AS ktp_kabkota_nama,
-                ktp_kec.kecamatan_nama  AS ktp_kecamatan_nama,
-                ktp_kel.kelurahan_nama  AS ktp_kelurahan_nama,
-                '1' AS desil
-            FROM t_mustahik m
-            INNER JOIN t_laz l ON m.laz_kode = l.laz_kode
-            INNER JOIN t_program p ON m.program_kode = p.program_kode
-            LEFT JOIN m_provinsi prov ON m.provinsi_kode = prov.provinsi_kode
-            LEFT JOIN m_kabkota kab ON m.kabkota_kode = kab.kabkota_kode
-            LEFT JOIN m_kecamatan kec ON m.kecamatan_kode = kec.kecamatan_kode
-            LEFT JOIN m_kelurahan kel ON m.kelurahan_kode = kel.kelurahan_kode
-            LEFT JOIN m_provinsi ktp_prov ON m.ktp_provinsi_kode = ktp_prov.provinsi_kode
-            LEFT JOIN m_kabkota ktp_kab ON m.ktp_kabkota_kode = ktp_kab.kabkota_kode
-            LEFT JOIN m_kecamatan ktp_kec ON m.ktp_kecamatan_kode = ktp_kec.kecamatan_kode
-            LEFT JOIN m_kelurahan ktp_kel ON m.ktp_kelurahan_kode = ktp_kel.kelurahan_kode
-            WHERE l.laz_status IN ('aktif','daftar_ulang')
-                AND m.nik = :nik_dec
-            ORDER BY m.created_at DESC
-        """)
-
         rows = db.session.execute(
-            sql,
-            {
-                "nik_dec": nik_dec
-            }
+            text(_DETAIL_SQL),
+            {"nik": nik_dec}
         ).mappings().all()
 
         if not rows:
-            return {
-                "message": "Data tidak ditemukan.",
-                "status_code": 404
-            }
+            return {"message": "Data tidak ditemukan.", "status_code": 404}
 
-        items = []
+        return {"data": _rows_to_detail_items(rows)}
 
-        for row in rows:
-            items.append({
-                "nik": str(row["nik"]) if row["nik"] else None,
-                "nik_hashed": base64.urlsafe_b64encode(str(row["nik"]).encode()).decode() if row["nik"] else None,
-                "kk": row["kk"],
-                "nama_lengkap": row["nama_lengkap"],
-                "jenis_kelamin": GENDER_MAP.get(row["jenis_kelamin"], row["jenis_kelamin"]),
-                "lahir_tanggal": _format_tanggal(row["lahir_tanggal"]),
-                "agama": row["agama"],
-                "rupiah": str(row["rupiah"]),
-                "tipe_penerimaan": row["tipe_penerimaan"],
-                "tanggal_terima": str(row["tanggal_terima"]) if row["tanggal_terima"] else None,
-                "created_at": str(row["created_at"]) if row["created_at"] else None,
-                "laz_kode": row["laz_kode"],
-                "laz_nama": row["laz_nama"],
-                "skala": SKALA_MAP.get(row["skala"], str(row["skala"])) if row["skala"] else None,
-                "program_kode": row["program_kode"],
-                "program_nama": row["program_nama"],
-                "alamat_domisili": row["alamat_domisili"],
-                "provinsi_nama": row["provinsi_nama"],
-                "kabkota_nama": row["kabkota_nama"],
-                "kecamatan_nama": row["kecamatan_nama"],
-                "kelurahan_nama": row["kelurahan_nama"],
-                "ktp_alamat": row["ktp_alamat"],
-                "ktp_provinsi_nama": row["ktp_provinsi_nama"],
-                "ktp_kabkota_nama": row["ktp_kabkota_nama"],
-                "ktp_kecamatan_nama": row["ktp_kecamatan_nama"],
-                "ktp_kelurahan_nama": row["ktp_kelurahan_nama"],
-                "desil": row["desil"],
-                "usia": _hitung_usia(row["lahir_tanggal"]),
-                "tanggungan": row["tanggungan"],
-                "status_pernikahan": KAWIN_MAP.get(row["kawin_status"], row["kawin_status"]),
-            })
+    @staticmethod
+    def get_detail_by_nik(nik: str) -> dict:
+        """Ambil detail mustahik berdasarkan NIK plain (tanpa encoding).
+        Digunakan oleh endpoint /mustahik/by-nik/<nik>.
+        Response menyertakan nik_hashed agar frontend bisa
+        memanggil /mustahik/<nik_hashed>/riwayat langsung.
+        """
+        rows = db.session.execute(
+            text(_DETAIL_SQL),
+            {"nik": nik}
+        ).mappings().all()
 
-        return {
-            "data": items
-        }
-    
+        if not rows:
+            return {"message": "Data tidak ditemukan.", "status_code": 404}
+
+        return {"data": _rows_to_detail_items(rows)}
+
     @staticmethod
     def get_riwayat(nik_hashed: str):
         nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
@@ -452,5 +459,3 @@ class MustahikService:
         return {
             "data": data
         }
-
-    
