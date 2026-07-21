@@ -2,6 +2,12 @@
   <AppLayout>
     <div class="dash-wrapper">
       <div class="dash-content">
+        <div v-if="datatableLoading" class="loading-overlay">
+          <div class="loading-box">
+            <i class="pi pi-spin pi-spinner"></i>
+            <p>Memuat data...</p>
+          </div>
+        </div>
         <!-- Header -->
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
           <div>
@@ -87,7 +93,7 @@
                 filter show-clear
               />
             </div>
-            <div class="flex items-end gap-2 flex-[2]">
+            <div class="flex items-end gap-2">
               <Button
                 label="Tampilkan" icon="pi pi-search" size="small"
                 @click="loadData"
@@ -676,6 +682,7 @@ const userEmail = computed(() => {
 const selectedYear      = ref(new Date().getFullYear())
 const wilayahLoading    = ref(false)
 const datatableLoading  = ref(false)
+const selectedLembaga   = ref(null)
 const selectedProvinsi  = ref(null)
 const selectedKabupaten = ref(null)
 const selectedKecamatan = ref(null)
@@ -758,6 +765,8 @@ onMounted(async () => {
     ReportService.getDashDataDesil(params),
   ])
 
+  datatableLoading.value = false
+
   if (paramLembagaRes.status === 'fulfilled')
     paramLembaga.value = paramLembagaRes.value
 
@@ -788,8 +797,6 @@ onMounted(async () => {
   if (paramProv.length = 1)
     selectedProvinsi.value = paramProv.value[0].kode
     optKabupaten()
-
-  datatableLoading.value = false
 })
 
 async function loadData() {
@@ -798,7 +805,8 @@ async function loadData() {
     tahun: selectedYear.value,
     provinsi_kode:  selectedProvinsi.value,
     kabkota_kode:   selectedKabupaten.value,
-    kacamatan_kode: selectedKecamatan.value
+    kacamatan_kode: selectedKecamatan.value,
+    lembaga: selectedLembaga.value
   }
   datatableLoading.value = true
 
@@ -1158,6 +1166,42 @@ onBeforeUnmount(() => {
   cursor:pointer; transition:box-shadow 0.2s;
 }
 .nav-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1); }
+.loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,.7);
+    backdrop-filter: blur(2px);
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+
+    z-index: 100;
+    border-radius: 12px;
+}
+
+.loading-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: .75rem;
+    background: #fff;
+    margin-top: 50px;
+    padding: 24px 32px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.1);
+}
+
+.loading-box i {
+    font-size: 2rem;
+    color: #16a34a;
+}
+
+.loading-box p {
+    margin: 0;
+    color: #475569;
+    font-size: 14px;
+}
 @media (max-width:1024px) {
   .grid-4    { grid-template-columns:repeat(2,1fr); }
   .grid-1-2-1 { grid-template-columns: 1fr 2fr; }
