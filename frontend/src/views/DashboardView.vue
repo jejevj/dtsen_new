@@ -199,13 +199,10 @@
           </div>
         </div>
 
-        <!-- Desil breakdown cards -->
+        <!-- Desil breakdown cards (putih, warna hanya di badge icon dan teks) -->
         <div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
-            <div v-for="d in desilStats" :key="d.label"
-              class="wm-wrap"
-              style="border-radius:14px;padding:18px;text-align:center;"
-              :style="{ background:d.iconBg }">
+            <div v-for="d in desilStats" :key="d.label" class="card-box wm-wrap" style="text-align:center;">
               <div class="wm-overlay" aria-hidden="true">
                 <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                   <defs>
@@ -217,13 +214,17 @@
                   <rect width="100%" height="100%" :fill="'url(#wm-desil-'+d.label+')'" />
                 </svg>
               </div>
-              <p style="font-size:1.4rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;" :style="{ color:d.iconColor}">Desil {{ d.label }}</p>
-              <p style="font-size:1.4rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.base_val }}</p>
-              <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Mustahik Berdasarkan Data Baseline</p>
-              <p style="font-size:1.4rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.lap_val }}</p>
-              <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Penerima Manfaat Lembaga</p>
-              <p style="font-size:1.2rem;font-weight:600;margin:0;" :style="{ color:d.iconColor}">{{ d.agg_val }}</p>
-              <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Total Pendistribusian dan Pendayagunaan</p>
+              <!-- Badge icon berwarna -->
+              <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:d.iconBg, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }">
+                <i class="pi pi-users" :style="{ color:d.iconColor, fontSize:'18px' }"></i>
+              </div>
+              <p style="font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px;color:#1e293b;">{{ d.label }}</p>
+              <p style="font-size:1.5rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.base_val }}</p>
+              <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;">Mustahik Data Baseline</p>
+              <p style="font-size:1.5rem;font-weight:900;margin:0 0 2px;color:#1e293b;">{{ d.lap_val }}</p>
+              <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;">Penerima Manfaat Lembaga</p>
+              <p style="font-size:1.1rem;font-weight:700;margin:0;color:#15803d;">{{ d.agg_val }}</p>
+              <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Total Pendistribusian</p>
             </div>
           </div>
         </div>
@@ -326,13 +327,12 @@
           </div>
         </div>
 
-        <!-- Bidang Program Cards -->
+        <!-- Bidang Program Cards (putih, warna hanya di icon badge) -->
         <div class="grid-3" style="display:grid;gap:16px;">
           <div
             v-for="(bidang, i) in bidangProgram"
             :key="bidang.bidang_label"
-            class="wm-wrap"
-            :style="{ background:bidangColors[i%bidangColors.length].back, borderRadius:'16px', border:bidangColors[i%bidangColors.length].bordersize + ' solid ' + bidangColors[i%bidangColors.length].border, padding:'24px', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }"
+            class="card-box wm-wrap"
           >
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
@@ -454,9 +454,10 @@ onMounted(async () => {
   if (basedesilRes.status    === 'fulfilled') desilBase.value    = basedesilRes.value
   if (datadesilRes.status    === 'fulfilled') desilData.value    = datadesilRes.value
 
-  if (paramProv.length = 1)
+  if (paramProv.value.length === 1) {
     selectedProvinsi.value = paramProv.value[0].kode
-    optKabupaten()
+    await optKabupaten()
+  }
 })
 
 async function loadData() {
@@ -499,8 +500,12 @@ async function optKabupaten() {
   const [ paramkabRes ] = await Promise.allSettled([ ReportService.getDashParamkab(params) ])
   if (paramkabRes.status === 'fulfilled') paramKab.value = paramkabRes.value
   wilayahLoading.value = false
-  if (paramKab.length = 0) paramKab = ref([])
-  else if (paramKab.length = 1) { paramKab = paramKab.value[0].kode; optKecamatan() }
+  if (paramKab.value.length === 0) {
+    paramKab.value = []
+  } else if (paramKab.value.length === 1) {
+    selectedKabupaten.value = paramKab.value[0].kode
+    await optKecamatan()
+  }
 }
 
 async function optKecamatan() {
@@ -509,23 +514,26 @@ async function optKecamatan() {
   const [ paramkecRes ] = await Promise.allSettled([ ReportService.getDashParamkec(params) ])
   if (paramkecRes.status === 'fulfilled') paramKec.value = paramkecRes.value
   wilayahLoading.value = false
-  if (paramKec.length = 0) paramKec = ref([])
+  if (paramKec.value.length === 0) paramKec.value = []
 }
 
 async function resetOption() {
   selectedProvinsi.value  = null
   selectedKabupaten.value = null
   selectedKecamatan.value = null
-  if (paramProv.length = 1) { selectedProvinsi.value = paramProv.value[0].kode; optKabupaten() }
-  if (paramKab.length = 1) { selectedKabupaten.value = paramKab.value[0].kode; optKecamatan() }
-  if (paramKec.length = 1) selectedKecamatan.value = paramKec.value[0].kode
+  paramKab.value = []
+  paramKec.value = []
+  if (paramProv.value.length === 1) {
+    selectedProvinsi.value = paramProv.value[0].kode
+    await optKabupaten()
+  }
 }
 
 const desilStats = computed(() => [
-  { label:'Desil 1', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), icon:'pi pi-users', iconBg:'#fcdcdc', iconColor:'#dc2626', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0),0)) },
-  { label:'Desil 2', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), icon:'pi pi-users', iconBg:'#faeedc', iconColor:'#e68c05', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_2||0),0)) },
-  { label:'Desil 3', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), icon:'pi pi-users', iconBg:'#faf1d9', iconColor:'#f5be27', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_3||0),0)) },
-  { label:'Desil 4', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), icon:'pi pi-users', iconBg:'#f0fdf4', iconColor:'#16a34a', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_4||0),0)) },
+  { label:'Desil 1', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), icon:'pi pi-users', iconBg:'#fee2e2', iconColor:'#dc2626', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0),0)) },
+  { label:'Desil 2', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), icon:'pi pi-users', iconBg:'#ffedd5', iconColor:'#ea580c', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_2||0),0)) },
+  { label:'Desil 3', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), icon:'pi pi-users', iconBg:'#fef9c3', iconColor:'#ca8a04', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_3||0),0)) },
+  { label:'Desil 4', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), icon:'pi pi-users', iconBg:'#dcfce7', iconColor:'#16a34a', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_4||0),0)) },
 ])
 
 const desilBarData = computed(() => ({
@@ -550,12 +558,12 @@ const bidangProgram = computed(() => {
 })
 
 const bidangColors = [
-  { bg:'#c6fcd6', icon:'#16a34a', border:'#16a34a', bordersize:'3px', back:'#f0fdf4' },
-  { bg:'#eff6ff', icon:'#2563eb', border:'#eff6ff', bordersize:'1px', back:'white' },
-  { bg:'#fef2f2', icon:'#dc2626', border:'#eff6ff', bordersize:'1px', back:'white' },
-  { bg:'#fafab6', icon:'#b9bd02', border:'#eff6ff', bordersize:'1px', back:'white' },
-  { bg:'#faf5ff', icon:'#7c3aed', border:'#eff6ff', bordersize:'1px', back:'white' },
-  { bg:'#fff7ed', icon:'#ea580c', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#dcfce7', icon:'#16a34a' },
+  { bg:'#eff6ff', icon:'#2563eb' },
+  { bg:'#fee2e2', icon:'#dc2626' },
+  { bg:'#fef9c3', icon:'#ca8a04' },
+  { bg:'#faf5ff', icon:'#7c3aed' },
+  { bg:'#fff7ed', icon:'#ea580c' },
 ]
 const bidangIcons = ['pi pi-star','pi pi-users','pi pi-heart','pi pi-book','pi pi-chart-line','pi pi-shield','pi pi-briefcase','pi pi-home']
 
@@ -563,7 +571,7 @@ const genderDataM = computed(() => wilayahData.value.reduce((t,i)=>t+Number(i.mu
 const genderDataF = computed(() => wilayahData.value.reduce((t,i)=>t+Number(i.mustahik_f||0),0))
 const genderChartData = computed(() => ({
   labels:['Laki-laki','Perempuan'],
-  datasets:[{ data:[genderDataM,genderDataF], backgroundColor:['#3b82f6','#ec4899'], borderWidth:0 }]
+  datasets:[{ data:[genderDataM.value, genderDataF.value], backgroundColor:['#3b82f6','#ec4899'], borderWidth:0 }]
 }))
 
 const filteredData = computed(() => getMockByWilayah(authStore.userWilayah))
@@ -621,7 +629,7 @@ onBeforeUnmount(() => { ro?.disconnect() })
   flex-direction: column;
   gap: 24px;
 }
-/* ===== WATERMARK (sama persis dengan MustahikView) ===== */
+/* ===== WATERMARK ===== */
 .wm-wrap {
   position: relative;
   overflow: hidden;
@@ -655,8 +663,6 @@ onBeforeUnmount(() => { ro?.disconnect() })
 .section-title { font-size:13px; font-weight:700; color:#374151; margin:0 0 14px; display:flex; align-items:center; gap:6px; }
 .text-center { text-align: center !important; }
 .text-right  { text-align: right  !important; }
-.td-label { font-size:12px; color:#94a3b8; font-weight:500; padding:9px 4px; width:45%; vertical-align:top; }
-.td-value  { font-size:13px; color:#374151; font-weight:600; padding:9px 4px; text-align:right; }
 .grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
 .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
 .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
