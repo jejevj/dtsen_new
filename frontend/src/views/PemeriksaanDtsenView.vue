@@ -262,8 +262,10 @@
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
                   <div><p class="text-xs text-gray-400">Nama Lengkap</p><p class="text-sm font-semibold text-gray-800">{{ mustahikIdentity.nama_lengkap || '-' }}</p></div>
                   <div><p class="text-xs text-gray-400">NIK</p><p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskedLastNik }}</p></div>
-                  <div><p class="text-xs text-gray-400">Jenis Kelamin</p><p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.jenis_kelamin || '-' }}</p></div>
-                  <div><p class="text-xs text-gray-400">Tanggal Lahir</p><p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.lahir_tanggal || '-' }}</p></div>
+                  <!-- Jenis Kelamin: m → Laki - Laki, f/F → Perempuan -->
+                  <div><p class="text-xs text-gray-400">Jenis Kelamin</p><p class="text-sm font-medium text-gray-800">{{ resolveGender(mustahikIdentity.jenis_kelamin) }}</p></div>
+                  <!-- Usia dihitung server-side, fallback hitung client-side dari lahir_tanggal -->
+                  <div><p class="text-xs text-gray-400">Usia</p><p class="text-sm font-medium text-gray-800">{{ hitungUsia(mustahikIdentity) }}</p></div>
                   <div><p class="text-xs text-gray-400">Agama</p><p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.agama || '-' }}</p></div>
                   <div><p class="text-xs text-gray-400">Alamat Domisili</p><p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.alamat_domisili || '-' }}</p></div>
                   <div><p class="text-xs text-gray-400">Provinsi Domisili</p><p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.provinsi_nama || '-' }}</p></div>
@@ -457,10 +459,10 @@ import { fetchBaselineKeluargaByNkk } from '@/services/baselineService'
 import { maskNik, formatRupiah } from '@/utils/formatter'
 import { useWatermark } from '@/composables/useWatermark'
 
-// ── Watermark ───────────────────────────────────────
+// ── Watermark ──
 const { userIdentifier } = useWatermark()
 
-// ── State: pencarian ───────────────────────────────
+// ── State: pencarian ──
 const form              = reactive({ nik: '', captcha: '' })
 const errors            = reactive({ nik: '', captcha: '' })
 const isSearching       = ref(false)
@@ -474,28 +476,52 @@ const searchDone        = ref(false)
 const captchaRefreshing = ref(false)
 const zawaDesil         = ref(null)
 
-// ── State: riwayat bantuan (all-LAZ) ────────────────
-const riwayatBantuan   = ref([])   // raw array dari /mustahik/{nikHashed}/riwayat
+// ── State: riwayat bantuan (all-LAZ) ──
+const riwayatBantuan   = ref([])
 const loadingRiwayat   = ref(false)
 
 const maskedLastNik = computed(() => maskNik(lastSearchedNik.value))
 
-// ── Computed: statistik riwayat (all-LAZ, no filter) ──────
+// ── Helper: Jenis Kelamin ──
+// Backend sudah map m→'Laki - Laki', f→'Perempuan' via GENDER_MAP.
+// resolveGender() sebagai safety net untuk nilai raw 'm'/'f'/'F' yang
+// mungkin lolos (mis. data lama atau endpoint lain).
+const GENDER_MAP_FE = { m: 'Laki - Laki', f: 'Perempuan', F: 'Perempuan', M: 'Laki - Laki' }
+function resolveGender(val) {
+  if (!val) return '-'
+  return GENDER_MAP_FE[val] ?? val
+}
+
+// ── Helper: Usia ──
+// Utamakan field `usia` dari backend; fallback hitung dari `lahir_tanggal`.
+function hitungUsia(identity) {
+  if (!identity) return '-'
+  if (identity.usia != null) return identity.usia + ' tahun'
+  if (!identity.lahir_tanggal) return '-'
+  const lahir = new Date(identity.lahir_tanggal)
+  if (isNaN(lahir)) return '-'
+  const today = new Date()
+  let usia = today.getFullYear() - lahir.getFullYear()
+  const belumUltah =
+    today.getMonth() < lahir.getMonth() ||
+    (today.getMonth() === lahir.getMonth() && today.getDate() < lahir.getDate())
+  if (belumUltah) usia--
+  return usia + ' tahun'
+}
+
+// ── Computed: statistik riwayat (all-LAZ) ──
 const riwayatBantuanTahunIni = computed(() => {
   const tahun = new Date().getFullYear()
   return riwayatBantuan.value
     .filter(r => Number(r.tahun) === tahun)
     .reduce((s, r) => s + Number(r.nominal || 0), 0)
 })
-
 const riwayatBantuanTotal = computed(() =>
   riwayatBantuan.value.reduce((s, r) => s + Number(r.nominal || 0), 0)
 )
-
 const riwayatBantuanTotalLaz = computed(() =>
   new Set(riwayatBantuan.value.map(r => r.laz_kode).filter(Boolean)).size
 )
-
 const riwayatRekapTahun = computed(() => {
   const map = {}
   riwayatBantuan.value.forEach(r => {
@@ -503,13 +529,13 @@ const riwayatRekapTahun = computed(() => {
     const n = Number(r.nominal || 0)
     if (!map[t]) map[t] = { tahun: t, total: 0, langsung: 0, tidakLangsung: 0 }
     map[t].total += n
-    if (r.metode === 'Penerima Manfaat Langsung')      map[t].langsung      += n
-    if (r.metode === 'Penerima Manfaat Tidak Langsung') map[t].tidakLangsung += n
+    if (r.metode === 'Penerima Manfaat Langsung')       map[t].langsung      += n
+    if (r.metode === 'Penerima Manfaat Tidak Langsung')  map[t].tidakLangsung += n
   })
   return Object.values(map).sort((a, b) => b.tahun - a.tahun)
 })
 
-// ── CAPTCHA ARITMATIKA ──────────────────────────────
+// ── CAPTCHA ARITMATIKA ──
 function generateCaptcha() {
   const ops = ['+', '-', 'x']
   const op  = ops[Math.floor(Math.random() * ops.length)]
@@ -540,10 +566,10 @@ function refreshCaptcha() {
   setTimeout(() => { captchaRefreshing.value = false }, 400)
 }
 
-// ── Computed: identity dari mustahikRows ───────────────
+// ── Computed: identity dari mustahikRows ──
 const mustahikIdentity = computed(() => mustahikRows.value[0] || {})
 
-// ── Validasi ────────────────────────────────────────
+// ── Validasi ──
 function validate() {
   errors.nik     = ''
   errors.captcha = ''
@@ -565,7 +591,7 @@ function validate() {
   return valid
 }
 
-// ── Pencarian Dual API + Riwayat ─────────────────────
+// ── Pencarian Dual API + Riwayat ──
 async function handleSearch() {
   if (!validate()) {
     if (form.captcha.trim() !== captcha.answer) refreshCaptcha()
@@ -590,36 +616,20 @@ async function handleSearch() {
     MustahikService.getZawaAnggotaByNik(nik),
   ])
 
-  // ── Mustahik ──
   if (mustahikResult.status === 'fulfilled') {
     const res = mustahikResult.value
     if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
       mustahikRows.value = res.data
-
-      // ── Ambil nikHashed dari data[0], lalu panggil riwayat (all-LAZ) ──
       const nikHashed = res.data[0]?.nik_hashed
-      if (nikHashed) {
-        loadingRiwayat.value = true
-        try {
-          const rRes = await MustahikService.getRiwayatByNikHashed(nikHashed)
-          riwayatBantuan.value = rRes?.data ?? []
-        } catch {
-          riwayatBantuan.value = []
-        } finally {
-          loadingRiwayat.value = false
-        }
-      } else {
-        // fallback: encode NIK ke base64 (sama persis seperti routing mustahik)
-        const nikHashedFallback = btoa(nik)
-        loadingRiwayat.value = true
-        try {
-          const rRes = await MustahikService.getRiwayatByNikHashed(nikHashedFallback)
-          riwayatBantuan.value = rRes?.data ?? []
-        } catch {
-          riwayatBantuan.value = []
-        } finally {
-          loadingRiwayat.value = false
-        }
+      const hashKey   = nikHashed ?? btoa(nik)
+      loadingRiwayat.value = true
+      try {
+        const rRes = await MustahikService.getRiwayatByNikHashed(hashKey)
+        riwayatBantuan.value = rRes?.data ?? []
+      } catch {
+        riwayatBantuan.value = []
+      } finally {
+        loadingRiwayat.value = false
       }
     }
   } else {
@@ -630,7 +640,6 @@ async function handleSearch() {
   }
   mustahikLoading.value = false
 
-  // ── DTSEN / ZAWA ──
   if (zawaResult.status === 'fulfilled') {
     const anggota = zawaResult.value
     if (anggota && typeof anggota === 'object') {
@@ -653,7 +662,7 @@ async function handleSearch() {
   refreshCaptcha()
 }
 
-// ── Format ──────────────────────────────────────────
+// ── Format ──
 function formatTanggal(val) {
   if (!val) return '-'
   try {
@@ -663,7 +672,6 @@ function formatTanggal(val) {
 </script>
 
 <style scoped>
-/* ── Watermark & Card ── */
 .pd-card {
   position: relative;
   background: white;
@@ -682,7 +690,6 @@ function formatTanggal(val) {
 .pd-watermark-svg { display: block; width: 100%; height: 100%; }
 .pd-content { position: relative; z-index: 0; }
 
-/* ── Table ── */
 .pd-table {
   width: 100%;
   border-collapse: collapse;
@@ -716,7 +723,6 @@ function formatTanggal(val) {
   font-weight: 600;
 }
 
-/* ── Transitions ── */
 .fade-slide-enter-active { transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .fade-slide-enter-from   { opacity: 0; transform: translateY(12px); }
 .fade-slide-leave-active { transition: all 0.2s ease; }
