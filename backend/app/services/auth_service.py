@@ -3,6 +3,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token
 from sqlalchemy import or_
 from ..models.tuser import TUser
 from ..models.t_dtsen_akses import TDtsenAkses
+from ..models.laz import Laz
 
 
 def md5(plain: str) -> str:
@@ -146,6 +147,13 @@ class AuthService:
 
     @staticmethod
     def _dtsen_payload(u: TDtsenAkses) -> dict:
+        # Join ke t_laz untuk ambil laz_nama berdasarkan laz_kode
+        laz_nama = None
+        if u.laz_kode:
+            laz = Laz.query.filter_by(laz_kode=u.laz_kode).first()
+            if laz:
+                laz_nama = laz.laz_nama
+
         return {
             'id':           u.dtsen_akses_id,
             'user_type':    'dtsen',
@@ -154,6 +162,7 @@ class AuthService:
             'email':        u.email,
             'notelp':       u.notelp,
             'laz_kode':     u.laz_kode,
+            'laz_nama':     laz_nama,
             'jabatan':      u.jabatan,
             'statuses':     u.statuses,
             'activated_at': u.activated_at.isoformat() if u.activated_at else None,
