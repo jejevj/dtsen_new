@@ -207,10 +207,13 @@
           </div>
         </div>
 
-        <!-- Desil breakdown cards -->
+        <!-- Desil breakdown cards — warna asli dari desilStats (iconBg per desil) -->
         <div>
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;" class="desil-grid">
-            <div v-for="d in desilStats" :key="d.label" class="card-box wm-wrap" style="background:white;">
+            <div v-for="d in desilStats" :key="d.label"
+              class="wm-wrap"
+              style="border-radius:14px;padding:18px;text-align:center;"
+              :style="{ background:d.iconBg, border:'1px solid ' + d.borderColor }">
               <div class="wm-overlay" aria-hidden="true">
                 <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                   <defs>
@@ -222,17 +225,14 @@
                   <rect width="100%" height="100%" :fill="'url(#wm-desil-'+d.label+')'" />
                 </svg>
               </div>
-              <div class="wm-content" style="text-align:center;">
-                <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:d.iconBg, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 12px' }">
-                  <i class="pi pi-users" :style="{ color:d.iconColor, fontSize:'18px' }"></i>
-                </div>
-                <p style="font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px;color:#1e293b;">{{ d.label }}</p>
-                <p style="font-size:1.5rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.base_val }}</p>
-                <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;">Mustahik Data Baseline</p>
-                <p style="font-size:1.5rem;font-weight:900;margin:0 0 2px;color:#1e293b;">{{ d.lap_val }}</p>
-                <p style="font-size:11px;color:#94a3b8;margin:0 0 10px;">Penerima Manfaat Lembaga</p>
-                <p style="font-size:1.1rem;font-weight:700;margin:0;color:#15803d;">{{ d.agg_val }}</p>
-                <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">Total Pendistribusian</p>
+              <div class="wm-content">
+                <p style="font-size:1.4rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px;" :style="{ color:d.iconColor}">{{ d.label }}</p>
+                <p style="font-size:1.4rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.base_val }}</p>
+                <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Mustahik Berdasarkan Data Baseline</p>
+                <p style="font-size:1.4rem;font-weight:900;margin:0 0 2px;" :style="{ color:d.iconColor}">{{ d.lap_val }}</p>
+                <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Penerima Manfaat Lembaga</p>
+                <p style="font-size:1.2rem;font-weight:600;margin:0;" :style="{ color:d.iconColor}">{{ d.agg_val }}</p>
+                <p style="font-size:11px;color:#64748b;margin:0 0 6px;">Total Pendistribusian dan Pendayagunaan</p>
               </div>
             </div>
           </div>
@@ -240,7 +240,7 @@
 
         <!-- Stat Cards -->
         <div class="grid-1-2-1">
-          <div v-for="stat in statCards" :key="stat.label" class="stat-card wm-wrap" style="background:white;">
+          <div v-for="stat in statCards" :key="stat.label" class="stat-card wm-wrap">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -265,7 +265,7 @@
 
         <!-- Charts row -->
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
-          <div class="card-box wm-wrap" style="background:white;">
+          <div class="card-box wm-wrap">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -286,7 +286,7 @@
               </div>
             </div>
           </div>
-          <div class="card-box wm-wrap" style="background:white;">
+          <div class="card-box wm-wrap">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -344,13 +344,14 @@
           </div>
         </div>
 
-        <!-- Bidang Program Cards -->
+        <!-- Bidang Program Cards — warna asli dari bidangColors (back + border) -->
         <div class="grid-3" style="display:grid;gap:16px;">
           <div
             v-for="(bidang, i) in bidangProgram"
             :key="bidang.bidang_label"
-            class="card-box wm-wrap"
-            style="background:white;"
+            class="wm-wrap"
+            style="border-radius:16px;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
+            :style="{ background:bidangColors[i%bidangColors.length].back, border:bidangColors[i%bidangColors.length].bordersize+' solid '+bidangColors[i%bidangColors.length].border }"
           >
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
@@ -550,10 +551,10 @@ async function resetOption() {
 }
 
 const desilStats = computed(() => [
-  { label:'Desil 1', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), icon:'pi pi-users', iconBg:'#fee2e2', iconColor:'#dc2626', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0),0)) },
-  { label:'Desil 2', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), icon:'pi pi-users', iconBg:'#ffedd5', iconColor:'#ea580c', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_2||0),0)) },
-  { label:'Desil 3', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), icon:'pi pi-users', iconBg:'#fef9c3', iconColor:'#ca8a04', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_3||0),0)) },
-  { label:'Desil 4', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), icon:'pi pi-users', iconBg:'#dcfce7', iconColor:'#16a34a', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_4||0),0)) },
+  { label:'Desil 1', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), iconBg:'#fcdcdc', iconColor:'#dc2626', borderColor:'#fca5a5', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0),0)) },
+  { label:'Desil 2', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), iconBg:'#faeedc', iconColor:'#e68c05', borderColor:'#fcd34d', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_2||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_2||0),0)) },
+  { label:'Desil 3', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), iconBg:'#faf1d9', iconColor:'#f5be27', borderColor:'#fde68a', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_3||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_3||0),0)) },
+  { label:'Desil 4', base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), iconBg:'#f0fdf4', iconColor:'#16a34a', borderColor:'#86efac', lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_4||0),0)), agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_4||0),0)) },
 ])
 
 const desilBarData = computed(() => ({
@@ -578,12 +579,12 @@ const bidangProgram = computed(() => {
 })
 
 const bidangColors = [
-  { bg:'#dcfce7', icon:'#16a34a' },
-  { bg:'#eff6ff', icon:'#2563eb' },
-  { bg:'#fee2e2', icon:'#dc2626' },
-  { bg:'#fef9c3', icon:'#ca8a04' },
-  { bg:'#faf5ff', icon:'#7c3aed' },
-  { bg:'#fff7ed', icon:'#ea580c' },
+  { bg:'#c6fcd6', icon:'#16a34a', border:'#16a34a', bordersize:'3px', back:'#f0fdf4' },
+  { bg:'#eff6ff', icon:'#2563eb', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#fef2f2', icon:'#dc2626', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#fafab6', icon:'#b9bd02', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#faf5ff', icon:'#7c3aed', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#fff7ed', icon:'#ea580c', border:'#eff6ff', bordersize:'1px', back:'white' },
 ]
 const bidangIcons = ['pi pi-star','pi pi-users','pi pi-heart','pi pi-book','pi pi-chart-line','pi pi-shield','pi pi-briefcase','pi pi-home']
 
