@@ -171,7 +171,7 @@
                     ★ {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
                   </span>
                 </div>
-                <p class="text-sm text-blue-600">NIK <strong>{{ zawaData.nama }}</strong> tercatat sebagai anggota keluarga dalam basis data DTSEN.</p>
+                <p class="text-sm text-blue-600"> <strong>{{ zawaData.nama || lastSearchedNik }}</strong> tercatat sebagai anggota keluarga dalam basis data DTSEN.</p>
               </div>
             </div>
 
