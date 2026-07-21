@@ -64,15 +64,15 @@ export const formatShortM = (value, decimals = 1) => {
 }
 
 /**
- * Masking NIK: tampilkan 4 digit awal + bintang tengah + 4 digit akhir.
- * Contoh: 3578116503040003 → 3578********0003
+ * Masking NIK: tampilkan 6 digit awal + bintang tengah + 1 digit akhir.
+ * Contoh: 3309131234560001 → 330913*********1
  *
  * @param {string|number|null} nik
- * @param {number} [visibleStart=4] - digit yang terlihat di awal
- * @param {number} [visibleEnd=4]   - digit yang terlihat di akhir
+ * @param {number} [visibleStart=6] - digit yang terlihat di awal
+ * @param {number} [visibleEnd=1]   - digit yang terlihat di akhir
  * @returns {string}
  */
-export function maskNik(nik, visibleStart = 4, visibleEnd = 4) {
+export function maskNik(nik, visibleStart = 6, visibleEnd = 1) {
   if (!nik && nik !== 0) return '-'
   const str = String(nik).trim()
   if (str === '-' || str === '') return '-'
