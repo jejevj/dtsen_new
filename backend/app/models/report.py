@@ -403,6 +403,7 @@ class Report:
         tahun_awal = int(params.get("tahun") or datetime.now().year)
         tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
         email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
         provinsi_kode = (params.get("provinsi_kode") or None)
         kabkota_kode = (params.get("kabkota_kode") or None)
         kacamatan_kode = (params.get("kacamatan_kode") or None)
@@ -410,6 +411,10 @@ class Report:
         sql_level = 1
         sql_param_data = "ktp_provinsi_kode"
         sql_where = ""
+        sql_laz = ""
+
+        if lembaga:
+            sql_laz = " AND t_mustahik.laz_kode = :lembaga"
 
         if provinsi_kode:
             sql_level = 2
@@ -470,7 +475,8 @@ class Report:
             JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
             UNION
             SELECT DISTINCT CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa, 
             m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama, t_dtsen_akses.laz_kode laz, 2 lvl,
@@ -481,7 +487,8 @@ class Report:
             JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
             UNION
             SELECT DISTINCT CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa, 
             m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama, t_dtsen_akses.laz_kode laz, 3 lvl, 
@@ -493,7 +500,8 @@ class Report:
             JOIN m_kecamatan ON m_kecamatan.kabkota_kode = m_kabkota.kabkota_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
         ) wilayah
         WHERE wilayah.lvl = :sql_level
         """
@@ -504,6 +512,7 @@ class Report:
             'tahun_awal'    : f'{tahun_awal}-01-01',
             'tahun_akhir'   : f'{tahun_akhir}-01-01',
             'email'         : email,
+            'lembaga'       : lembaga,
             'sql_level'     : sql_level,
             'provinsi_kode' : provinsi_kode,
             'kabkota_kode'  : kabkota_kode,
@@ -517,6 +526,7 @@ class Report:
         tahun_awal = int(params.get("tahun") or datetime.now().year)
         tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
         email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
         provinsi_kode = (params.get("provinsi_kode") or None)
         kabkota_kode = (params.get("kabkota_kode") or None)
         kacamatan_kode = (params.get("kacamatan_kode") or None)
@@ -589,6 +599,7 @@ class Report:
             'tahun_awal'    : f'{tahun_awal}-01-01',
             'tahun_akhir'   : f'{tahun_akhir}-01-01',
             'email'         : email,
+            'lembaga'       : lembaga,
             'sql_level'     : sql_level,
             'provinsi_kode' : provinsi_kode,
             'kabkota_kode'  : kabkota_kode,
@@ -602,6 +613,7 @@ class Report:
         tahun_awal = int(params.get("tahun") or datetime.now().year)
         tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
         email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
         provinsi_kode = (params.get("provinsi_kode") or None)
         kabkota_kode = (params.get("kabkota_kode") or None)
         kacamatan_kode = (params.get("kacamatan_kode") or None)
@@ -609,6 +621,10 @@ class Report:
         sql_level = 1
         sql_param_data = "ktp_provinsi_kode"
         sql_where = ""
+        sql_laz = ""
+
+        if lembaga:
+            sql_laz = " AND t_mustahik.laz_kode = :lembaga"
 
         if provinsi_kode:
             sql_level = 2
@@ -636,6 +652,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) mustahik
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -645,6 +662,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) mustahik_m
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -654,6 +672,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) mustahik_f
         , COALESCE((
             SELECT SUM(t_mustahik.rupiah) 
@@ -663,6 +682,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ),0) rupiah
         , COALESCE((
             SELECT SUM(t_mustahik.rupiah) 
@@ -671,6 +691,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ),0) rupiah_all
         FROM
         (
@@ -713,7 +734,8 @@ class Report:
             JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
             UNION
             SELECT DISTINCT CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa, 
             m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama, t_dtsen_akses.laz_kode laz, 2 lvl,
@@ -724,7 +746,8 @@ class Report:
             JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
             UNION
             SELECT DISTINCT CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa, 
             m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama, t_dtsen_akses.laz_kode laz, 3 lvl, 
@@ -736,7 +759,8 @@ class Report:
             JOIN m_kecamatan ON m_kecamatan.kabkota_kode = m_kabkota.kabkota_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
         ) wilayah
         WHERE wilayah.lvl = :sql_level
         """
@@ -747,6 +771,7 @@ class Report:
             'tahun_awal'    : f'{tahun_awal}-01-01',
             'tahun_akhir'   : f'{tahun_akhir}-01-01',
             'email'         : email,
+            'lembaga'       : lembaga,
             'sql_level'     : sql_level,
             'provinsi_kode' : provinsi_kode,
             'kabkota_kode'  : kabkota_kode,
@@ -760,6 +785,7 @@ class Report:
         tahun_awal = int(params.get("tahun") or datetime.now().year)
         tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
         email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
         provinsi_kode = (params.get("provinsi_kode") or None)
         kabkota_kode = (params.get("kabkota_kode") or None)
         kacamatan_kode = (params.get("kacamatan_kode") or None)
@@ -840,6 +866,7 @@ class Report:
             'tahun_awal'    : f'{tahun_awal}-01-01',
             'tahun_akhir'   : f'{tahun_akhir}-01-01',
             'email'         : email,
+            'lembaga'       : lembaga,
             'sql_level'     : sql_level,
             'provinsi_kode' : provinsi_kode,
             'kabkota_kode'  : kabkota_kode,
@@ -853,6 +880,7 @@ class Report:
         tahun_awal = int(params.get("tahun") or datetime.now().year)
         tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
         email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
         provinsi_kode = (params.get("provinsi_kode") or None)
         kabkota_kode = (params.get("kabkota_kode") or None)
         kacamatan_kode = (params.get("kacamatan_kode") or None)
@@ -861,6 +889,10 @@ class Report:
         sql_param_data = "ktp_provinsi_kode"
         sql_param_zawa = "kode_provinsi_ktp"
         sql_where = ""
+        sql_laz = ""
+
+        if lembaga:
+            sql_laz = " AND t_mustahik.laz_kode = :lembaga"
 
         if provinsi_kode:
             sql_level = 2
@@ -891,6 +923,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_na
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -900,6 +933,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_1
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -909,6 +943,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_2
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -918,6 +953,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_3
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -927,6 +963,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_4
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -936,6 +973,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_5
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -945,6 +983,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_6
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -954,6 +993,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_7
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -963,6 +1003,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_8
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -972,6 +1013,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_9
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -981,6 +1023,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_10
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -989,6 +1032,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) desil_all
         , COALESCE((
             SELECT SUM(t_mustahik.rupiah) 
@@ -997,6 +1041,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ),0) desil_sum_all
         , COALESCE((
             SELECT SUM(t_mustahik.rupiah) 
@@ -1006,6 +1051,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ),0) desil_sum_na
         , COALESCE((
             SELECT SUM(t_mustahik.rupiah) 
@@ -1015,6 +1061,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ),0) desil_sum_1
         , COALESCE((
             SELECT SUM(t_mustahik.rupiah) 
@@ -1024,6 +1071,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ),0) desil_sum_2
         , COALESCE((
             SELECT SUM(t_mustahik.rupiah) 
@@ -1033,6 +1081,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ),0) desil_sum_3
         , COALESCE((
             SELECT SUM(t_mustahik.rupiah) 
@@ -1042,6 +1091,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ),0) desil_sum_4
         FROM
         (
@@ -1084,7 +1134,8 @@ class Report:
             JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
             UNION
             SELECT DISTINCT CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa, 
             m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama, t_dtsen_akses.laz_kode laz, 2 lvl,
@@ -1095,7 +1146,8 @@ class Report:
             JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
             UNION
             SELECT DISTINCT CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa, 
             m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama, t_dtsen_akses.laz_kode laz, 3 lvl, 
@@ -1107,7 +1159,8 @@ class Report:
             JOIN m_kecamatan ON m_kecamatan.kabkota_kode = m_kabkota.kabkota_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
         ) wilayah
         WHERE wilayah.lvl = :sql_level
         """
@@ -1118,6 +1171,7 @@ class Report:
             'tahun_awal'    : f'{tahun_awal}-01-01',
             'tahun_akhir'   : f'{tahun_akhir}-01-01',
             'email'         : email,
+            'lembaga'       : lembaga,
             'sql_level'     : sql_level,
             'provinsi_kode' : provinsi_kode,
             'kabkota_kode'  : kabkota_kode,
@@ -1131,6 +1185,7 @@ class Report:
         tahun_awal = int(params.get("tahun") or datetime.now().year)
         tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
         email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
         provinsi_kode = (params.get("provinsi_kode") or None)
         kabkota_kode = (params.get("kabkota_kode") or None)
         kacamatan_kode = (params.get("kacamatan_kode") or None)
@@ -1146,6 +1201,10 @@ class Report:
         sql_param_data = "ktp_provinsi_kode"
         sql_param_zawa = "kode_provinsi_ktp"
         sql_where = ""
+        sql_laz = ""
+
+        if lembaga:
+            sql_laz = " AND t_mustahik.laz_kode = :lembaga"
 
         if provinsi_kode:
             sql_level = 2
@@ -1176,6 +1235,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) usia_1
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -1185,6 +1245,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) usia_2
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -1194,6 +1255,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) usia_3
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -1203,6 +1265,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) usia_4
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -1212,6 +1275,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) usia_5
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -1221,6 +1285,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) usia_6
         , (
             SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
@@ -1230,6 +1295,7 @@ class Report:
             AND t_mustahik.tanggal_terima < :tahun_akhir 
             AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
             AND (t_mustahik.laz_kode = wilayah.laz OR wilayah.laz IS NULL)
+            """ + sql_laz + """
         ) usia_7
         FROM
         (
@@ -1272,7 +1338,8 @@ class Report:
             JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
             UNION
             SELECT DISTINCT CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa, 
             m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama, t_dtsen_akses.laz_kode laz, 2 lvl,
@@ -1283,7 +1350,8 @@ class Report:
             JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
             UNION
             SELECT DISTINCT CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa, 
             m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama, t_dtsen_akses.laz_kode laz, 3 lvl, 
@@ -1295,7 +1363,8 @@ class Report:
             JOIN m_kecamatan ON m_kecamatan.kabkota_kode = m_kabkota.kabkota_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
             WHERE t_dtsen_akses.email = :email
-            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
         ) wilayah
         WHERE wilayah.lvl = :sql_level
         """
@@ -1312,6 +1381,7 @@ class Report:
             'tahun_lahir_5' : f'{tahun_lahir_5}-01-01',
             'tahun_lahir_6' : f'{tahun_lahir_6}-01-01',
             'email'         : email,
+            'lembaga'       : lembaga,
             'sql_level'     : sql_level,
             'provinsi_kode' : provinsi_kode,
             'kabkota_kode'  : kabkota_kode,
@@ -1325,12 +1395,17 @@ class Report:
         tahun_awal = int(params.get("tahun") or datetime.now().year)
         tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
         email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
         provinsi_kode = (params.get("provinsi_kode") or None)
         kabkota_kode = (params.get("kabkota_kode") or None)
         kacamatan_kode = (params.get("kacamatan_kode") or None)
 
         sql_level = 1
         sql_where = ""
+        sql_laz = ""
+
+        if lembaga:
+            sql_laz = " AND t_mustahik.laz_kode = :lembaga"
 
         if provinsi_kode:
             sql_level = 2
@@ -1362,7 +1437,8 @@ class Report:
                 JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.provinsi_kode
                 JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
                 WHERE t_dtsen_akses.email = :email
-                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+                """ + sql_laz + """ 
                 GROUP BY lvl, kode, laz, program_kode
                 UNION
                 SELECT DISTINCT 2 lvl, t_mustahik.kabkota_kode kode, t_dtsen_akses.laz_kode laz, t_mustahik.program_kode, SUM(t_mustahik.rupiah) rupiah, COUNT(DISTINCT t_mustahik.nik) mustahik
@@ -1372,7 +1448,8 @@ class Report:
                 JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
                 JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
                 WHERE t_dtsen_akses.email = :email
-                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+                """ + sql_laz + """ 
                 GROUP BY lvl, kode, laz, program_kode
                 UNION
                 SELECT DISTINCT 3 lvl, t_mustahik.kecamatan_kode kode, t_dtsen_akses.laz_kode laz, t_mustahik.program_kode, SUM(t_mustahik.rupiah) rupiah, COUNT(DISTINCT t_mustahik.nik) mustahik
@@ -1383,7 +1460,8 @@ class Report:
                 JOIN m_kecamatan ON m_kecamatan.kabkota_kode = m_kabkota.kabkota_kode
                 JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
                 WHERE t_dtsen_akses.email = :email
-                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+                """ + sql_laz + """ 
                 GROUP BY lvl, kode, laz, program_kode
             ) wilayah
             JOIN t_program ON t_program.program_kode = wilayah.program_kode
@@ -1401,6 +1479,7 @@ class Report:
             'tahun_awal'    : f'{tahun_awal}-01-01',
             'tahun_akhir'   : f'{tahun_akhir}-01-01',
             'email'         : email,
+            'lembaga'       : lembaga,
             'sql_level'     : sql_level,
             'provinsi_kode' : provinsi_kode,
             'kabkota_kode'  : kabkota_kode,
