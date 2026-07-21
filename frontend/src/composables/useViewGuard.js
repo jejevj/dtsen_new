@@ -10,11 +10,7 @@
  *  - Drag & drop elemen
  *  - Keyboard shortcuts DevTools:
  *      F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U (view source)
-<<<<<<< HEAD
  *  - DevTools open detection via window-size heuristic (reliable, no debugger loop)
-=======
- *  - DevTools console detection (debugger trap loop)
->>>>>>> origin/basril
  *
  * Toast bridge:
  *  Karena composable ini dijalankan sebelum app Vue di-mount,
