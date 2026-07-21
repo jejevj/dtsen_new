@@ -150,94 +150,108 @@
       <div v-if="searchDone && !isSearching" class="space-y-4">
 
         <!-- ══════════════════════════════════════════════════════════════ -->
-        <!-- PANEL 1: TERDATA DI DTSEN (tampil PERTAMA) -->
+        <!-- PANEL 1: TERDATA DI DTSEN -->
         <!-- ══════════════════════════════════════════════════════════════ -->
 
-        <!-- Ditemukan di DTSEN -->
         <transition name="fade-slide">
-          <div v-if="zawaData" class="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden">
-            <!-- Header panel -->
-            <div class="bg-blue-50 border-b border-blue-200 px-6 py-4 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <i class="pi pi-database text-blue-600 text-xl"></i>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <h3 class="font-semibold text-blue-800">Terdata di DTSEN</h3>
-                  <!-- Desil Badge — highlighted -->
-                  <span v-if="zawaDesil"
-                    :style="{ background: DESIL_COLOR[zawaDesil]?.bg, color: DESIL_COLOR[zawaDesil]?.text, border: '1.5px solid ' + DESIL_COLOR[zawaDesil]?.border }"
-                    class="px-3 py-0.5 text-xs font-extrabold rounded-full shadow-sm">
-                    ★ {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
-                  </span>
-                </div>
-                <p class="text-sm text-blue-600"> <strong>{{ zawaData.nama || maskedLastNik }}</strong> tercatat sebagai anggota keluarga dalam basis data DTSEN.</p>
-              </div>
+          <div v-if="zawaData" class="pd-card">
+            <!-- Watermark -->
+            <div v-if="userIdentifier" class="pd-watermark" aria-hidden="true">
+              <svg class="pd-watermark-svg" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <pattern id="pd-wm-dtsen" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                    <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text>
+                    <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#pd-wm-dtsen)" />
+              </svg>
             </div>
 
-            <!-- Data Kependudukan -->
-            <div class="p-6">
-              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Data Kependudukan (DTSEN)</h4>
-              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-4">
-                <div>
-                  <p class="text-xs text-gray-400">Nama</p>
-                  <p class="text-sm font-semibold text-gray-800">{{ zawaData.nama || '-' }}</p>
+            <!-- Konten panel DTSEN -->
+            <div class="pd-content">
+              <!-- Header panel -->
+              <div class="bg-blue-50 border-b border-blue-200 px-6 py-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <i class="pi pi-database text-blue-600 text-xl"></i>
                 </div>
-                <div>
-                  <p class="text-xs text-gray-400">NIK</p>
-                  <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskNik(zawaData.nomor_induk_kependudukan || lastSearchedNik) }}</p>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="font-semibold text-blue-800">Terdata di DTSEN</h3>
+                    <span v-if="zawaDesil"
+                      :style="{ background: DESIL_COLOR[zawaDesil]?.bg, color: DESIL_COLOR[zawaDesil]?.text, border: '1.5px solid ' + DESIL_COLOR[zawaDesil]?.border }"
+                      class="px-3 py-0.5 text-xs font-extrabold rounded-full shadow-sm">
+                      ★ {{ DESIL_LABEL[zawaDesil] ?? ('Desil ' + zawaDesil) }}
+                    </span>
+                  </div>
+                  <p class="text-sm text-blue-600"><strong>{{ zawaData.nama || maskedLastNik }}</strong> tercatat sebagai anggota keluarga dalam basis data DTSEN.</p>
                 </div>
-                <div>
-                  <p class="text-xs text-gray-400">No. KK</p>
-                  <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskNik(zawaData.nomor_kartu_keluarga) }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Jenis Kelamin</p>
-                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(JENIS_KELAMIN, zawaData.jenis_kelamin) }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Tanggal Lahir</p>
-                  <p class="text-sm font-medium text-gray-800">{{ formatTanggal(zawaData.tanggal_lahir) }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Status Kawin</p>
-                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_KAWIN, zawaData.status_kawin) }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Hubungan Keluarga</p>
-                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(HUBUNGAN_KELUARGA, zawaData.status_hubungan_keluarga) }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Pendidikan Tertinggi</p>
-                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(PENDIDIKAN, zawaData.ijazah_tertinggi_yang_dimiliki) }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Status Bekerja</p>
-                  <p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_BEKERJA, zawaData.status_bekerja) }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Alamat KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.alamat_ktp || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Kecamatan KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.kecamatan_ktp || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Kab/Kota KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.kabupaten_kota_ktp || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Provinsi KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.provinsi_ktp || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">PBI Nasional</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_nas != null ? (zawaData.pbi_nas ? 'Ya' : 'Tidak') : '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">PBI Pemda</p>
-                  <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_pemda != null ? (zawaData.pbi_pemda ? 'Ya' : 'Tidak') : '-' }}</p>
+              </div>
+
+              <!-- Data Kependudukan -->
+              <div class="p-6">
+                <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Data Kependudukan (DTSEN)</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-4">
+                  <div>
+                    <p class="text-xs text-gray-400">Nama</p>
+                    <p class="text-sm font-semibold text-gray-800">{{ zawaData.nama || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">NIK</p>
+                    <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskNik(zawaData.nomor_induk_kependudukan || lastSearchedNik) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">No. KK</p>
+                    <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskNik(zawaData.nomor_kartu_keluarga) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Jenis Kelamin</p>
+                    <p class="text-sm font-medium text-gray-800">{{ resolveRef(JENIS_KELAMIN, zawaData.jenis_kelamin) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Tanggal Lahir</p>
+                    <p class="text-sm font-medium text-gray-800">{{ formatTanggal(zawaData.tanggal_lahir) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Status Kawin</p>
+                    <p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_KAWIN, zawaData.status_kawin) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Hubungan Keluarga</p>
+                    <p class="text-sm font-medium text-gray-800">{{ resolveRef(HUBUNGAN_KELUARGA, zawaData.status_hubungan_keluarga) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Pendidikan Tertinggi</p>
+                    <p class="text-sm font-medium text-gray-800">{{ resolveRef(PENDIDIKAN, zawaData.ijazah_tertinggi_yang_dimiliki) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Status Bekerja</p>
+                    <p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_BEKERJA, zawaData.status_bekerja) }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Alamat KTP</p>
+                    <p class="text-sm font-medium text-gray-800">{{ zawaData.alamat_ktp || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Kecamatan KTP</p>
+                    <p class="text-sm font-medium text-gray-800">{{ zawaData.kecamatan_ktp || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Kab/Kota KTP</p>
+                    <p class="text-sm font-medium text-gray-800">{{ zawaData.kabupaten_kota_ktp || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Provinsi KTP</p>
+                    <p class="text-sm font-medium text-gray-800">{{ zawaData.provinsi_ktp || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">PBI Nasional</p>
+                    <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_nas != null ? (zawaData.pbi_nas ? 'Ya' : 'Tidak') : '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">PBI Pemda</p>
+                    <p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_pemda != null ? (zawaData.pbi_pemda ? 'Ya' : 'Tidak') : '-' }}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -263,133 +277,146 @@
         </transition>
 
         <!-- ══════════════════════════════════════════════════════════════ -->
-        <!-- PANEL 2: PENERIMA MANFAAT / MUSTAHIK (tampil KEDUA) -->
+        <!-- PANEL 2: PENERIMA MANFAAT / MUSTAHIK -->
         <!-- ══════════════════════════════════════════════════════════════ -->
 
-        <!-- Ditemukan sebagai Mustahik -->
         <transition name="fade-slide">
-          <div v-if="mustahikRows.length > 0" class="bg-white rounded-xl shadow-sm border border-green-200 overflow-hidden">
-            <div class="bg-green-50 border-b border-green-200 px-6 py-4 flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                <i class="pi pi-check-circle text-green-600 text-xl"></i>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
+          <div v-if="mustahikRows.length > 0" class="pd-card">
+            <!-- Watermark -->
+            <div v-if="userIdentifier" class="pd-watermark" aria-hidden="true">
+              <svg class="pd-watermark-svg" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <pattern id="pd-wm-mustahik" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                    <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text>
+                    <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text>
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#pd-wm-mustahik)" />
+              </svg>
+            </div>
+
+            <!-- Konten panel Mustahik -->
+            <div class="pd-content">
+              <div class="bg-green-50 border-b border-green-200 px-6 py-4 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <i class="pi pi-check-circle text-green-600 text-xl"></i>
+                </div>
+                <div class="flex-1">
                   <h3 class="font-semibold text-green-800">Penerima Manfaat</h3>
+                  <p class="text-sm text-green-600">NIK <strong>{{ maskedLastNik }}</strong> terdaftar sebagai penerima zakat/bantuan.</p>
                 </div>
-                <p class="text-sm text-green-600">NIK <strong>{{ maskedLastNik }}</strong> terdaftar sebagai penerima zakat/bantuan.</p>
+                <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full border border-green-300 flex-shrink-0">
+                  {{ mustahikRows.length }} Riwayat
+                </span>
               </div>
-              <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full border border-green-300 flex-shrink-0">
-                {{ mustahikRows.length }} Riwayat
-              </span>
-            </div>
 
-            <div class="p-6 pb-4">
-              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Identitas Pribadi</h4>
-              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
-                <div>
-                  <p class="text-xs text-gray-400">Nama Lengkap</p>
-                  <p class="text-sm font-semibold text-gray-800">{{ mustahikIdentity.nama_lengkap || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">NIK</p>
-                  <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskedLastNik }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Jenis Kelamin</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.jenis_kelamin || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Tanggal Lahir</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.lahir_tanggal || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Agama</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.agama || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Alamat Domisili</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.alamat_domisili || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Provinsi Domisili</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.provinsi_nama || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Kab/Kota Domisili</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.kabkota_nama || '-' }}</p>
+              <div class="p-6 pb-4">
+                <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Identitas Pribadi</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
+                  <div>
+                    <p class="text-xs text-gray-400">Nama Lengkap</p>
+                    <p class="text-sm font-semibold text-gray-800">{{ mustahikIdentity.nama_lengkap || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">NIK</p>
+                    <p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskedLastNik }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Jenis Kelamin</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.jenis_kelamin || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Tanggal Lahir</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.lahir_tanggal || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Agama</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.agama || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Alamat Domisili</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.alamat_domisili || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Provinsi Domisili</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.provinsi_nama || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Kab/Kota Domisili</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.kabkota_nama || '-' }}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="px-6 pb-6">
-              <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Alamat KTP</h4>
-              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
-                <div>
-                  <p class="text-xs text-gray-400">Alamat KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.ktp_alamat || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Provinsi KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.ktp_provinsi_nama || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Kab/Kota KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.ktp_kabkota_nama || '-' }}</p>
-                </div>
-                <div>
-                  <p class="text-xs text-gray-400">Kecamatan KTP</p>
-                  <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.ktp_kecamatan_nama || '-' }}</p>
+              <div class="px-6 pb-6">
+                <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Alamat KTP</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3">
+                  <div>
+                    <p class="text-xs text-gray-400">Alamat KTP</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.ktp_alamat || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Provinsi KTP</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.ktp_provinsi_nama || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Kab/Kota KTP</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.ktp_kabkota_nama || '-' }}</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-400">Kecamatan KTP</p>
+                    <p class="text-sm font-medium text-gray-800">{{ mustahikIdentity.ktp_kecamatan_nama || '-' }}</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="border-t border-gray-100">
-              <div class="px-6 py-4 border-b border-gray-100">
-                <h4 class="text-sm font-semibold text-gray-700">Riwayat Penerimaan Zakat / Bantuan</h4>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">LAZ</th>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Skala</th>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipe</th>
-                      <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Nominal</th>
-                      <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Terima</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-gray-50">
-                    <tr v-for="(row, i) in mustahikRows" :key="i" class="hover:bg-gray-50 transition-colors">
-                      <td class="px-4 py-3 text-gray-400 text-xs">{{ i + 1 }}</td>
-                      <td class="px-4 py-3">
-                        <p class="font-medium text-gray-800">{{ row.laz_nama || '-' }}</p>
-                        <p class="text-xs text-gray-400">{{ row.laz_kode }}</p>
-                      </td>
-                      <td class="px-4 py-3">
-                        <span class="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">{{ row.skala || '-' }}</span>
-                      </td>
-                      <td class="px-4 py-3 text-gray-700">{{ row.program_nama || '-' }}</td>
-                      <td class="px-4 py-3">
-                        <span :class="[
-                          'px-2 py-0.5 text-xs rounded-full font-medium',
-                          row.tipe_penerimaan === 'langsung' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
-                        ]">{{ row.tipe_penerimaan || '-' }}</span>
-                      </td>
-                      <td class="px-4 py-3 text-right font-semibold text-gray-800">{{ formatRupiah(row.rupiah) }}</td>
-                      <td class="px-4 py-3 text-gray-600">{{ row.tanggal_terima || '-' }}</td>
-                    </tr>
-                  </tbody>
-                  <tfoot class="bg-gray-50 border-t border-gray-200">
-                    <tr>
-                      <td colspan="5" class="px-4 py-3 text-xs font-semibold text-gray-500 text-right">Total Diterima</td>
-                      <td class="px-4 py-3 text-right font-bold text-green-700">{{ formatRupiah(totalRupiah) }}</td>
-                      <td></td>
-                    </tr>
-                  </tfoot>
-                </table>
+              <div class="border-t border-gray-100">
+                <div class="px-6 py-4 border-b border-gray-100">
+                  <h4 class="text-sm font-semibold text-gray-700">Riwayat Penerimaan Zakat / Bantuan</h4>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">LAZ</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Skala</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Program</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipe</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Nominal</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Terima</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                      <tr v-for="(row, i) in mustahikRows" :key="i" class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 text-gray-400 text-xs">{{ i + 1 }}</td>
+                        <td class="px-4 py-3">
+                          <p class="font-medium text-gray-800">{{ row.laz_nama || '-' }}</p>
+                          <p class="text-xs text-gray-400">{{ row.laz_kode }}</p>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full font-medium">{{ row.skala || '-' }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-700">{{ row.program_nama || '-' }}</td>
+                        <td class="px-4 py-3">
+                          <span :class="[
+                            'px-2 py-0.5 text-xs rounded-full font-medium',
+                            row.tipe_penerimaan === 'langsung' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'
+                          ]">{{ row.tipe_penerimaan || '-' }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-right font-semibold text-gray-800">{{ formatRupiah(row.rupiah) }}</td>
+                        <td class="px-4 py-3 text-gray-600">{{ row.tanggal_terima || '-' }}</td>
+                      </tr>
+                    </tbody>
+                    <tfoot class="bg-gray-50 border-t border-gray-200">
+                      <tr>
+                        <td colspan="5" class="px-4 py-3 text-xs font-semibold text-gray-500 text-right">Total Diterima</td>
+                        <td class="px-4 py-3 text-right font-bold text-green-700">{{ formatRupiah(totalRupiah) }}</td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -452,6 +479,10 @@ import {
 } from '@/data/dtsenRef'
 import { fetchBaselineKeluargaByNkk } from '@/services/baselineService'
 import { maskNik } from '@/utils/formatter'
+import { useWatermark } from '@/composables/useWatermark'
+
+// ── Watermark ───────────────────────────────────────
+const { userIdentifier } = useWatermark()
 
 // ── State ──────────────────────────────────────────
 const form              = reactive({ nik: '', captcha: '' })
@@ -465,9 +496,8 @@ const lastSearchedNik   = ref('')
 const apiError          = ref('')
 const searchDone        = ref(false)
 const captchaRefreshing = ref(false)
-const zawaDesil         = ref(null)   // desil dari data keluarga
+const zawaDesil         = ref(null)
 
-// NIK yang ditampilkan ke UI selalu dalam bentuk masked
 const maskedLastNik = computed(() => maskNik(lastSearchedNik.value))
 
 // ── CAPTCHA ARITMATIKA ──────────────────────────────
@@ -554,7 +584,6 @@ async function handleSearch() {
     MustahikService.getZawaAnggotaByNik(nik),
   ])
 
-  // Mustahik
   if (mustahikResult.status === 'fulfilled') {
     const res = mustahikResult.value
     if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
@@ -568,12 +597,10 @@ async function handleSearch() {
   }
   mustahikLoading.value = false
 
-  // DTSEN / ZAWA
   if (zawaResult.status === 'fulfilled') {
     const anggota = zawaResult.value
     if (anggota && typeof anggota === 'object') {
       zawaData.value = anggota
-      // Ambil desil dari data keluarga via NKK
       const nkk = anggota.nomor_kartu_keluarga
       if (nkk) {
         try {
@@ -611,6 +638,35 @@ function formatTanggal(val) {
 </script>
 
 <style scoped>
+/* ── Watermark ── */
+.pd-card {
+  position: relative;
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  overflow: hidden;
+}
+.pd-card.border-blue-200  { border-color: #bfdbfe; }
+.pd-card.border-green-200 { border-color: #bbf7d0; }
+.pd-watermark {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+}
+.pd-watermark-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pd-content {
+  position: relative;
+  z-index: 0;
+}
+
+/* ── Transitions ── */
 .fade-slide-enter-active { transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .fade-slide-enter-from   { opacity: 0; transform: translateY(12px); }
 .fade-slide-leave-active { transition: all 0.2s ease; }
