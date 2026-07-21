@@ -14,16 +14,6 @@ export const formatGender = (value) => {
 
 /**
  * Mengubah angka menjadi format singkat dengan satuan Rb / Jt / M / T
-<<<<<<< HEAD
- */
-export const formatShort = (value, decimals = 1) => {
-  if (value === null || value === undefined || isNaN(value)) return '-'
-  const abs = Math.abs(value)
-  const sign = value < 0 ? '-' : ''
-  const fmt = (num) =>
-    parseFloat(num.toFixed(decimals))
-      .toLocaleString('id-ID', { maximumFractionDigits: decimals })
-=======
  * Contoh:
  *   690000        → "690 Rb"
  *   1560000       → "1,5 Jt"
@@ -45,14 +35,12 @@ export const formatShort = (value, decimals = 1) => {
     parseFloat(num.toFixed(decimals))
       .toLocaleString('id-ID', { maximumFractionDigits: decimals })
 
->>>>>>> origin/basril
   if (abs >= 1_000_000_000_000) return `${sign}${fmt(abs / 1_000_000_000_000)} T`
   if (abs >= 1_000_000_000)     return `${sign}${fmt(abs / 1_000_000_000)} M`
   if (abs >= 1_000_000)         return `${sign}${fmt(abs / 1_000_000)} Jt`
   if (abs >= 1_000)             return `${sign}${fmt(abs / 1_000)} Rb`
   return `${sign}${abs}`
 }
-<<<<<<< HEAD
 
 /**
  * Masking NIK: tampilkan 4 digit awal + bintang tengah + 4 digit akhir.
@@ -74,5 +62,3 @@ export function maskNik(nik, visibleStart = 4, visibleEnd = 4) {
   const masked = '*'.repeat(total - visibleStart - visibleEnd)
   return `${start}${masked}${end}`
 }
-=======
->>>>>>> origin/basril
