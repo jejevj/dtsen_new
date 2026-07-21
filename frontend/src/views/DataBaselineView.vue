@@ -315,6 +315,31 @@
                 </div>
               </div>
 
+              <!-- Section Ternak (slider range) — hanya tab keluarga -->
+              <div v-if="activeTab === 'keluarga'" class="space-y-4">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ternak</p>
+
+                <div v-for="tf in TERNAK_FIELDS" :key="tf.key" class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs font-medium text-slate-600">{{ tf.label }}</label>
+                    <span class="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                      {{ ternakSliders[tf.key][0] }} – {{ ternakSliders[tf.key][1] }}
+                    </span>
+                  </div>
+                  <Slider
+                    v-model="ternakSliders[tf.key]"
+                    :range="true"
+                    :min="0"
+                    :max="100"
+                    :step="1"
+                    class="w-full"
+                  />
+                  <div class="flex justify-between text-[10px] text-slate-400">
+                    <span>0</span><span>100</span>
+                  </div>
+                </div>
+              </div>
+
               <div
                 v-for="(groupFields, groupName) in groupedFilterFields"
                 :key="groupName"
@@ -325,8 +350,13 @@
                 <div v-for="field in groupFields" :key="field.field_key">
                   <label class="block text-xs font-medium text-slate-600 mb-1">{{ field.field_label }}</label>
 
+                  <!-- Ternak fields dari DB config: skip — sudah ditangani slider di atas -->
+                  <template v-if="isTernakField(field.field_key)">
+                    <!-- rendered by slider section above, skip here -->
+                  </template>
+
                   <Select
-                    v-if="field.refs && field.refs.length"
+                    v-else-if="field.refs && field.refs.length"
                     v-model="currentFilters[field.field_key]"
                     :options="[{ ref_value: '', ref_label: 'Semua' }, ...field.refs]"
                     option-label="ref_label"
@@ -337,7 +367,7 @@
                   />
 
                   <InputNumber
-                    v-else-if="field.field_type === 'Integer' || field.field_type === 'Float'"
+                    v-else-if="(field.field_type === 'Integer' || field.field_type === 'Float')"
                     v-model="currentFilters[field.field_key]"
                     :placeholder="field.field_label"
                     class="w-full"
@@ -406,6 +436,7 @@ import InputText     from 'primevue/inputtext'
 import InputNumber   from 'primevue/inputnumber'
 import Select        from 'primevue/select'
 import DatePicker    from 'primevue/datepicker'
+import Slider        from 'primevue/slider'
 import {
   fetchBaselineProvinsi,
   fetchKabkotaByBps,
@@ -416,6 +447,38 @@ import {
 import { fetchFilterFields } from '@/services/tampilanDtsenService'
 
 const router = useRouter()
+
+// ── Ternak slider config
+const TERNAK_FIELDS = [
+  { key: 'jumlah_ternak_babi',          label: 'Jumlah Ternak: Babi' },
+  { key: 'jumlah_ternak_kambing_domba', label: 'Jumlah Ternak: Kambing / Domba' },
+  { key: 'jumlah_ternak_kerbau',        label: 'Jumlah Ternak: Kerbau' },
+  { key: 'jumlah_ternak_kuda',          label: 'Jumlah Ternak: Kuda' },
+  { key: 'jumlah_ternak_sapi',          label: 'Jumlah Ternak: Sapi' },
+]
+const TERNAK_KEYS = new Set(TERNAK_FIELDS.map(f => f.key))
+
+// ternakSliders: { [key]: [min, max] } — default 0–100 = "semua / tidak difilter"
+const ternakSliders = reactive(
+  Object.fromEntries(TERNAK_FIELDS.map(f => [f.key, [0, 100]]))
+)
+
+function isTernakField(fieldKey) {
+  return TERNAK_KEYS.has(fieldKey)
+}
+
+/** Konversi nilai slider [min, max] → string untuk API backend.
+ *  [0, 100] → tidak dikirim (default, tidak difilter)
+ *  [n, n]   → "n"  (exact)
+ *  [0, m]   → "0-m"
+ *  [n, 100] → ">n-1" tidak cocok, kirim "n-100"
+ *  [n, m]   → "n-m"
+ */
+function sliderToApiValue(min, max) {
+  if (min === 0 && max === 100) return null  // default → tidak filter
+  if (min === max) return String(min)
+  return `${min}-${max}`
+}
 
 // Opsi Desil Kemiskinan (hardcode, tidak butuh konfigurasi DB)
 const desilOptions = [
@@ -593,11 +656,17 @@ const currentFilters = computed(() =>
   activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
 )
 
-// Hitung jumlah filter aktif: dari drawer + desil khusus keluarga
+// Hitung jumlah filter aktif: dari drawer + desil + ternak sliders (jika bukan default 0-100)
 const activeFilterCount = computed(() => {
   const drawerCount = Object.values(currentFilters.value).filter(v => v !== '' && v != null).length
   const desilCount  = (activeTab.value === 'keluarga' && keluarga.desil) ? 1 : 0
-  return drawerCount + desilCount
+  const ternakCount = activeTab.value === 'keluarga'
+    ? TERNAK_FIELDS.filter(f => {
+        const [mn, mx] = ternakSliders[f.key]
+        return !(mn === 0 && mx === 100)
+      }).length
+    : 0
+  return drawerCount + desilCount + ternakCount
 })
 
 function formatFilterValue(val) {
@@ -617,8 +686,17 @@ const activeFiltersBadges = computed(() => {
     const opt = desilOptions.find(o => o.value === keluarga.desil)
     result.push({ key: '__desil__', label: 'Desil', display: opt?.label ?? keluarga.desil })
   }
-  // Badge dari drawer filter dinamis
+  // Badge ternak slider jika bukan default
+  if (activeTab.value === 'keluarga') {
+    for (const tf of TERNAK_FIELDS) {
+      const [mn, mx] = ternakSliders[tf.key]
+      if (mn === 0 && mx === 100) continue
+      result.push({ key: `__ternak__${tf.key}`, label: tf.label, display: `${mn} – ${mx}` })
+    }
+  }
+  // Badge dari drawer filter dinamis (skip ternak — sudah di atas)
   for (const f of filterFields.value) {
+    if (isTernakField(f.field_key)) continue
     const val = currentFilters.value[f.field_key]
     if (val === '' || val == null) continue
     let display = formatFilterValue(val)
@@ -654,6 +732,7 @@ async function loadFilterFields() {
     filterFields.value = data
     const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
     for (const f of data) {
+      if (isTernakField(f.field_key)) continue  // ternak pakai slider, skip
       if (!(f.field_key in store)) store[f.field_key] = ''
     }
   } catch (e) {
@@ -682,7 +761,13 @@ function applyFilter() {
 function resetFilter() {
   const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
   for (const k of Object.keys(store)) store[k] = ''
-  if (activeTab.value === 'keluarga') keluarga.desil = ''
+  if (activeTab.value === 'keluarga') {
+    keluarga.desil = ''
+    // Reset semua ternak slider ke default 0-100
+    for (const tf of TERNAK_FIELDS) {
+      ternakSliders[tf.key] = [0, 100]
+    }
+  }
   showFilter.value = false
   if (activeTab.value === 'anggota') loadAnggota()
   else loadKeluarga()
@@ -694,6 +779,13 @@ function clearOneFilter(fieldKey) {
     loadKeluarga()
     return
   }
+  // Clear ternak slider badge
+  if (fieldKey.startsWith('__ternak__')) {
+    const key = fieldKey.replace('__ternak__', '')
+    ternakSliders[key] = [0, 100]
+    loadKeluarga()
+    return
+  }
   const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
   if (fieldKey in store) { store[fieldKey] = ''; applyFilter() }
 }
@@ -702,6 +794,17 @@ function buildFilterParams(store) {
   const params = {}
   for (const [k, v] of Object.entries(store)) {
     if (v !== '' && v != null) params[k] = formatFilterValue(v)
+  }
+  return params
+}
+
+/** Tambahkan parameter ternak dari slider ke params API */
+function buildTernakParams() {
+  const params = {}
+  for (const tf of TERNAK_FIELDS) {
+    const [mn, mx] = ternakSliders[tf.key]
+    const val = sliderToApiValue(mn, mx)
+    if (val !== null) params[tf.key] = val
   }
   return params
 }
@@ -766,6 +869,8 @@ async function loadKeluarga(cursor = null) {
     if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
     // Kirim desil_nasional ke backend jika dipilih
     if (keluarga.desil)     params.desil_nasional  = keluarga.desil
+    // Kirim filter ternak dari slider
+    Object.assign(params, buildTernakParams())
     Object.assign(params, buildFilterParams(keluargaFilters))
     const res = await fetchBaselineKeluarga(params)
     keluarga.rows = res.data ?? []; keluarga.columns = res.columns ?? []
@@ -794,6 +899,7 @@ function resetKeluarga() {
   keluargaKabkotaOptions.value   = []
   keluargaKecamatanOptions.value = []
   for (const k of Object.keys(keluargaFilters)) keluargaFilters[k] = ''
+  for (const tf of TERNAK_FIELDS) ternakSliders[tf.key] = [0, 100]
   Object.assign(keluarga.meta, {
     label:'', totalItems:0, totalPages:1, currentPage:1,
     hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10,
