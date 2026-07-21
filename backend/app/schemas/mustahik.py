@@ -1,4 +1,5 @@
 import hashlib
+import base64
 from marshmallow import Schema, fields, validate
 from datetime import date, datetime
 
@@ -22,20 +23,36 @@ class MustahikSchema(Schema):
 
     # Wilayah domisili (dari relationship lazy='joined')
     kabkota_nama = fields.Method('get_kabkota_nama', dump_only=True)
+    provinsi_nama = fields.Method('get_provinsi_nama', dump_only=True)
+    desil = fields.Method("get_desil", dump_only=True)
+
+    # def get_nik_hashed(self, obj):
+    #     return hashlib.md5(str(obj.nik).encode()).hexdigest() if obj.nik else None
 
     def get_nik_hashed(self, obj):
-        return hashlib.md5(str(obj.nik).encode()).hexdigest() if obj.nik else None
+        if not obj.nik:
+            return None
+        return base64.urlsafe_b64encode(str(obj.nik).encode()).decode()
 
     def get_kabkota_nama(self, obj):
-        return obj.kabkota.kabkota_nama if obj.kabkota else None
+        return obj.ktp_kabkota.kabkota_nama if obj.ktp_kabkota else None
+
+    def get_provinsi_nama(self, obj):
+        return obj.ktp_provinsi.provinsi_nama if obj.ktp_provinsi else None
+
+    def get_desil(self, obj):
+        return obj.bappenas.desil if obj.bappenas else None
 
     def get_masked_nik(self, obj):
         if not obj.nik:
             return None
+
         nik = str(obj.nik)
-        if len(nik) <= 4:
+
+        if len(nik) <= 7:
             return nik
-        return f"{nik[:2]}{'*' * (len(nik) - 4)}{nik[-2:]}"
+
+        return f"{nik[:6]}{'*' * (len(nik) - 7)}{nik[-1]}"
 
     def _hitung_usia(self, obj):
         if not obj.lahir_tanggal:

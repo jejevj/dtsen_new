@@ -239,7 +239,7 @@ const navItems = [
 
 const pageLabels = {
   '/dashboard':     'Dashboard',
-  '/mustahik':      'Data Mustahik',
+  '/mustahik':      'Data Penerima Manfaat',
   '/data-baseline': 'Data Baseline',
   '/report':        'Pemeriksaan DTSEN',
 }

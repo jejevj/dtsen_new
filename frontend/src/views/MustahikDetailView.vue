@@ -6,7 +6,7 @@
       </button>
       <div v-if="loading" class="state-card">
         <div class="loader-circle"></div>
-        <h3>Memuat Data Mustahik</h3>
+        <h3>Memuat Data Penerima Manfaat</h3>
         <p>Sedang mengambil informasi penerima manfaat...</p>
 
         <div class="loading-bars">
@@ -36,7 +36,7 @@
         </div>
         <h3>Data Tidak Ditemukan</h3>
         <p>
-          Data mustahik yang Anda cari tidak tersedia atau sudah tidak dapat diakses.
+          Data Penerima Manfaat yang Anda cari tidak tersedia atau sudah tidak dapat diakses.
         </p>
         <button class="state-btn" @click="$router.back()">
           <i class="pi pi-arrow-left"></i>
@@ -143,60 +143,40 @@
               </table>
             </div>
           </div>
-
         </div>
-
-        <!-- <div class="detail-card wm-card">
+        <div
+          style="display:flex;justify-content:flex-start;align-items:center;gap:10px;margin-bottom:14px"
+        >
+          <span
+            style="font-size:13px;font-weight:600;color:#64748b"
+          >
+            Lembaga Penyalur Bantuan :
+          </span>
+          <Select
+            v-model="filterLaz"
+            :options="lazOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Semua Lembaga"
+            style="width:280px"
+            :disabled="!!authStore.user?.laz_kode"
+          />
+        </div>
+        <div class="detail-card wm-card">
           <div class="wm-overlay" aria-hidden="true">
             <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <pattern id="wm-program" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                <pattern id="wm-riwayat" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
                   <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
                   <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
                 </pattern>
               </defs>
-              <rect width="100%" height="100%" fill="url(#wm-program)" />
             </svg>
           </div>
-          <div style="position:relative;z-index:1;">
-            <p class="section-title"><i class="pi pi-shield"></i> Program Bantuan Sosial Lain</p>
-            <table class="info-table">
-              <thead>
-                <tr>
-                    <th class="th">Program</th>
-                    <th class="th">Bidang</th>
-                    <th class="th">Kode Program</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                    v-for="(prog,i) in programSosial"
-                    :key="i"
-                >
-                    <td class="td-label">
-                        {{ prog.program_nama }}
-                    </td>
-
-                    <td class="td-value">
-                        {{ prog.bidang }}
-                    </td>
-
-                    <td class="td-value">
-                        {{ prog.program_kode }}
-                    </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div> -->
-
-     
-        <div class="detail-card">
-          <p class="section-title"><i class="pi pi-wallet"></i> Ringkasan Penyaluran Bantuan</p>
+          <p class="section-title"><i class="pi pi-wallet"></i> Ringkasan Penerimaan Bantuan</p>
           <div class="grid-3">
             <div class="stat-box" style="background:#f0fdf4;">
                 <p class="stat-label">Bantuan Tahun Ini</p>
-
                 <template v-if="loadingRiwayat">
                     <p class="stat-loading">Memuat...</p>
                 </template>
@@ -236,7 +216,7 @@
                     LAZ berbeda yang pernah menyalurkan bantuan
                 </p>
             </div>
-        </div>
+          </div>
         </div>
         <div class="detail-card wm-card">
           <div class="wm-overlay" aria-hidden="true">
@@ -251,7 +231,73 @@
             </svg>
           </div>
           <div style="position:relative;z-index:1;">
-            <p class="section-title"><i class="pi pi-history"></i> Riwayat Penyaluran Bantuan</p>
+            <p class="section-title"><i class="pi pi-history"></i> Ringkasan Penerimaan Bantuan / Tahun</p>
+            <div style="overflow-x:auto">
+                  <table class="data-table">
+                      <thead>
+                          <tr>
+                              <th>Tahun</th>
+                              <th>Total Penerimaan</th>
+                              <th>Penerimaan Langsung</th>
+                              <th>Penerimaan Tidak Langsung</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          <tr v-if="loadingRiwayat">
+                              <td colspan="4" class="table-info">
+                                  Memuat data...
+                              </td>
+                          </tr>
+                          <tr
+                              v-else
+                              v-for="row in rekapPenyaluran"
+                              :key="row.tahun"
+                          >
+                              <td>
+                                  <strong>{{ row.tahun }}</strong>
+                              </td>
+                              <td>
+                                  <span
+                                      style="background:#eff6ff;color:#2563eb;padding:4px 10px;border-radius:999px;font-weight:700;"
+                                  >
+                                      {{ formatRupiah(row.total) }}
+                                  </span>
+                              </td>
+                              <td>
+                                  {{ formatRupiah(row.langsung) }}
+                              </td>
+                              <td>
+                                  {{ formatRupiah(row.tidakLangsung) }}
+                              </td>
+                          </tr>
+                          <tr
+                              v-if="!loadingRiwayat && rekapPenyaluran.length===0"
+                          >
+                              <td colspan="4" class="table-info">
+                                  Belum ada data.
+                              </td>
+                          </tr>
+                      </tbody>
+                  </table>
+              </div>
+            
+          </div>
+        </div>
+        <div class="detail-card wm-card">
+          <div class="wm-overlay" aria-hidden="true">
+            <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="wm-riwayat" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                  <text x="10" y="40" font-family="Inter, sans-serif" font-size="11" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                  <text x="10" y="70" font-family="Inter, sans-serif" font-size="10" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#wm-riwayat)" />
+            </svg>
+          </div>
+          
+          <div style="position:relative;z-index:1;">
+            <p class="section-title"><i class="pi pi-history"></i> Riwayat Penerimaan Bantuan</p>
             <div style="overflow-x:auto;">
               <table class="data-table">
                 <thead>
@@ -263,7 +309,6 @@
                     <th>Bidang</th>
                     <th>Nominal</th>
                     <th>Tipe Penerimaan</th>
-                    
                     <th>Tanggal Cair</th>
                   </tr>
                 </thead>
@@ -274,16 +319,14 @@
                           Memuat riwayat penyaluran bantuan...
                       </td>
                   </tr>
-
-                  <tr v-else-if="riwayat.length === 0">
+                  <tr v-else-if="riwayatFiltered.length === 0">
                       <td colspan="8" class="table-info">
                           Belum ada riwayat penyaluran bantuan.
                       </td>
                   </tr>
-
                   <tr
                       v-else
-                      v-for="(item,i) in riwayat"
+                      v-for="(item,i) in riwayatFiltered"
                       :key="i"
                   >
                       <td>{{ item.tahun }}</td>
@@ -299,20 +342,11 @@
                       <td>{{ item.metode }}</td>
                       <td>{{ item.tanggal }}</td>
                   </tr>
-
               </tbody>
               </table>
             </div>
-            <!-- <div style="display:flex;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
-              <div style="text-align:right;">
-                <p style="font-size:12px;color:#94a3b8;margin:0;">Total Kumulatif Diterima</p>
-                <p style="font-size:1.2rem;font-weight:900;color:#15803d;margin:2px 0 0;">{{ formatRupiah(totalKumulatif) }}</p>
-              </div>
-            </div> -->
           </div>
         </div>
-
-        
       </template>
     </div>
   </AppLayout>
@@ -326,80 +360,128 @@ import { useAuthStore } from '@/stores/auth'
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 
+import Select from 'primevue/select'
+
+const authStore = useAuthStore()
+const filterLaz = ref(authStore.user?.laz_kode || '')
 const route = useRoute()
 const mustahik = ref(null)
 const loading = ref(true)
 const error = ref('')
-const authStore = useAuthStore()
 const riwayat = ref([])
 const programSosial = ref([])
 const loadingRiwayat = ref(true)
-// async function loadProgram() {
-//     const res = await api.get(
-//         `/mustahik/${route.params.nikHashed}/program`
-//     )
-//     console.log(res)
-//     programSosial.value = res.data.data
-// }
+
 async function loadRiwayat() {
     loadingRiwayat.value = true
 
     try {
         const res = await api.get(`/mustahik/${route.params.nikHashed}/riwayat`)
         riwayat.value = res.data.data ?? []
+        filterLaz.value = authStore.user?.laz_kode || ''
     } finally {
         loadingRiwayat.value = false
     }
 }
 async function loadDetail() {
-  console.log('loadDetail dipanggil')
-
   loading.value = true
   error.value = ''
-
   try {
-    console.log(route.params.nikHashed)
     const res = await api.get(`/mustahik/${route.params.nikHashed}`)
-
-    
-
     mustahik.value = res.data.data?.[0] ?? null
   } catch (err) {
-    console.log(err)
     error.value = err?.response?.data?.message ?? 'Data tidak ditemukan'
   } finally {
     loading.value = false
   }
 }
 
+const lazOptions = computed(() => {
+    const map = new Map()
+
+    riwayat.value.forEach(item => {
+        if (item.laz_kode && !map.has(item.laz_kode)) {
+            map.set(item.laz_kode, {
+                label: item.laz,
+                value: item.laz_kode
+            })
+        }
+    })
+
+    return [
+        { label: 'Semua Lembaga', value: '' },
+        ...map.values()
+    ]
+})
+
+
+
 onMounted(() => {
     loadDetail()
     loadRiwayat()
-    // loadProgram()
+})
+
+const riwayatFiltered = computed(() => {
+    console.log('filterLaz', filterLaz.value)
+
+    console.log(riwayat.value)
+
+    return riwayat.value.filter(item => {
+        console.log(
+            item.laz,
+            item.laz_kode
+        )
+
+        return item.laz_kode === filterLaz.value
+    })
 })
 
 const bantuanTahunIni = computed(() => {
     const tahunSekarang = new Date().getFullYear()
 
-    return riwayat.value
+    return riwayatFiltered.value
         .filter(item => Number(item.tahun) === tahunSekarang)
-        .reduce((total, item) => {
-            return total + Number(item.nominal || 0)
-        }, 0)
+        .reduce((t, item) => t + Number(item.nominal || 0), 0)
 })
 
 const totalKumulatif = computed(() => {
-    return riwayat.value.reduce((t, r) => {
+    return riwayatFiltered.value.reduce((t, r) => {
         return t + Number(r.nominal || 0)
     }, 0)
 })
 
 const totalLazKontributor = computed(() => {
     return new Set(
-        riwayat.value
+        riwayatFiltered.value
             .map(item => item.laz?.trim().toLowerCase())
             .filter(Boolean)
     ).size
+})
+
+const rekapPenyaluran = computed(() => {
+    const result = {}
+    riwayatFiltered.value.forEach(item => {
+        const tahun = item.tahun
+        const nominal = Number(item.nominal || 0)
+        if (!result[tahun]) {
+            result[tahun] = {
+                tahun,
+                total: 0,
+                langsung: 0,
+                tidakLangsung: 0
+            }
+        }
+        result[tahun].total += nominal
+        const metode = (item.metode || "").toLowerCase()
+        if (item.metode === "Penerima Manfaat Langsung") {
+            result[tahun].langsung += nominal
+        }
+        if (item.metode === "Penerima Manfaat Tidak Langsung") {
+            result[tahun].tidakLangsung += nominal
+        }
+    })
+
+    return Object.values(result).sort((a, b) => b.tahun - a.tahun)
 })
 
 const DESIL_COLORS = {
@@ -433,7 +515,7 @@ const userIdentifier = computed(() => {
 
 function maskNIK(nik) {
   if (!nik) return '-'
-  return nik.slice(0, 6) + '••••' + nik.slice(-4)
+  return nik.slice(0, 6) + '*********' + nik.slice(-1)
 }
 
 function desilLabel(d) {

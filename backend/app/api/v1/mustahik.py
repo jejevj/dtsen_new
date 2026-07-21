@@ -8,7 +8,7 @@ from ...services.mustahik_service import MustahikService
 @jwt_required()
 def list_mustahik():
     """
-    List data mustahik dengan filter dan pagination
+    List data penerima manfaat dengan filter dan pagination
     ---
     tags:
       - Mustahik

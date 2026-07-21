@@ -3,7 +3,7 @@ from flask import jsonify, request
 from flask_jwt_extended import jwt_required
 from . import api_v1_bp
 from ...extensions import db
-from ...models.wilayah import Provinsi, KabKota, Kecamatan
+from ...models.wilayah import Provinsi, KabKota, Kecamatan, Kelurahan
 from ...models.t_dtsen_akses import TDtsenAkses
 from ...models.t_dtsen_wilayah import TDtsenWilayah
 from ...services.auth_service import parse_identity_str
@@ -325,6 +325,37 @@ def wilayah_kecamatan():
     return jsonify({
         "data": [
             {"kode": k.kecamatan_kode, "nama": k.kecamatan_nama, "kabkota_kode": k.kabkota_kode}
+            for k in rows
+        ]
+    }), 200
+
+@api_v1_bp.get('/wilayah/kelurahan')
+@jwt_required()
+def wilayah_kelurahan():
+    """Kelurahan berdasarkan kecamatan_kode."""
+
+    kecamatan_kode = request.args.get('kecamatan_kode', '').strip()
+
+    if not kecamatan_kode:
+        return jsonify({"error": "kecamatan_kode wajib diisi."}), 400
+
+    rows = (
+        Kelurahan.query
+        .filter_by(
+            kecamatan_kode=kecamatan_kode,
+            kelurahan_aktif='y'
+        )
+        .order_by(Kelurahan.kelurahan_nama)
+        .all()
+    )
+
+    return jsonify({
+        "data": [
+            {
+                "kode": k.kelurahan_kode,
+                "nama": k.kelurahan_nama,
+                "kecamatan_kode": k.kecamatan_kode
+            }
             for k in rows
         ]
     }), 200
