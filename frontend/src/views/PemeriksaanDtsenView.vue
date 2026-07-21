@@ -364,7 +364,7 @@
                         <th>Bidang</th>
                         <th>Nominal</th>
                         <th>Tipe Penerimaan</th>
-                        <th>Tanggal Cair</th>
+                        <th>Tanggal Tanggal Penerimaan</th>
                       </tr>
                     </thead>
                     <tbody>
