@@ -18,7 +18,7 @@
                 :style="roleBadgeStyle">{{ authStore.user?.user_grup || authStore.user?.jabatan || 'operator' }}</span>
             </p>
             <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">
-              Berdasarkan Data Baseline DTSEN dan Laporan Penerima Manfaat
+              Berdasarkan Data DTSEN dan Laporan Penerima Manfaat
             </p>
           </div>
         </div>
@@ -55,7 +55,7 @@
         <!-- hero grid: 2 tabel baseline -->
         <div class="hero-grid" style="display:grid;gap:16px;">
 
-          <div class="detail-card wm-card">
+          <div class="detail-card wm-card" style="padding-left:0;padding-right:0;padding-bottom:0;">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -67,7 +67,7 @@
                 <rect width="100%" height="100%" fill="url(#wm-base-wilayah)" />
               </svg>
             </div>
-            <div class="wm-content" style="display:flex;flex-direction:column;">
+            <div class="wm-content">
               <p class="section-title" style="padding-left:10px;padding-right:10px;">
                 <i class="pi pi-map"></i> Sebaran Mustahik Berdasarkan Data Baseline
                 <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(wilayahBase.length) }}&ensp;</span>
@@ -83,12 +83,12 @@
               </template>
               <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
                 <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-                Data Sebaran Mustahik Berdasarkan Data Baseline tidak ditemukan
+                Data Sebaran Mustahik Berdasarkan Data DTSEN tidak tersedia
               </div>
             </div>
           </div>
 
-          <div class="detail-card wm-card">
+          <div class="detail-card wm-card" style="padding-left:0;padding-right:0;padding-bottom:0;">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
                 <defs>
@@ -100,7 +100,7 @@
                 <rect width="100%" height="100%" fill="url(#wm-base-desil)" />
               </svg>
             </div>
-            <div class="wm-content" style="display:flex;flex-direction:column;">
+            <div class="wm-content">
               <p class="section-title" style="padding-left:10px;padding-right:10px;">
                 <i class="pi pi-map"></i> Sebaran Mustahik per Desil Berdasarkan Data Baseline
                 <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(desilBase.length) }}&ensp;</span>
@@ -119,7 +119,7 @@
               </template>
               <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
                 <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-                Data Sebaran Mustahik per Desil Berdasarkan Data Baseline tidak ditemukan
+                Data Sebaran Mustahik per Desil Berdasarkan Data DTSEN tidak tersedia
               </div>
             </div>
           </div>
@@ -151,6 +151,7 @@
                   <Column field="lvl_1" sortable header="Provinsi"><template #body="{ data }">{{ data.lvl_1 ?? '-' }}</template></Column>
                   <Column field="lvl_2" sortable header="Kab/kota"><template #body="{ data }">{{ data.lvl_2 ?? '-' }}</template></Column>
                   <Column field="lvl_3" sortable header="Kecamatan"><template #body="{ data }">{{ data.lvl_3 ?? '-' }}</template></Column>
+                  <Column field="lvl_4" sortable header="Kelurahan"><template #body="{ data }">{{ data.lvl_4 ?? '-' }}</template></Column>
                   <Column field="mustahik" header="Mustahik" sortable style="width:10%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.mustahik ?? 0) }}</div></template></Column>
                   <Column field="rupiah" header="Total" sortable style="width:15%"><template #body="{ data }"><div class="text-right">{{ formatRupiah(data.rupiah ?? 0) }}</div></template></Column>
                 </DataTable>
@@ -158,7 +159,7 @@
             </template>
             <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
               <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-              Data Pendistribusian dan Pendayagunaan per Wilayah tidak ditemukan
+              Data Pendistribusian dan Pendayagunaan per Wilayah tidak tersedia
             </div>
           </div>
         </div>
@@ -202,7 +203,7 @@
             </template>
             <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
               <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-              Data Sebaran Penerima Manfaat per Desil tidak ditemukan
+              Data Sebaran Penerima Manfaat per Desil tidak tersedia
             </div>
           </div>
         </div>
@@ -307,7 +308,7 @@
         </div>
 
         <!-- Tabel: Sebaran Usia -->
-        <div class="detail-card wm-card" style="padding-left:0;padding-right:0;">
+        <div class="detail-card wm-card" style="padding-left:0;padding-right:0;padding-bottom:0;">
           <div class="wm-overlay" aria-hidden="true">
             <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -340,7 +341,7 @@
             </template>
             <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
               <i class="pi pi-map" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-              Data Sebaran Penerima Manfaat Berdasarkan Usia tidak ditemukan
+              Data Sebaran Penerima Manfaat Berdasarkan Usia tidak tersedia
             </div>
           </div>
         </div>
@@ -506,7 +507,7 @@ async function loadData() {
     tahun: selectedYear.value,
     provinsi_kode:  selectedProvinsi.value,
     kabkota_kode:   selectedKabupaten.value,
-    kacamatan_kode: selectedKecamatan.value,
+    kecamatan_kode: selectedKecamatan.value,
     lembaga: selectedLembaga.value
   }
   datatableLoading.value = true
@@ -645,9 +646,9 @@ const desilBarData = computed(() => ({
 
 // wmId = slug aman untuk ID SVG pada stat cards
 const statCards = computed(() => [
-  { label:'Penerima Manfaat',                    wmId:'penerima-manfaat',     value:formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_all||0),0)),                              sub:'Seluruh Desil',                          icon:'pi pi-users',       iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'Pendistribusian dan Pendayagunaan',   wmId:'pendistribusian',      value:formatRupiah(wilayahData.value.reduce((t,i)=>t+Number(i.rupiah_all||0),0)),                         sub:'Total nilai bantuan pada seluruh Desil',  icon:'pi pi-wallet',      iconBg:'#faf5ff', iconColor:'#7c3aed' },
-  { label:'Cakupan Wilayah',                     wmId:'cakupan-wilayah',      value:formatAngka(wilayahData.value.filter(i=>i.mustahik!==0).length)+'',                                sub:'dari '+formatAngka(wilayahBase.value.length)+' wilayah pengajuan', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Penerima Manfaat',                    wmId:'penerima-manfaat',     value:formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0)+Number(i.desil_2||0)+Number(i.desil_3||0)+Number(i.desil_4||0),0)),                  sub:'pada desil 1 - 4',                          icon:'pi pi-users',       iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Pendistribusian dan Pendayagunaan',   wmId:'pendistribusian',      value:formatRupiah(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0)+Number(i.desil_sum_2||0)+Number(i.desil_sum_3||0)+Number(i.desil_sum_4||0),0)), sub:'Total nilai bantuan pada desil 1 - 4', icon:'pi pi-wallet',      iconBg:'#faf5ff', iconColor:'#7c3aed' },
+  { label:'Cakupan Wilayah',                     wmId:'cakupan-wilayah',      value:formatAngka(wilayahData.value.filter(i=>i.mustahik>0).length)+'', sub:'dari '+formatAngka(wilayahBase.value.length)+' wilayah pengajuan', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
 ])
 
 const bidangProgram = computed(() => {
