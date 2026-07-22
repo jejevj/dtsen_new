@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
 
-  base: '/zis dskl/',   // ← tambahkan ini (ganti /dtsen/ sesuai prefix yang diinginkan)
+  base: '/zis-dskl/',   // ← tambahkan ini (ganti /dtsen/ sesuai prefix yang diinginkan)
   plugins: [vue()],
   resolve: {
     alias: {
