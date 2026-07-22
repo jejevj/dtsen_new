@@ -36,7 +36,13 @@
                 </span>
               </div>
               <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_induk_kependudukan) }}</strong></p>
-              <p style="font-size:13px;color:#64748b;margin:0;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</strong></p>
+              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</strong></p>
+              <!-- Usia + Tanggal Lahir -->
+              <p v-if="data.tanggal_lahir" style="font-size:13px;color:#64748b;margin:0;">
+                Usia: <strong style="color:#374151;">{{ usiaLabel }}</strong>
+                <span style="color:#cbd5e1;margin:0 6px;">·</span>
+                <span style="color:#94a3b8;font-size:12px;">{{ formatTanggalLahir(data.tanggal_lahir) }}</span>
+              </p>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
               <span v-if="data.pbi_nas === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;"><i class="pi pi-shield" style="font-size:10px;"></i> PBI Nasional</span>
@@ -402,6 +408,7 @@ const { resolveValue, getDetailFields } = useBaselineRefs()
 const { userIdentifier } = useWatermark()
 
 // ── Field keys yang disembunyikan dari tampilan ──
+// Semua field yang berisi kode wilayah tidak ditampilkan di card detail.
 const HIDDEN_FIELD_KEYS = new Set([
   'provinsi_kode',
   'kabupaten_kota_kode',
@@ -416,6 +423,11 @@ const HIDDEN_FIELD_KEYS = new Set([
   'kabkota_id',
   'kecamatan_id',
   'kelurahan_id',
+  // Kode KTP — hanya tampilkan nama wilayah, bukan kodenya
+  'kode_provinsi_ktp',
+  'kode_kabupaten_kota_ktp',
+  'kode_kecamatan_ktp',
+  'kode_kelurahan_desa_ktp',
 ])
 
 function visibleFields(fields) {
@@ -427,6 +439,28 @@ function visibleFields(fields) {
     if (key.endsWith('_kode') && !isNikField(key)) return false
     return true
   })
+}
+
+// ── Computed: Usia dari tanggal_lahir ──
+const usiaLabel = computed(() => {
+  if (!data.value?.tanggal_lahir) return ''
+  const lahir = new Date(String(data.value.tanggal_lahir))
+  if (isNaN(lahir.getTime())) return '-'
+  const today = new Date()
+  let usia = today.getFullYear() - lahir.getFullYear()
+  const belumUltah =
+    today.getMonth() < lahir.getMonth() ||
+    (today.getMonth() === lahir.getMonth() && today.getDate() < lahir.getDate())
+  if (belumUltah) usia--
+  return usia + ' tahun'
+})
+
+// ── Format tanggal lahir menjadi "11 Juli 1971" ──
+function formatTanggalLahir(v) {
+  if (!v) return ''
+  const d = new Date(String(v))
+  if (isNaN(d.getTime())) return String(v)
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 // ── Computed stats mustahik ──
