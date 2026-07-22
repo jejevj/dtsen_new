@@ -1,6 +1,7 @@
 version: '3.9'
 
 # ────────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # DTSEN Stack
 #  dtsen_api      : Flask/Gunicorn  → host:8778
 #  dtsen_frontend : Vue + Nginx     → host:8786
@@ -12,9 +13,7 @@ version: '3.9'
 # Update:
 #   git pull && docker compose up -d --build
 # ────────────────────────────────────────────────────────────────────────────────
-
 services:
-
   api:
     build:
       context: ./backend

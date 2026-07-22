@@ -1,5 +1,6 @@
 from ..extensions import db
 from datetime import datetime
+from .mustahik_bappenas import MustahikBappenas
 
 
 class Mustahik(db.Model):
@@ -86,6 +87,12 @@ class Mustahik(db.Model):
         'Kelurahan', backref='mustahik_ktp', lazy='joined',
         primaryjoin='Mustahik.ktp_kelurahan_kode == Kelurahan.kelurahan_kode',
         foreign_keys=[ktp_kelurahan_kode]
+    )
+    bappenas = db.relationship(
+        "MustahikBappenas",
+        lazy="joined",
+        uselist=False,
+        primaryjoin="foreign(Mustahik.nik) == MustahikBappenas.nik"
     )
 
     def __repr__(self):

@@ -322,7 +322,7 @@
             <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 14px;">Mengapa DTSEN?</h2>
             <p style="font-size:15px;color:#64748b;line-height:1.7;margin:0 0 28px;max-width:480px;">
               Satu Data ZAS DSKL mengintegrasikan data penerima manfaat zakat dari seluruh LAZ terdaftar dengan data
-              desil kemiskinan — memastikan penyaluran tepat sasaran.
+              desil — memastikan penyaluran tepat sasaran.
             </p>
             <div style="display:flex;flex-direction:column;gap:16px;">
               <div v-for="feat in features" :key="feat.title" style="display:flex;gap:14px;align-items:flex-start;">
@@ -548,7 +548,7 @@ const features = [
   { icon:'pi pi-shield',     title:'Data Terverifikasi',       desc:'Terintegrasi langsung dengan DTSEN.' },
   { icon:'pi pi-map',        title:'Pemetaan Wilayah',         desc:'Sebaran mustahik hingga tingkat kelurahan di seluruh Indonesia.' },
   { icon:'pi pi-chart-line', title:'Analitik Real-time',       desc:'Dashboard interaktif dengan filter multidimensi dan ekspor data.' },
-  { icon:'pi pi-users',      title:'Profil Penerima Manfaat Lengkap',  desc:'Data sosiodemografi penerima termasuk desil kemiskinan.' },
+  { icon:'pi pi-users',      title:'Profil Penerima Manfaat Lengkap',  desc:'Data sosiodemografi penerima termasuk desil.' },
 ]
 
 const aboutMetrics = [

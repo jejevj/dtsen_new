@@ -90,6 +90,14 @@ def list_detail_fields():
             (TampilanDtsen.kategori == kategori) |
             (TampilanDtsen.kategori == 'keduanya')
         )
+    q = (
+        TampilanDtsen.query
+        .filter_by(is_active=1, is_filter=1)
+    )
+
+    kategori = request.args.get('kategori')
+    if kategori:
+        q = q.filter_by(kategori=kategori)
 
     fields = q.order_by(TampilanDtsen.urutan.asc()).all()
 

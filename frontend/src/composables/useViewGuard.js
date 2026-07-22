@@ -91,39 +91,41 @@ export function initViewGuard() {
     }
   }, true)
 
-  // 6. DevTools detection via window-size heuristic
-  //    Saat DevTools terbuka dalam posisi dock (side/bottom), ukuran
-  //    window.outerWidth atau window.outerHeight akan lebih besar dari
-  //    window.innerWidth/innerHeight secara signifikan (threshold 160px).
-  //    Teknik ini tidak menggunakan debugger sehingga tidak memblokir event loop.
+  // 6. DevTools open detection via window-size heuristic
+  //
+  //  Cara kerja:
+  //    Saat DevTools dibuka di sisi kanan/kiri → outerWidth - innerWidth > threshold
+  //    Saat DevTools dibuka di bawah/atas     → outerHeight - innerHeight > threshold
+  //  Threshold 160px memberi toleransi scrollbar & taskbar.
+  //  Pengecekan dilakukan setiap 1000ms (cukup responsif, tidak membuang CPU).
   ;(function devtoolsDetect() {
-    const THRESHOLD = 160
+    const THRESHOLD = 160  // px
     let devtoolsOpen = false
 
     function isDevtoolsOpen() {
-      return (
-        window.outerWidth  - window.innerWidth  > THRESHOLD ||
-        window.outerHeight - window.innerHeight > THRESHOLD
-      )
+      const widthDiff  = window.outerWidth  - window.innerWidth
+      const heightDiff = window.outerHeight - window.innerHeight
+      return widthDiff > THRESHOLD || heightDiff > THRESHOLD
     }
 
     function check() {
-      const open = isDevtoolsOpen()
-
-      if (open && !devtoolsOpen) {
-        devtoolsOpen = true
-        dispatchBlocked('Developer Tools terdeteksi terbuka. Tutup untuk melanjutkan.')
-        showDevtoolsWarning()
-      } else if (!open && devtoolsOpen) {
-        devtoolsOpen = false
-        hideDevtoolsWarning()
+      if (isDevtoolsOpen()) {
+        if (!devtoolsOpen) {
+          devtoolsOpen = true
+          dispatchBlocked('Developer Tools terdeteksi terbuka. Tutup untuk melanjutkan.')
+          showDevtoolsWarning()
+        }
+      } else {
+        if (devtoolsOpen) {
+          devtoolsOpen = false
+          hideDevtoolsWarning()
+        }
       }
     }
 
-    // Cek saat resize (trigger utama saat DevTools dibuka/tutup)
-    window.addEventListener('resize', check)
-    // Cek awal saat halaman pertama kali dimuat
+    // Cek langsung saat init (handle kasus DevTools sudah terbuka sebelum halaman load)
     check()
+    setInterval(check, 1000)
   })()
 }
 
