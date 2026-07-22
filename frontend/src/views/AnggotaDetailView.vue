@@ -70,7 +70,7 @@
                       <table class="disab-table">
                         <thead><tr><th class="disab-th">Aspek</th><th class="disab-th" style="text-align:right;">Status</th></tr></thead>
                         <tbody>
-                          <tr v-for="field in group.fields" :key="field.field_key" class="disab-tr">
+                          <tr v-for="field in visibleFields(group.fields)" :key="field.field_key" class="disab-tr">
                             <td class="disab-td-aspek">{{ stripDisabPrefix(field.field_label) }}</td>
                             <td class="disab-td-status"><span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span></td>
                           </tr>
@@ -80,7 +80,7 @@
                     <template v-else>
                       <table class="info-table">
                         <tbody>
-                          <tr v-for="field in group.fields" :key="field.field_key">
+                          <tr v-for="field in visibleFields(group.fields)" :key="field.field_key">
                             <td class="td-label">{{ field.field_label }}</td>
                             <td class="td-value">
                               <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
@@ -102,7 +102,7 @@
                   <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <div class="grid-stat">
-                      <div v-for="field in group.fields" :key="field.field_key" class="stat-box" :style="statBoxBg(field.field_key, data[field.field_key])">
+                      <div v-for="field in visibleFields(group.fields)" :key="field.field_key" class="stat-box" :style="statBoxBg(field.field_key, data[field.field_key])">
                         <p class="stat-label">{{ field.field_label }}</p>
                         <template v-if="field.field_key === 'id_pelanggan_pln'">
                           <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;" :style="{ color: data[field.field_key]?'#15803d':'#94a3b8' }">{{ data[field.field_key] ?? 'Tidak ada' }}</p>
@@ -131,7 +131,7 @@
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <table class="info-table">
                       <tbody>
-                        <tr v-for="field in group.fields" :key="field.field_key">
+                        <tr v-for="field in visibleFields(group.fields)" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
                           <td class="td-value">
                             <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
@@ -311,7 +311,7 @@
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <table class="info-table">
                       <tbody>
-                        <tr v-for="field in group.fields" :key="field.field_key">
+                        <tr v-for="field in visibleFields(group.fields)" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
                           <td class="td-value">
                             <template v-if="isNikField(field.field_key)">
@@ -400,6 +400,39 @@ const mustahikRiwayat = ref([])   // raw array dari /mustahik/{nikHashed}/riwaya
 
 const { resolveValue, getDetailFields } = useBaselineRefs()
 const { userIdentifier } = useWatermark()
+
+// ── Field keys yang mengandung kode wilayah – disembunyikan dari tampilan ──
+const HIDDEN_FIELD_KEYS = new Set([
+  'provinsi_kode',
+  'kabupaten_kota_kode',
+  'kecamatan_kode',
+  'kelurahan_desa_kode',
+  'kode_provinsi',
+  'kode_kabupaten_kota',
+  'kode_kecamatan',
+  'kode_kelurahan',
+  'kode_wilayah',
+  // variasi nama field kode wilayah lainnya
+  'provinsi_id',
+  'kabkota_id',
+  'kecamatan_id',
+  'kelurahan_id',
+])
+
+/**
+ * Filter field yang memiliki suffix _kode (kecuali NIK/KK)
+ * dan field yang ada dalam HIDDEN_FIELD_KEYS
+ */
+function visibleFields(fields) {
+  if (!fields) return []
+  return fields.filter(f => {
+    const key = f.field_key ?? ''
+    if (HIDDEN_FIELD_KEYS.has(key)) return false
+    // Sembunyikan semua field yang diakhiri _kode kecuali NIK & KK
+    if (key.endsWith('_kode') && !isNikField(key)) return false
+    return true
+  })
+}
 
 // ── Computed stats mustahik ──
 const mustahikBantuanTahunIni = computed(() => {
