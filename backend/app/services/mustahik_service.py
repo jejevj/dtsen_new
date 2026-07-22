@@ -84,6 +84,9 @@ def _format_tanggal(d) -> str | None:
         return str(d)
 
 # ── shared SQL builder ──────────────────────────────────────────────────────
+# FIX: Ganti INNER JOIN t_laz → LEFT JOIN agar NIK dengan LAZ non-aktif
+# tetap ditemukan. Filter laz_status dipindah ke kondisi JOIN (bukan WHERE)
+# sehingga row tetap ada meski laz_status tidak memenuhi syarat.
 _DETAIL_SQL = """
     SELECT
         m.*,
@@ -100,8 +103,10 @@ _DETAIL_SQL = """
         ktp_kel.kelurahan_nama  AS ktp_kelurahan_nama,
         '1' AS desil
     FROM t_mustahik m
-    INNER JOIN t_laz l ON m.laz_kode = l.laz_kode
-    INNER JOIN t_program p ON m.program_kode = p.program_kode
+    LEFT JOIN t_laz l
+        ON m.laz_kode = l.laz_kode
+    LEFT JOIN t_program p
+        ON m.program_kode = p.program_kode
     LEFT JOIN m_provinsi prov ON m.provinsi_kode = prov.provinsi_kode
     LEFT JOIN m_kabkota kab ON m.kabkota_kode = kab.kabkota_kode
     LEFT JOIN m_kecamatan kec ON m.kecamatan_kode = kec.kecamatan_kode
@@ -110,8 +115,7 @@ _DETAIL_SQL = """
     LEFT JOIN m_kabkota ktp_kab ON m.ktp_kabkota_kode = ktp_kab.kabkota_kode
     LEFT JOIN m_kecamatan ktp_kec ON m.ktp_kecamatan_kode = ktp_kec.kecamatan_kode
     LEFT JOIN m_kelurahan ktp_kel ON m.ktp_kelurahan_kode = ktp_kel.kelurahan_kode
-    WHERE l.laz_status IN ('aktif','daftar_ulang')
-        AND m.nik = :nik
+    WHERE m.nik = :nik
     ORDER BY m.created_at DESC
 """
 
@@ -385,6 +389,8 @@ class MustahikService:
         nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
         logger.info(f"nik_hashed : {nik_hashed}")
         logger.info(f"nik_decode : {nik_dec}")
+        # FIX: Hapus filter laz_status dari WHERE agar riwayat tetap muncul
+        # meski LAZ sudah tidak aktif. Data riwayat historis tetap valid.
         sql = text("""
             SELECT
                 m.tanggal_terima,
@@ -404,9 +410,7 @@ class MustahikService:
                 ON m.laz_kode = u.uker_kode
             LEFT JOIN m_bidang b
                 ON p.bidang_kode = b.bidang_kode
-            WHERE
-                m.nik = :nik_dec
-                AND l.laz_status IN ('aktif','daftar_ulang')
+            WHERE m.nik = :nik_dec
             ORDER BY m.tanggal_terima DESC
         """)
 
