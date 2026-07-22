@@ -185,11 +185,11 @@ function getProvNama(p) { return p.state || p.name || p.NAME_1 || p.PROVINSI || 
 
 // ── GeoJSON loaders ──────────────────────────────────────────────────────────
 const GEOJSON_PROVINSI = [
-  'https://raw.githubusercontent.com/superpikar/indonesia-geojson/master/indonesia.geojson',
-  'https://raw.githubusercontent.com/benkoshy/indonesia/master/indonesia-provinces-simple.geojson',
+  '/zis-dskl/geo/indonesia-provinces-simple.geojson',
+  '/zis-dskl/geo/indonesia-provinces-simple.geojson',
 ]
 const GEOJSON_KABKOTA = [
-  'https://raw.githubusercontent.com/fahadh4ilyas/indonesia-geojson-archive/master/Indonesia_cities.geojson',
+  '',
 ]
 
 const PROV_NAME_TO_KODE = {
