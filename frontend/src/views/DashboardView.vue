@@ -793,10 +793,12 @@ onMounted(async () => {
 
   if (datadesilRes.status === 'fulfilled')
     desilData.value = datadesilRes.value
-
-  if (paramProv.length = 1)
+/*
+  if (paramProv.value.length === 1){
     selectedProvinsi.value = paramProv.value[0].kode
-    optKabupaten()
+    await optKabupaten()
+  }
+*/
 })
 
 async function loadData() {
@@ -859,15 +861,21 @@ async function optKabupaten() {
     ReportService.getDashParamkab(params)
   ])
  
-  if (paramkabRes.status === 'fulfilled')
+  if (paramkabRes.status === 'fulfilled'){
     paramKab.value = paramkabRes.value
     wilayahLoading.value = false
+  }
 
-  if (paramKab.length = 0)
+  if (paramKab.value.length === 0){
     paramKab = ref([])
-  else if (paramKab.length = 1)
-    paramKab = paramKab.value[0].kode
-    optKecamatan()
+    paramKec = ref([])
+  }
+/*
+  else if (paramKab.value.length === 1){
+    selectedKabupaten.value = paramKab.value[0].kode
+    await optKecamatan()
+  }
+*/
 }
 
 async function optKecamatan() {
@@ -880,29 +888,33 @@ async function optKecamatan() {
     ReportService.getDashParamkec(params)
   ])
  
-  if (paramkecRes.status === 'fulfilled')
+  if (paramkecRes.status === 'fulfilled'){
     paramKec.value = paramkecRes.value
     wilayahLoading.value = false
+  }
 
-  if (paramKec.length = 0)
+  if (paramKec.value.length === 0)
     paramKec = ref([])
 }
 
 async function resetOption() {
   selectedProvinsi.value  = null
-  selectedKabupaten.value  = null
-  selectedKecamatan.value  = null
-
-  if (paramProv.length = 1)
+  selectedKabupaten.value = null
+  selectedKecamatan.value = null
+/*
+  if (paramProv.value.length === 1){
     selectedProvinsi.value = paramProv.value[0].kode
-    optKabupaten()
+    await optKabupaten()
+  }
 
-  if (paramKab.length = 1)
+  if (paramKab.value.length === 1){
     selectedKabupaten.value = paramKab.value[0].kode
-    optKecamatan()
+    await optKecamatan()
+  }
 
-  if (paramKec.length = 1)
+  if (paramKec.value.length === 1)
     selectedKecamatan.value = paramKec.value[0].kode
+*/
 }
 
 const desilStats = computed(() => [

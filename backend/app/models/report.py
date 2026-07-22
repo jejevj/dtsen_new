@@ -324,7 +324,7 @@ class Report:
             SELECT t_dtsen_wilayah.provinsi_kode kode, m_provinsi.provinsi_nama nama
             FROM t_dtsen_akses
             JOIN t_dtsen_wilayah ON t_dtsen_wilayah.dtsen_akses_id = t_dtsen_akses.dtsen_akses_id
-            JOIN t_laz ON t_laz.laz_kode = t_dtsen_akses.laz_kode
+            JOIN t_laz ON (t_laz.laz_kode = t_dtsen_akses.laz_kode OR t_dtsen_akses.laz_kode IS NULL)
             JOIN m_provinsi ON m_provinsi.provinsi_kode = t_dtsen_wilayah.provinsi_kode
             WHERE t_dtsen_akses.email = :email
             AND t_dtsen_akses.statuses = 'aktif'
@@ -350,7 +350,7 @@ class Report:
         provinsi_kode = (params.get("provinsi_kode") or None)
 
         sql = text("""
-            SELECT m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama
+            SELECT DISTINCT m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama
             FROM m_kabkota
             JOIN t_dtsen_wilayah ON t_dtsen_wilayah.provinsi_kode = m_kabkota.provinsi_kode
             JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
@@ -373,7 +373,7 @@ class Report:
         kabkota_kode = (params.get("kabkota_kode") or None)
 
         sql_text = """
-        SELECT m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama
+        SELECT DISTINCT m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama
         FROM m_kecamatan
         LEFT JOIN t_dtsen_wilayah ON t_dtsen_wilayah.provinsi_kode = LEFT(m_kecamatan.kabkota_kode,2)
         JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
@@ -1400,7 +1400,6 @@ class Report:
         kabkota_kode = (params.get("kabkota_kode") or None)
         kacamatan_kode = (params.get("kacamatan_kode") or None)
 
-        sql_level = 1
         sql_where = ""
         sql_laz = ""
 
@@ -1408,16 +1407,13 @@ class Report:
             sql_laz = " AND t_mustahik.laz_kode = :lembaga"
 
         if provinsi_kode:
-            sql_level = 2
-            sql_where = " AND provinsi_kode = :provinsi_kode"
+            sql_where = " AND t_mustahik.provinsi_kode = :provinsi_kode"
 
         if kabkota_kode:
-            sql_level = 3
-            sql_where = " AND kabkota_kode = :kabkota_kode"
+            sql_where = " AND t_mustahik.kabkota_kode = :kabkota_kode"
 
         if kacamatan_kode:
-            sql_level = 3
-            sql_where = " AND kacamatan_kode = :kacamatan_kode"
+            sql_where = " AND t_mustahik.kacamatan_kode = :kacamatan_kode"
 
         sql_text = """
         SELECT
@@ -1431,42 +1427,18 @@ class Report:
             SELECT t_program.bidang_kode, SUM(wilayah.rupiah) total_penyaluran, COUNT(DISTINCT wilayah.mustahik) total_mustahik
             FROM
             (
-                SELECT DISTINCT 1 lvl, t_mustahik.provinsi_kode kode, t_dtsen_akses.laz_kode laz, t_mustahik.program_kode, SUM(t_mustahik.rupiah) rupiah, COUNT(DISTINCT t_mustahik.nik) mustahik
+                SELECT DISTINCT t_mustahik.provinsi_kode kode, t_dtsen_akses.laz_kode laz, t_mustahik.program_kode, SUM(t_mustahik.rupiah) rupiah, COUNT(DISTINCT t_mustahik.nik) mustahik
                 FROM t_mustahik
                 JOIN t_mustahik_bappenas ON t_mustahik_bappenas.nik = t_mustahik.nik AND t_mustahik_bappenas.desil < 5
                 JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.provinsi_kode
                 JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
                 WHERE t_dtsen_akses.email = :email
                 AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+                """ + sql_where + """ 
                 """ + sql_laz + """ 
-                GROUP BY lvl, kode, laz, program_kode
-                UNION
-                SELECT DISTINCT 2 lvl, t_mustahik.kabkota_kode kode, t_dtsen_akses.laz_kode laz, t_mustahik.program_kode, SUM(t_mustahik.rupiah) rupiah, COUNT(DISTINCT t_mustahik.nik) mustahik
-                FROM t_mustahik
-                JOIN t_mustahik_bappenas ON t_mustahik_bappenas.nik = t_mustahik.nik AND t_mustahik_bappenas.desil < 5
-                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.provinsi_kode
-                JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
-                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
-                WHERE t_dtsen_akses.email = :email
-                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
-                """ + sql_laz + """ 
-                GROUP BY lvl, kode, laz, program_kode
-                UNION
-                SELECT DISTINCT 3 lvl, t_mustahik.kecamatan_kode kode, t_dtsen_akses.laz_kode laz, t_mustahik.program_kode, SUM(t_mustahik.rupiah) rupiah, COUNT(DISTINCT t_mustahik.nik) mustahik
-                FROM t_mustahik
-                JOIN t_mustahik_bappenas ON t_mustahik_bappenas.nik = t_mustahik.nik AND t_mustahik_bappenas.desil < 5
-                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.provinsi_kode
-                JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
-                JOIN m_kecamatan ON m_kecamatan.kabkota_kode = m_kabkota.kabkota_kode
-                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
-                WHERE t_dtsen_akses.email = :email
-                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
-                """ + sql_laz + """ 
-                GROUP BY lvl, kode, laz, program_kode
+                GROUP BY kode, laz, program_kode
             ) wilayah
             JOIN t_program ON t_program.program_kode = wilayah.program_kode
-            WHERE wilayah.lvl = :sql_level 
-            """ + sql_where + """ 
             GROUP BY t_program.bidang_kode
         ) x
         ON x.bidang_kode = b.bidang_kode
@@ -1480,7 +1452,6 @@ class Report:
             'tahun_akhir'   : f'{tahun_akhir}-01-01',
             'email'         : email,
             'lembaga'       : lembaga,
-            'sql_level'     : sql_level,
             'provinsi_kode' : provinsi_kode,
             'kabkota_kode'  : kabkota_kode,
             'kacamatan_kode': kacamatan_kode
