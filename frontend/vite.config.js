@@ -3,6 +3,8 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
+
+  base: '/zis dskl/',   // ← tambahkan ini (ganti /dtsen/ sesuai prefix yang diinginkan)
   plugins: [vue()],
   resolve: {
     alias: {
