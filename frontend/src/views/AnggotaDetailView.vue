@@ -412,23 +412,17 @@ const HIDDEN_FIELD_KEYS = new Set([
   'kode_kecamatan',
   'kode_kelurahan',
   'kode_wilayah',
-  // variasi nama field kode wilayah lainnya
   'provinsi_id',
   'kabkota_id',
   'kecamatan_id',
   'kelurahan_id',
 ])
 
-/**
- * Filter field yang memiliki suffix _kode (kecuali NIK/KK)
- * dan field yang ada dalam HIDDEN_FIELD_KEYS
- */
 function visibleFields(fields) {
   if (!fields) return []
   return fields.filter(f => {
     const key = f.field_key ?? ''
     if (HIDDEN_FIELD_KEYS.has(key)) return false
-    // Sembunyikan semua field yang diakhiri _kode kecuali NIK & KK
     if (key.endsWith('_kode') && !isNikField(key)) return false
     return true
   })
@@ -632,14 +626,24 @@ async function loadMustahikData(nik) {
   loadingMustahik.value = true
   mustahikRiwayat.value = []
   try {
+    // Step 1: ambil detail mustahik via NIK plain → dapat nik_hashed dari backend
     const detailRes = await MustahikService.getDetailByNik(nik)
     const rows = detailRes?.data ?? []
     if (rows.length === 0) return
-    const nikHashed = rows[0]?.nik_hashed ?? btoa(nik)
+
+    // Step 2: gunakan nik_hashed HANYA dari response backend (base64 url-safe)
+    // JANGAN pakai btoa(nik) sebagai fallback — encoding-nya berbeda!
+    const nikHashed = rows[0]?.nik_hashed
+    if (!nikHashed) {
+      console.warn('[AnggotaDetail] nik_hashed tidak ada di response mustahik')
+      return
+    }
+
+    // Step 3: ambil riwayat menggunakan nik_hashed yang valid
     const riwayatRes = await MustahikService.getRiwayatByNikHashed(nikHashed)
     mustahikRiwayat.value = riwayatRes?.data ?? []
   } catch (e) {
-    // 404 = bukan mustahik, abaikan; error lain log saja
+    // 404 = NIK tidak terdaftar sebagai mustahik → tampilkan "Belum Pernah Menerima Bantuan"
     if (e?.response?.status !== 404) console.error('[AnggotaDetail] gagal load mustahik:', e)
   } finally {
     loadingMustahik.value = false
