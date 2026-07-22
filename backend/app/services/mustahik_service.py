@@ -157,31 +157,11 @@ class MustahikService:
             bind["tipe_penerimaan"] = params["tipe_penerimaan"]
 
         if params.get("jumlah_penyaluran_min"):
-            where.append("""
-            (
-                SELECT SUM(mx.rupiah)
-                FROM t_mustahik_master mx
-                WHERE mx.nik = m.nik
-                AND (
-                    :laz_kode IS NULL
-                    OR mx.laz_kode = :laz_kode
-                )
-            ) >= :jumlah_min
-            """)
+            where.append("m.total_rupiah >= :jumlah_min")
             bind["jumlah_min"] = params["jumlah_penyaluran_min"]
 
         if params.get("jumlah_penyaluran_max"):
-            where.append("""
-            (
-                SELECT SUM(mx.rupiah)
-                FROM t_mustahik_master mx
-                WHERE mx.nik = m.nik
-                AND (
-                    :laz_kode IS NULL
-                    OR mx.laz_kode = :laz_kode
-                )
-            ) <= :jumlah_max
-            """)
+            where.append("m.total_rupiah <= :jumlah_max")
             bind["jumlah_max"] = params["jumlah_penyaluran_max"]
 
         if params.get("provinsi_kode_domisili"):
@@ -231,7 +211,7 @@ class MustahikService:
 
 
         if params.get("desil"):
-            where.append("COALESCE(b.desil,1)=:desil")
+            where.append("COALESCE(m.desil,1)=:desil")
             bind["desil"] = params["desil"]
 
         if params.get("nama_program"):

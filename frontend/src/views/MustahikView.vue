@@ -94,7 +94,7 @@
                 </td>
                 <td class="px-5 py-3 text-slate-600">{{ row.total_laz_kontribusi ?? '-' }} Lembaga</td>
                 <td class="px-5 py-3 text-slate-600">{{ row.total_transaksi ?? '-' }} Kali</td>
-                <td class="px-5 py-3 text-slate-600">{{ row.total_rupiah ?? '-' }}</td>
+                <td class="px-5 py-3 text-slate-600">{{ formatRupiah(row.total_rupiah) }}</td>
                 <td class="px-5 py-3">
                   <Button
                     label="Detail"
@@ -319,6 +319,17 @@ const programOptions = ref([])
 
 const usiaTouched = ref(false)
 const penyaluranTouched = ref(false)
+
+const formatRupiah = (value) => {
+  if (value == null) return '-'
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value)
+}
 
 const activeFilters = reactive({
   skala_laz:'',
