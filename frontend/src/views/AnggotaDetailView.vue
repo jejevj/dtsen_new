@@ -231,15 +231,15 @@
             </div>
           </div>
 
-          <!-- Riwayat detail -->
+          <!-- Riwayat detail — grouped rowspan per LAZ per tahun -->
           <div class="detail-card">
             <p class="section-title"><i class="pi pi-list"></i> Riwayat Penerimaan Bantuan</p>
             <div style="overflow-x:auto;">
               <table class="kk-table">
                 <thead>
                   <tr>
-                    <th>Tahun</th>
-                    <th>LAZ</th>
+                    <th style="width:32px;text-align:center;">No</th>
+                    <th>Lembaga Zakat</th>
                     <th>Periode</th>
                     <th>Program</th>
                     <th>Bidang</th>
@@ -249,19 +249,24 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(item, i) in mustahikRiwayat" :key="i">
-                    <td>{{ item.tahun }}</td>
-                    <td>
-                      <p style="font-weight:600;color:#374151;margin:0;">{{ item.laz || '-' }}</p>
-                      <p style="font-size:10px;color:#94a3b8;margin:0;">{{ item.laz_kode }}</p>
-                    </td>
-                    <td>{{ item.periode }}</td>
-                    <td>{{ item.program }}</td>
-                    <td>{{ item.bidang }}</td>
-                    <td><span style="padding:2px 8px;border-radius:99px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;">{{ formatRupiah(item.nominal) }}</span></td>
-                    <td>{{ item.metode }}</td>
-                    <td>{{ item.tanggal }}</td>
-                  </tr>
+                  <template v-for="(group, gi) in mustahikRiwayatGrouped" :key="gi">
+                    <tr v-for="(item, ii) in group.items" :key="ii">
+                      <!-- No + LAZ cell: only on first row of group -->
+                      <td v-if="ii === 0" :rowspan="group.items.length" style="text-align:center;font-weight:700;vertical-align:middle;">{{ gi + 1 }}</td>
+                      <td v-if="ii === 0" :rowspan="group.items.length" style="vertical-align:middle;">
+                        <p style="font-weight:700;color:#374151;margin:0;">{{ group.laz || '-' }}</p>
+                        <p style="font-size:10px;color:#94a3b8;margin:2px 0 0;">{{ group.laz_kode }}</p>
+                        <p style="font-size:10px;color:#64748b;margin:1px 0 0;">{{ group.tahun }}</p>
+                      </td>
+                      <!-- Per-program columns -->
+                      <td>{{ item.periode }}</td>
+                      <td>{{ item.program }}</td>
+                      <td>{{ item.bidang }}</td>
+                      <td><span style="padding:2px 8px;border-radius:99px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;">{{ formatRupiah(item.nominal) }}</span></td>
+                      <td>{{ item.metode }}</td>
+                      <td>{{ item.tanggal }}</td>
+                    </tr>
+                  </template>
                 </tbody>
               </table>
             </div>
@@ -406,7 +411,6 @@ const { resolveValue, getDetailFields } = useBaselineRefs()
 const { userIdentifier } = useWatermark()
 
 // ── Field keys yang disembunyikan dari tampilan ──
-// Semua field yang berisi kode wilayah tidak ditampilkan di card detail.
 const HIDDEN_FIELD_KEYS = new Set([
   'provinsi_kode',
   'kabupaten_kota_kode',
@@ -421,7 +425,6 @@ const HIDDEN_FIELD_KEYS = new Set([
   'kabkota_id',
   'kecamatan_id',
   'kelurahan_id',
-  // Kode KTP — hanya tampilkan nama wilayah, bukan kodenya
   'kode_provinsi_ktp',
   'kode_kabupaten_kota_ktp',
   'kode_kecamatan_ktp',
@@ -453,7 +456,7 @@ const usiaLabel = computed(() => {
   return usia + ' tahun'
 })
 
-// ── Format tanggal lahir menjadi "11 Juli 1971" ──
+// ── Format tanggal lahir ──
 function formatTanggalLahir(v) {
   if (!v) return ''
   const d = new Date(String(v))
@@ -485,6 +488,41 @@ const mustahikRekapTahun = computed(() => {
     if (r.metode === 'Penerima Manfaat Tidak Langsung') map[t].tidakLangsung += n
   })
   return Object.values(map).sort((a, b) => b.tahun - a.tahun)
+})
+
+/**
+ * mustahikRiwayatGrouped
+ * Mengelompokkan mustahikRiwayat berdasarkan kombinasi (tahun + laz_kode).
+ * Setiap group hanya merender 1 baris untuk kolom No & LAZ (rowspan),
+ * sedangkan kolom Program, Bidang, Nominal, dll dirender per item.
+ * Urutan: sort by tahun DESC, laz_kode ASC.
+ */
+const mustahikRiwayatGrouped = computed(() => {
+  const raw = mustahikRiwayat.value
+  if (!raw.length) return []
+
+  // Pakai ordered Map untuk menjaga urutan kemunculan pertama
+  const map = new Map()
+  raw.forEach(item => {
+    // Key per (tahun, laz_kode) — jika LAZ yang sama muncul di tahun berbeda, dipisah
+    const key = `${item.tahun}__${item.laz_kode}`
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        tahun:    item.tahun,
+        laz:      item.laz,
+        laz_kode: item.laz_kode,
+        items:    [],
+      })
+    }
+    map.get(key).items.push(item)
+  })
+
+  // Sort: tahun DESC, laz_kode ASC
+  return Array.from(map.values()).sort((a, b) => {
+    if (b.tahun !== a.tahun) return b.tahun - a.tahun
+    return String(a.laz_kode).localeCompare(String(b.laz_kode))
+  })
 })
 
 const NIK_FIELDS = new Set(['nomor_induk_kependudukan', 'nik', 'nomor_kartu_keluarga', 'nkk'])
@@ -643,8 +681,6 @@ function goToMember(nik) {
   router.push({ name: 'baseline-anggota-detail', params: { nik } })
 }
 
-// FIX: Pakai fetchBaselineAnggotaByNik yang sudah teroptimasi
-// (prioritas provinsi dari 2 digit awal NIK, tidak loop brutal tanpa urutan)
 async function loadData(nik) {
   data.value = null
   try {
@@ -658,24 +694,19 @@ async function loadMustahikData(nik) {
   loadingMustahik.value = true
   mustahikRiwayat.value = []
   try {
-    // Step 1: ambil detail mustahik via NIK plain → dapat nik_hashed dari backend
     const detailRes = await MustahikService.getDetailByNik(nik)
     const rows = detailRes?.data ?? []
     if (rows.length === 0) return
 
-    // Step 2: gunakan nik_hashed HANYA dari response backend (base64 url-safe)
-    // JANGAN pakai btoa(nik) sebagai fallback — encoding-nya berbeda!
     const nikHashed = rows[0]?.nik_hashed
     if (!nikHashed) {
       console.warn('[AnggotaDetail] nik_hashed tidak ada di response mustahik')
       return
     }
 
-    // Step 3: ambil riwayat menggunakan nik_hashed yang valid
     const riwayatRes = await MustahikService.getRiwayatByNikHashed(nikHashed)
     mustahikRiwayat.value = riwayatRes?.data ?? []
   } catch (e) {
-    // 404 = NIK tidak terdaftar sebagai mustahik → tampilkan "Belum Pernah Menerima Bantuan"
     if (e?.response?.status !== 404) console.error('[AnggotaDetail] gagal load mustahik:', e)
   } finally {
     loadingMustahik.value = false
@@ -718,7 +749,6 @@ async function init(nik) {
   keluargaGroups.value = kkGroups
   loading.value = false
 
-  // load paralel: KK + mustahik
   const tasks = []
   if (data.value?.nomor_kartu_keluarga) tasks.push(loadKKData(data.value.nomor_kartu_keluarga))
   tasks.push(loadMustahikData(nik))
