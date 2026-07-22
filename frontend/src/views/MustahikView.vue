@@ -120,7 +120,6 @@
                     size="small"
                     class="text-primary-600"
                     @click="$router.push('/mustahik/' + row.nik_hashed)"
-                    v-tooltip="'Lihat Detail'"
                   />
                 </td>
               </tr>
