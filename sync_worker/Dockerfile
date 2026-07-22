@@ -19,4 +19,5 @@ COPY . .
 # Buat folder log
 RUN mkdir -p /app/logs/sync
 
-CMD ["python3", "-u", "sync_keluarga_full.py"]
+# sync_worker dinonaktifkan — ubah CMD ini untuk mengaktifkan kembali
+CMD ["sh", "-c", "echo 'sync_worker disabled' && exit 0"]

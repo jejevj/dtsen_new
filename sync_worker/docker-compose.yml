@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: dtsen_sync_keluarga
     restart: "no"          # Tidak auto-restart — jalankan manual saat diperlukan
+    profiles:
+      - disabled            # Service ini dinonaktifkan — jalankan hanya jika eksplisit: --profile disabled
     env_file:
       - .env
     volumes:
