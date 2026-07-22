@@ -12,6 +12,10 @@ from sqlalchemy import text
 from datetime import date, datetime
 import time
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 mustahik_schema = MustahikSchema()
 mustahiks_schema = MustahikSchema(many=True)
@@ -155,10 +159,34 @@ class MustahikService:
     @staticmethod
     def get_list(params: dict) -> dict:
 
-        where = [
-            "l.laz_status IN ('aktif','daftar_ulang')"
-        ]
+        where = []
         bind = {}
+        joins = []
+
+        if (
+            params.get("laz_kode")
+            or params.get("program_kode")
+            or params.get("nama_program")
+            or params.get("skala_laz")
+            
+        ):
+            joins.append("""
+            INNER JOIN t_mustahik tm
+                ON tm.nik = m.nik
+            """)
+
+        if params.get("laz_kode") or params.get("skala_laz"):
+            joins.append("""
+            INNER JOIN t_laz l
+                ON l.laz_kode = tm.laz_kode
+            """)
+
+        if params.get("program_kode") or params.get("nama_program"):
+            joins.append("""
+            INNER JOIN t_program p
+                ON p.program_kode = tm.program_kode
+            """)
+
         if params.get("nama"):
             where.append("m.nama_lengkap LIKE :nama")
             bind["nama"] = f"%{params['nama']}%"
@@ -180,7 +208,7 @@ class MustahikService:
             bind["agama"] = params["agama"]
 
         if params.get("laz_kode"):
-            where.append("m.laz_kode=:laz_kode")
+            where.append("tm.laz_kode=:laz_kode")
             bind["laz_kode"] = params["laz_kode"]
 
         if params.get("skala_laz"):
@@ -196,31 +224,11 @@ class MustahikService:
             bind["tipe_penerimaan"] = params["tipe_penerimaan"]
 
         if params.get("jumlah_penyaluran_min"):
-            where.append("""
-            (
-                SELECT SUM(mx.rupiah)
-                FROM t_mustahik mx
-                WHERE mx.nik = m.nik
-                AND (
-                    :laz_kode IS NULL
-                    OR mx.laz_kode = :laz_kode
-                )
-            ) >= :jumlah_min
-            """)
+            where.append("m.total_rupiah >= :jumlah_min")
             bind["jumlah_min"] = params["jumlah_penyaluran_min"]
 
         if params.get("jumlah_penyaluran_max"):
-            where.append("""
-            (
-                SELECT SUM(mx.rupiah)
-                FROM t_mustahik mx
-                WHERE mx.nik = m.nik
-                AND (
-                    :laz_kode IS NULL
-                    OR mx.laz_kode = :laz_kode
-                )
-            ) <= :jumlah_max
-            """)
+            where.append("m.total_rupiah <= :jumlah_max")
             bind["jumlah_max"] = params["jumlah_penyaluran_max"]
 
         if params.get("provinsi_kode_domisili"):
@@ -268,7 +276,7 @@ class MustahikService:
             bind["usia_max"] = params["usia_max"]
 
         if params.get("desil"):
-            where.append("COALESCE(b.desil,1)=:desil")
+            where.append("COALESCE(m.desil,1)=:desil")
             bind["desil"] = params["desil"]
 
         if params.get("nama_program"):
@@ -276,64 +284,60 @@ class MustahikService:
             bind["program_nama"] = f"%{params['nama_program']}%"
 
         where_sql = " AND ".join(where)
-        page = int(params.get("page", 1))
-        per_page = int(params.get("per_page", 20))
-        offset = (page - 1) * per_page
+        if where_sql:
+            where_sql = "WHERE " + where_sql
+        page = int(params.get("page",1))
+        per_page = int(params.get("per_page",20))
+
+        offset = (page-1)*per_page
 
         bind["limit"] = per_page
         bind["offset"] = offset
 
         total_sql = text(f"""
             SELECT COUNT(DISTINCT m.nik) total
-            FROM t_mustahik m
-            INNER JOIN t_laz l ON m.laz_kode=l.laz_kode
-            INNER JOIN t_program p ON m.program_kode=p.program_kode
-            LEFT JOIN t_mustahik_bappenas b ON b.nik=m.nik
-            WHERE {where_sql}
-        """)
+            FROM t_mustahik_master m
+            {" ".join(joins)}
+            {where_sql}
+            """)
 
         total = db.session.execute(total_sql, bind).scalar()
 
         sql = text(f"""
         SELECT
-            MIN(m.mustahik_id) AS mustahik_id,
             m.nik,
-            MAX(m.nama_lengkap) AS nama_lengkap,
-            MAX(m.jenis_kelamin) AS jenis_kelamin,
-            MAX(m.lahir_tanggal) AS lahir_tanggal,
-            SUM(m.rupiah) AS rupiah,
-            MAX(m.kk) AS kk,
-            MAX(prov.provinsi_nama) AS provinsi_nama,
-            MAX(kab.kabkota_nama) AS kabkota_nama,
-            MAX(l.laz_nama) AS laz_nama,
-            MAX(l.skala) AS skala,
-            MAX(p.program_nama) AS program_nama,
-            COALESCE(MAX(b.desil),1) AS desil,
-            MAX(m.created_at) AS created_at
-        FROM t_mustahik m
-        INNER JOIN t_laz l ON m.laz_kode=l.laz_kode
-        INNER JOIN t_program p ON m.program_kode=p.program_kode
-        LEFT JOIN t_mustahik_bappenas b ON b.nik=m.nik
+            m.nama_lengkap,
+            m.jenis_kelamin,
+            m.tanggal_lahir,
+            prov.provinsi_nama,
+            kab.kabkota_nama,
+            COALESCE(m.desil,1) AS desil,
+            m.total_rupiah,
+            m.total_transaksi,
+            m.total_laz_kontribusi
+        FROM t_mustahik_master m
+        {" ".join(joins)}
         LEFT JOIN m_provinsi prov ON m.ktp_provinsi_kode=prov.provinsi_kode
         LEFT JOIN m_kabkota kab ON m.ktp_kabkota_kode=kab.kabkota_kode
-        WHERE {where_sql}
-        GROUP BY m.nik
-        ORDER BY MAX(m.created_at) DESC
+        {where_sql}
+        ORDER BY m.ktp_provinsi_kode ASC
         LIMIT :limit OFFSET :offset
         """)
         rows = db.session.execute(sql, bind).mappings().all()
         items = []
         for row in rows:
             items.append({
-                "mustahik_id": row["mustahik_id"],
                 "nik": _mask_nik(row["nik"]),
-                "nik_hashed": base64.urlsafe_b64encode(str(row["nik"]).encode()).decode(),
-                "nama_lengkap": row["nama_lengkap"],
-                "jenis_kelamin": row["jenis_kelamin"],
-                "usia": _hitung_usia(row["lahir_tanggal"]),
-                "provinsi_nama": row["provinsi_nama"],
-                "kabkota_nama": row["kabkota_nama"],
-                "desil": row["desil"]
+                "nik_hashed":base64.urlsafe_b64encode(str(row["nik"]).encode()).decode(),
+                "nama_lengkap":row["nama_lengkap"],
+                "jenis_kelamin":row["jenis_kelamin"],
+                "usia":_hitung_usia(row["tanggal_lahir"]),
+                "provinsi_nama":row["provinsi_nama"],
+                "kabkota_nama":row["kabkota_nama"],
+                "total_rupiah":row["total_rupiah"],
+                "total_transaksi":row["total_transaksi"],
+                "total_laz_kontribusi":row["total_laz_kontribusi"],
+                "desil":row["desil"]
             })
         return {
             "data": items,
@@ -379,6 +383,8 @@ class MustahikService:
     @staticmethod
     def get_riwayat(nik_hashed: str):
         nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
+        logger.info(f"nik_hashed : {nik_hashed}")
+        logger.info(f"nik_decode : {nik_dec}")
         sql = text("""
             SELECT
                 m.tanggal_terima,
@@ -390,7 +396,7 @@ class MustahikService:
                 b.bidang_label,
                 m.laz_kode
             FROM t_mustahik m
-            INNER JOIN t_program p
+            LEFT JOIN t_program p
                 ON m.program_kode = p.program_kode
             LEFT JOIN t_laz l
                 ON m.laz_kode = l.laz_kode

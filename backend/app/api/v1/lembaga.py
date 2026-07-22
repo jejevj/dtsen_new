@@ -9,16 +9,24 @@ def list_lembaga():
     bind = {}
 
     laz_where = """
-        WHERE laz_status IN ('aktif','daftar_ulang')
+    WHERE laz_status IN ('aktif','daftar_ulang')
     """
+
     uker_where = """
-        WHERE is_kemenag = 0
+    WHERE is_kemenag = 0
     """
+
+    uker_skala = "NULL AS skala"
+
     if skala:
         bind["skala"] = int(skala)
+
         laz_where += """
             AND skala = :skala
         """
+
+        uker_skala = ":skala AS skala"
+
         if int(skala) == 1:
             uker_where += """
                 AND uker_parent = 0
@@ -41,25 +49,25 @@ def list_lembaga():
     uker_skala_col = ":skala AS skala" if skala else "NULL AS skala"
 
     sql = text(f"""
-        SELECT
-            laz_kode AS kode,
-            laz_nama AS nama,
-            skala,
-            'laz' AS jenis
-        FROM t_laz
-        {laz_where}
+    SELECT
+        laz_kode AS kode,
+        laz_nama AS nama,
+        skala,
+        'laz' AS jenis
+    FROM t_laz
+    {laz_where}
 
-        UNION ALL
+    UNION ALL
 
-        SELECT
-            uker_kode AS kode,
-            uker_nama AS nama,
-            {uker_skala_col},
-            'kemenag' AS jenis
-        FROM m_uker
-        {uker_where}
+    SELECT
+        uker_kode AS kode,
+        uker_nama AS nama,
+        {uker_skala},
+        'kemenag' AS jenis
+    FROM m_uker
+    {uker_where}
 
-        ORDER BY nama
+    ORDER BY nama
     """)
 
     rows = db.session.execute(sql, bind).mappings().all()
