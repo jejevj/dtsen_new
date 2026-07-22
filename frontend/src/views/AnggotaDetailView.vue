@@ -40,8 +40,6 @@
               <!-- Usia + Tanggal Lahir -->
               <p v-if="data.tanggal_lahir" style="font-size:13px;color:#64748b;margin:0;">
                 Usia: <strong style="color:#374151;">{{ usiaLabel }}</strong>
-                <span style="color:#cbd5e1;margin:0 6px;">·</span>
-                <span style="color:#94a3b8;font-size:12px;">{{ formatTanggalLahir(data.tanggal_lahir) }}</span>
               </p>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
