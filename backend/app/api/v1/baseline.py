@@ -3,7 +3,7 @@ import os
 import re
 import time
 import requests
-from datetime import datetime
+from datetime import date, datetime
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import distinct, select
@@ -195,12 +195,14 @@ _TERNAK_RANGE_FIELDS = {
 }
 
 # Kumpulan param yang bukan bagian dari filter dinamis (sudah ditangani secara eksplisit)
+# usia_min dan usia_max ditangani khusus via _apply_usia_filter, bukan _apply_extra_filters
 _RESERVED_PARAMS = {
     'provinsi', 'cursor', 'search', 'kabkota_kode', 'kecamatan_kode',
+    'usia_min', 'usia_max',
 }
 
 
-# ─── Kode wilayah normalizer ──────────────────────────────────
+# ─── Kode wilayah normalizer ────────────────────────────────
 
 def _normalize_kode(raw: str) -> tuple[str, str]:
     s = raw.strip()
@@ -227,7 +229,7 @@ def _kode_filter(column, raw: str):
     return db.or_(column == dotted, column == plain)
 
 
-# ─── Provinsi resolver ────────────────────────────────────────
+# ─── Provinsi resolver ──────────────────────────────────
 
 def _resolve_provinsi(raw: str):
     if not raw:
@@ -243,7 +245,7 @@ def _resolve_provinsi(raw: str):
     return None, None
 
 
-# ─── Identity & Access Control ────────────────────────────────
+# ─── Identity & Access Control ───────────────────────────
 
 def _current_identity() -> dict:
     return parse_identity_str(get_jwt_identity())
@@ -329,7 +331,7 @@ def _get_wilayah_scope(identity: dict) -> dict:
     }
 
 
-# ─── Wilayah scope endpoint ───────────────────────────────────
+# ─── Wilayah scope endpoint ──────────────────────────────
 
 @api_v1_bp.get('/baseline/wilayah-scope')
 @jwt_required()
@@ -337,7 +339,7 @@ def baseline_wilayah_scope():
     return jsonify(_get_wilayah_scope(_current_identity())), 200
 
 
-# ─── ZAWA HTTP helpers ────────────────────────────────────────
+# ─── ZAWA HTTP helpers ──────────────────────────────────
 
 def _zawa_headers() -> dict:
     api_key = os.environ.get("ZAWA_API_KEY", "")
@@ -501,7 +503,7 @@ def _build_db_cursor(page: int) -> str:
     return f"db:page_{page}"
 
 
-# ─── DB cache helpers ─────────────────────────────────────────
+# ─── DB cache helpers ───────────────────────────────────
 
 def _cache_anggota_to_db(items: list, provinsi_slug: str):
     """
@@ -665,7 +667,76 @@ def _apply_extra_filters(q, model, column_map: dict, extra_filters: dict):
     return q
 
 
-# ─── SYNC ENDPOINTS ──────────────────────────────────────────
+# ---------------------------------------------------------------------------
+# Helper: filter usia — konversi usia_min/usia_max ke range tanggal_lahir
+#
+# tanggal_lahir disimpan sebagai VARCHAR(30) dengan format 'YYYY-MM-DD'.
+# Logika konversi:
+#   usia >= usia_min  →  tanggal_lahir <= TODAY - usia_min tahun
+#   usia <= usia_max  →  tanggal_lahir >= TODAY - usia_max tahun
+#
+# Contoh: usia_min=20, usia_max=40 pada tanggal 2026-07-23
+#   tgl_lahir_max = '2006-07-23'  (usia minimal 20)
+#   tgl_lahir_min = '1986-07-23'  (usia maksimal 40)
+#   → filter: tanggal_lahir BETWEEN '1986-07-23' AND '2006-07-23'
+# ---------------------------------------------------------------------------
+def _apply_usia_filter(q, usia_min_raw, usia_max_raw):
+    """Terapkan filter rentang usia ke query ZawaAnggota.
+
+    Param:
+        usia_min_raw: nilai string/int usia minimum (inklusif), atau None/''.
+        usia_max_raw: nilai string/int usia maksimum (inklusif), atau None/''.
+
+    Return:
+        Query SQLAlchemy yang sudah ditambah filter tanggal_lahir jika perlu.
+    """
+    try:
+        usia_min = int(usia_min_raw) if usia_min_raw not in (None, '', '0') else None
+    except (ValueError, TypeError):
+        usia_min = None
+    try:
+        usia_max = int(usia_max_raw) if usia_max_raw not in (None, '', '100') else None
+    except (ValueError, TypeError):
+        usia_max = None
+
+    # Jika keduanya default (0-100), tidak perlu filter
+    if usia_min is None and usia_max is None:
+        return q
+
+    today = date.today()
+
+    def subtract_years(d: date, years: int) -> date:
+        """Kurangi tahun dari date, handle 29 Feb dengan aman."""
+        try:
+            return d.replace(year=d.year - years)
+        except ValueError:
+            # 29 Feb → 28 Feb di tahun non-kabisat
+            return d.replace(year=d.year - years, day=28)
+
+    if usia_min is not None and usia_max is not None:
+        # Anggota dengan usia dalam rentang [usia_min, usia_max]
+        tgl_lahir_min = subtract_years(today, usia_max).strftime('%Y-%m-%d')
+        tgl_lahir_max = subtract_years(today, usia_min).strftime('%Y-%m-%d')
+        q = q.filter(ZawaAnggota.tanggal_lahir.between(tgl_lahir_min, tgl_lahir_max))
+        logger.debug(
+            f"[Filter Usia] usia {usia_min}–{usia_max} → "
+            f"tanggal_lahir BETWEEN '{tgl_lahir_min}' AND '{tgl_lahir_max}'"
+        )
+    elif usia_min is not None:
+        # Hanya batas bawah usia: lahir ≤ today - usia_min
+        tgl_lahir_max = subtract_years(today, usia_min).strftime('%Y-%m-%d')
+        q = q.filter(ZawaAnggota.tanggal_lahir <= tgl_lahir_max)
+        logger.debug(f"[Filter Usia] usia >= {usia_min} → tanggal_lahir <= '{tgl_lahir_max}'")
+    elif usia_max is not None:
+        # Hanya batas atas usia: lahir ≥ today - usia_max
+        tgl_lahir_min = subtract_years(today, usia_max).strftime('%Y-%m-%d')
+        q = q.filter(ZawaAnggota.tanggal_lahir >= tgl_lahir_min)
+        logger.debug(f"[Filter Usia] usia <= {usia_max} → tanggal_lahir >= '{tgl_lahir_min}'")
+
+    return q
+
+
+# ─── SYNC ENDPOINTS ────────────────────────────────────
 
 @api_v1_bp.get('/baseline/anggota/by-nkk')
 @jwt_required()
@@ -939,7 +1010,7 @@ def baseline_sync_status():
     }), 200
 
 
-# ─── READ ENDPOINTS ──────────────────────────────────────────
+# ─── READ ENDPOINTS ────────────────────────────────────
 
 @api_v1_bp.get('/baseline/ping')
 @jwt_required()
@@ -994,7 +1065,8 @@ def baseline_provinsi_list():
 
 def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
                              kabkota_filter, kecamatan_filter, search: str,
-                             extra_filters: dict = None):
+                             extra_filters: dict = None,
+                             usia_min=None, usia_max=None):
     valid_nkk_sq = _valid_nkk_subquery()
 
     q = ZawaAnggota.query.filter(
@@ -1025,6 +1097,10 @@ def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
         ))
     if extra_filters:
         q = _apply_extra_filters(q, ZawaAnggota, _ANGGOTA_COLUMN_MAP, extra_filters)
+
+    # Filter usia: konversi ke rentang tanggal_lahir
+    q = _apply_usia_filter(q, usia_min, usia_max)
+
     return q
 
 
@@ -1039,6 +1115,10 @@ def baseline_anggota():
     search           = request.args.get('search', '').strip()
     kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
     kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
+
+    # Ambil param usia (ditangani khusus, bukan melalui _apply_extra_filters)
+    usia_min_raw = request.args.get('usia_min', '').strip() or None
+    usia_max_raw = request.args.get('usia_max', '').strip() or None
 
     extra_filters = {
         k: v for k, v in request.args.items()
@@ -1144,6 +1224,7 @@ def baseline_anggota():
             provinsi_slug=provinsi, bps_kode=bps_kode,
             kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
             search=search, extra_filters=extra_filters,
+            usia_min=usia_min_raw, usia_max=usia_max_raw,
         )
         total_count = q.count()
         if total_count > 0:
@@ -1164,7 +1245,7 @@ def baseline_anggota():
                     "limit": DB_PAGE_SIZE, "searchMode": "db_cache", "source": "local_db",
                 }
             }), 200
-        if extra_filters:
+        if extra_filters or usia_min_raw or usia_max_raw:
             return jsonify({
                 "data": [], "columns": [],
                 "meta": {
