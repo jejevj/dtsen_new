@@ -248,6 +248,27 @@
                 </div>
               </div>
 
+              <!-- Slider Usia — anggota only -->
+              <div v-if="activeTab === 'anggota'" class="space-y-3">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Demografi</p>
+                <div class="space-y-2">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs font-medium text-slate-600">Rentang Usia</label>
+                    <span class="text-xs font-semibold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
+                      {{ usiaSlider[0] }} – {{ usiaSlider[1] }} tahun
+                    </span>
+                  </div>
+                  <Slider
+                    v-model="usiaSlider"
+                    :range="true" :min="0" :max="100" :step="1"
+                    class="w-full"
+                  />
+                  <div class="flex justify-between text-[10px] text-slate-400">
+                    <span>0 tahun</span><span>100 tahun</span>
+                  </div>
+                </div>
+              </div>
+
               <!-- Grup dari DB — semua grup KECUALI yang semua field-nya ternak -->
               <div
                 v-for="(groupFields, groupName) in groupedFilterFieldsNoTernak"
@@ -368,6 +389,21 @@ const TERNAK_KEYS = new Set(TERNAK_FIELDS.map(f => f.key))
 const ternakSliders = reactive(
   Object.fromEntries(TERNAK_FIELDS.map(f => [f.key, [0, 100]]))
 )
+
+// ── Usia slider — anggota only (0–100 tahun)
+const usiaSlider = ref([0, 100])
+
+function isUsiaSliderActive() {
+  return !(usiaSlider.value[0] === 0 && usiaSlider.value[1] === 100)
+}
+
+function buildUsiaParams() {
+  if (!isUsiaSliderActive()) return {}
+  return {
+    usia_min: usiaSlider.value[0],
+    usia_max: usiaSlider.value[1],
+  }
+}
 
 function isTernakField(fieldKey) {
   return TERNAK_KEYS.has(fieldKey)
@@ -560,7 +596,8 @@ const activeFilterCount = computed(() => {
   const ternakCount = activeTab.value === 'keluarga'
     ? TERNAK_FIELDS.filter(f => { const [mn, mx] = ternakSliders[f.key]; return !(mn === 0 && mx === 100) }).length
     : 0
-  return drawerCount + desilCount + ternakCount
+  const usiaCount = activeTab.value === 'anggota' && isUsiaSliderActive() ? 1 : 0
+  return drawerCount + desilCount + ternakCount + usiaCount
 })
 
 function formatFilterValue(val) {
@@ -585,6 +622,13 @@ const activeFiltersBadges = computed(() => {
       if (mn === 0 && mx === 100) continue
       result.push({ key: `__ternak__${tf.key}`, label: tf.label, display: `${mn} – ${mx}` })
     }
+  }
+  if (activeTab.value === 'anggota' && isUsiaSliderActive()) {
+    result.push({
+      key: '__usia__',
+      label: 'Usia',
+      display: `${usiaSlider.value[0]} – ${usiaSlider.value[1]} tahun`,
+    })
   }
   for (const f of filterFields.value) {
     if (isTernakField(f.field_key)) continue
@@ -645,6 +689,9 @@ function resetFilter() {
     keluarga.desil = ''
     for (const tf of TERNAK_FIELDS) ternakSliders[tf.key] = [0, 100]
   }
+  if (activeTab.value === 'anggota') {
+    usiaSlider.value = [0, 100]
+  }
   showFilter.value = false
   activeTab.value === 'anggota' ? loadAnggota() : loadKeluarga()
 }
@@ -654,6 +701,10 @@ function clearOneFilter(fieldKey) {
   if (fieldKey.startsWith('__ternak__')) {
     ternakSliders[fieldKey.replace('__ternak__', '')] = [0, 100]
     loadKeluarga(); return
+  }
+  if (fieldKey === '__usia__') {
+    usiaSlider.value = [0, 100]
+    loadAnggota(); return
   }
   const store = activeTab.value === 'anggota' ? anggotaFilters : keluargaFilters
   if (fieldKey in store) { store[fieldKey] = ''; applyFilter() }
@@ -683,6 +734,7 @@ async function loadAnggota(cursor = null) {
     const params = { provinsi: anggota.provinsi, cursor: cursor || undefined, search: anggota.search.trim() || undefined }
     if (anggota.kabkota)   params.kabkota_kode   = anggota.kabkota
     if (anggota.kecamatan) params.kecamatan_kode = anggota.kecamatan
+    Object.assign(params, buildUsiaParams())
     Object.assign(params, buildFilterParams(anggotaFilters))
     const res = await fetchBaselineAnggota(params)
     anggota.rows = res.data ?? []; anggota.columns = res.columns ?? []
@@ -700,6 +752,7 @@ function resetAnggota() {
   anggota.rows = []; anggota.columns = []; anggota.historyStack = []; anggota.currentCursor = null
   anggotaKabkotaOptions.value = []; anggotaKecamatanOptions.value = []
   for (const k of Object.keys(anggotaFilters)) anggotaFilters[k] = ''
+  usiaSlider.value = [0, 100]
   Object.assign(anggota.meta, { label:'', totalItems:0, totalPages:1, currentPage:1, hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10 })
   if (first) { loadAnggotaKabkota(first.kode); loadAnggota() }
 }
