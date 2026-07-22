@@ -6,7 +6,7 @@ import requests
 from datetime import datetime
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import distinct
+from sqlalchemy import distinct, select
 from . import api_v1_bp
 from ...extensions import db
 from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
@@ -505,9 +505,9 @@ def _build_db_cursor(page: int) -> str:
 
 def _cache_anggota_to_db(items: list, provinsi_slug: str):
     """
-    Simpan anggota ke DB. provinsi_slug dipakai sebagai default,
-    tapi jika item memiliki kode_provinsi_ktp yang valid, slug diturunkan
-    dari BPS kode agar data tidak salah label provinsi.
+    Simpan anggota ke DB. provinsi_slug dipakai sebagai fallback,
+    tapi kode_provinsi_ktp selalu menjadi sumber utama untuk menentukan
+    provinsi_slug yang benar agar data tidak salah label.
     """
     if not items:
         return 0
@@ -517,9 +517,14 @@ def _cache_anggota_to_db(items: list, provinsi_slug: str):
         if not nik:
             continue
 
-        # Tentukan provinsi_slug yang benar dari kode_provinsi_ktp jika tersedia
+        # FIX: Selalu prioritaskan kode_provinsi_ktp sebagai sumber provinsi_slug.
+        # Jika tidak tersedia atau tidak dikenal, baru gunakan provinsi_slug parameter.
         kode_prov_ktp = str(row.get("kode_provinsi_ktp") or "").strip().zfill(2)
-        correct_slug  = _BPS_TO_SLUG.get(kode_prov_ktp) or provinsi_slug
+        correct_slug  = _BPS_TO_SLUG.get(kode_prov_ktp)
+        if not correct_slug:
+            # Coba dari 2 digit pertama NIK sebagai fallback kedua
+            nik_bps = nik[:2].zfill(2)
+            correct_slug = _BPS_TO_SLUG.get(nik_bps) or provinsi_slug
 
         existing = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=nik).first()
         if existing:
@@ -566,15 +571,17 @@ def _dedupe_by_nik(items: list) -> list:
 # ---------------------------------------------------------------------------
 # Helper: subquery NKK yang desil_nasional-nya termasuk _DESIL_ALLOWED (1-4)
 # Dipakai untuk filter anggota via join ke zawa_keluarga.
+# FIX: Menggunakan select().scalar_subquery() agar kompatibel dengan
+# SQLAlchemy 2.x dan menghilangkan SAWarning "Coercing Subquery object".
 # ---------------------------------------------------------------------------
 def _valid_nkk_subquery():
-    """Kembalikan subquery kolom nomor_kartu_keluarga dari ZawaKeluarga
+    """Kembalikan scalar subquery kolom nomor_kartu_keluarga dari ZawaKeluarga
     yang desil_nasional IN _DESIL_ALLOWED.
     """
     return (
-        db.session.query(ZawaKeluarga.nomor_kartu_keluarga)
-        .filter(ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED))
-        .subquery()
+        select(ZawaKeluarga.nomor_kartu_keluarga)
+        .where(ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED))
+        .scalar_subquery()
     )
 
 
@@ -837,7 +844,7 @@ def baseline_sync_keluarga():
     db.session.add(log)
     db.session.commit()
 
-    existing_nkk_subq = db.session.query(ZawaKeluarga.nomor_kartu_keluarga).subquery()
+    existing_nkk_subq = select(ZawaKeluarga.nomor_kartu_keluarga).scalar_subquery()
     pending_nkk_rows = (
         db.session.query(distinct(ZawaAnggota.nomor_kartu_keluarga))
         .filter(
@@ -1068,8 +1075,23 @@ def baseline_anggota():
 
     # --- NIK search path: enforce desil via join ---
     if search and _is_numeric_id(search):
-        # Cek DB dulu: hanya valid jika NKK-nya masuk desil 1-4
-        db_row = ZawaAnggota.query.filter_by(nomor_induk_kependudukan=search.strip()).first()
+        # FIX: Tambahkan filter provinsi agar NIK cross-province tidak muncul.
+        # Query harus mencocokkan kode_provinsi_ktp ATAU provinsi_slug dengan
+        # provinsi yang diminta, mencegah data salah label muncul di provinsi lain.
+        db_row = ZawaAnggota.query.filter(
+            ZawaAnggota.nomor_induk_kependudukan == search.strip(),
+            db.or_(
+                ZawaAnggota.kode_provinsi_ktp == bps_kode,
+                ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),
+                db.and_(
+                    db.or_(
+                        ZawaAnggota.kode_provinsi_ktp.is_(None),
+                        ZawaAnggota.kode_provinsi_ktp == '',
+                    ),
+                    ZawaAnggota.provinsi_slug == provinsi,
+                )
+            )
+        ).first()
         if db_row:
             nkk_check = ZawaKeluarga.query.filter(
                 ZawaKeluarga.nomor_kartu_keluarga == db_row.nomor_kartu_keluarga,
@@ -1396,15 +1418,19 @@ def baseline_repair_provinsi_slug():
     """
     Perbaiki data lama: update provinsi_slug berdasarkan kode_provinsi_ktp.
     Panggil sekali dari admin untuk migrasi data yang salah label.
+    Fallback ke 2 digit pertama NIK jika kode_provinsi_ktp tidak tersedia.
     """
     updated = 0
-    rows = ZawaAnggota.query.filter(
-        ZawaAnggota.kode_provinsi_ktp.isnot(None),
-        ZawaAnggota.kode_provinsi_ktp != ''
-    ).all()
+    rows = ZawaAnggota.query.all()
     for row in rows:
         bps = str(row.kode_provinsi_ktp or '').strip().zfill(2)
         correct = _BPS_TO_SLUG.get(bps)
+        if not correct:
+            # Fallback: deteksi dari 2 digit pertama NIK
+            nik = str(row.nomor_induk_kependudukan or '').strip()
+            if nik:
+                nik_bps = nik[:2].zfill(2)
+                correct = _BPS_TO_SLUG.get(nik_bps)
         if correct and row.provinsi_slug != correct:
             row.provinsi_slug = correct
             updated += 1
