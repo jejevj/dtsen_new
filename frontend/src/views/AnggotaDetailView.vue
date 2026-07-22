@@ -401,7 +401,11 @@ const mustahikRiwayat = ref([])   // raw array dari /mustahik/{nikHashed}/riwaya
 const { resolveValue, getDetailFields } = useBaselineRefs()
 const { userIdentifier } = useWatermark()
 
-// ── Field keys yang mengandung kode wilayah – disembunyikan dari tampilan ──
+// ── Field keys yang disembunyikan dari tampilan ──
+// Mencakup:
+//   1. Kode wilayah generik (_kode suffix, kode_* prefix, *_id)
+//   2. Semua field KTP (ktp_*) — baik _kode maupun _nama — karena sudah
+//      direpresentasikan oleh group "Alamat KTP" yang lebih readable
 const HIDDEN_FIELD_KEYS = new Set([
   'provinsi_kode',
   'kabupaten_kota_kode',
@@ -422,7 +426,12 @@ function visibleFields(fields) {
   if (!fields) return []
   return fields.filter(f => {
     const key = f.field_key ?? ''
+    // Sembunyikan field yang ada di daftar eksplisit
     if (HIDDEN_FIELD_KEYS.has(key)) return false
+    // Sembunyikan semua field KTP (prefix ktp_) — _kode maupun _nama
+    // karena sudah direpresentasikan oleh section "Alamat KTP"
+    if (key.startsWith('ktp_')) return false
+    // Sembunyikan field kode wilayah lain (suffix _kode), kecuali field NIK
     if (key.endsWith('_kode') && !isNikField(key)) return false
     return true
   })
