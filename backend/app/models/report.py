@@ -1,0 +1,1426 @@
+from datetime import datetime
+from ..extensions import db
+from sqlalchemy import text
+
+
+class Report:
+
+    @staticmethod
+    def get_param_tahun(params: dict) -> list:
+        sql = text("""
+        WITH RECURSIVE years AS (
+            SELECT YEAR(CURDATE()) AS tahun
+            UNION ALL
+            SELECT tahun - 1
+            FROM years
+            WHERE tahun >= (SELECT DISTINCT YEAR(t_mustahik.tanggal_terima) FROM t_mustahik ORDER BY tanggal_terima ASC LIMIT 1)
+        )
+        SELECT tahun FROM years
+        ORDER BY tahun DESC;
+        """)
+
+        rows = db.session.execute(sql).mappings().all()
+
+        return [dict(row) for row in rows]
+    
+    @staticmethod
+    def get_param_lembaga() -> list:
+        sql = text("""
+        SELECT laz_kode, laz_nama
+        FROM t_laz
+        WHERE laz_status IN ('aktif', 'daftar_ulang')
+        AND skala > 0
+        ORDER BY laz_nama;
+        """)
+
+        rows = db.session.execute(sql).mappings().all()
+
+        return [dict(row) for row in rows]
+    
+    @staticmethod
+    def get_skala_bzn() -> list:
+        sql = text("""
+        SELECT 1 skala, COUNT(uker_kode) bzn_count
+        FROM m_uker
+        WHERE uker_kode = 'BZN'
+        GROUP BY uker_kode
+        UNION
+        SELECT 2 skala, COUNT(DISTINCT uker_kode) bzn_count
+        FROM m_uker
+        WHERE uker_parent = 'BZN'
+        GROUP BY uker_parent
+        UNION
+        SELECT 3 skala, COUNT(DISTINCT uker_kode) bzn_count
+        FROM m_uker
+        WHERE kabkota_kode IS NOT NULL OR TRIM(kabkota_kode) != ''
+        GROUP BY uker_parent;
+        """)
+
+        rows = db.session.execute(sql, {}).mappings().all()
+
+        return [dict(row) for row in rows]
+    
+    @staticmethod
+    def get_skala_laz() -> list:
+        sql = text("""
+        SELECT skala, laz_status, COUNT(laz_kode) laz_count
+        FROM t_laz
+        WHERE skala != 0
+        GROUP BY skala, laz_status;
+        """)
+
+        rows = db.session.execute(sql, {}).mappings().all()
+
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_desil_baseline() -> list:
+        sql = text("""
+        SELECT desil_nasional desil, SUM(jumlah_anggota_keluarga) nik_count 
+        FROM (
+        SELECT DISTINCT nomor_kartu_keluarga, desil_nasional, jumlah_anggota_keluarga FROM zawa_keluarga WHERE desil_nasional BETWEEN 1 AND 5
+        )zawa
+        GROUP BY desil_nasional;
+        """)
+
+        rows = db.session.execute(sql, {}).mappings().all()
+
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_desil_mustahik(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        
+        sql_text = """
+        SELECT t_mustahik_bappenas.desil, COUNT(DISTINCT t_mustahik_bappenas.nik) nik_count, SUM(t_mustahik.rupiah) rupiah
+        FROM t_mustahik_bappenas
+        LEFT JOIN t_mustahik ON t_mustahik.mustahik_id = t_mustahik_bappenas.mustahik_id
+        WHERE t_mustahik_bappenas.desil BETWEEN 1 AND 4
+        AND t_mustahik_bappenas.tahun_penyetaraan >= :start_date
+        AND t_mustahik_bappenas.tahun_penyetaraan < :end_date
+        """
+        
+        lembaga = params.get("lembaga") or None
+        if lembaga:
+            sql_text += "AND t_mustahik.laz_kode = :lembaga"
+
+        sql_text += "GROUP BY t_mustahik_bappenas.desil;"
+        
+        sql = text(sql_text)
+
+        rows = db.session.execute(sql, {
+            'start_date': tahun_awal,
+            'end_date': tahun_akhir,
+            'lembaga': lembaga
+        }).mappings().all()
+
+        return [dict(row) for row in rows]
+ 
+    @staticmethod
+    def get_tren(params: dict) -> list:
+        tahun = int(params.get("tahun") or datetime.now().year)
+
+        sql_text = """
+        WITH RECURSIVE years AS (
+            SELECT :tahun AS tahun
+            UNION ALL
+            SELECT tahun - 1
+            FROM years
+            WHERE tahun > :tahun - 4
+        )
+        SELECT tahun"""
+
+        lembaga = params.get("lembaga") or None
+        if lembaga:
+            sql_text += """
+            , COALESCE((SELECT SUM(rupiah) FROM t_mustahik WHERE laz_kode = :lembaga AND tipe_penerimaan = 'pml' AND tanggal_terima >= CONCAT(tahun,'-01-01') AND tanggal_terima < CONCAT(tahun+1,'-01-01')), 0) AS Bantuan_Langsung
+            , COALESCE((SELECT SUM(rupiah) FROM t_mustahik WHERE laz_kode = :lembaga AND tipe_penerimaan = 'pmtl' AND tanggal_terima >= CONCAT(tahun,'-01-01') AND tanggal_terima < CONCAT(tahun+1,'-01-01')), 0) AS Bantuan_Tidak_Langsung
+            """
+        else:
+            sql_text += """
+            , COALESCE((SELECT SUM(rupiah) FROM t_mustahik WHERE tipe_penerimaan = 'pml' AND tanggal_terima >= CONCAT(tahun,'-01-01') AND tanggal_terima < CONCAT(tahun+1,'-01-01')), 0) AS Bantuan_Langsung
+            , COALESCE((SELECT SUM(rupiah) FROM t_mustahik WHERE tipe_penerimaan = 'pmtl' AND tanggal_terima >= CONCAT(tahun,'-01-01') AND tanggal_terima < CONCAT(tahun+1,'-01-01')), 0) AS Bantuan_Tidak_Langsung
+            """
+    
+        sql_text += """
+        FROM years
+        ORDER BY tahun;
+        """
+        sql = text(sql_text)
+
+        rows = db.session.execute(sql, {
+            'tahun': tahun,
+            'lembaga': lembaga
+        }).mappings().all()
+
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_gender(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+
+        sql_text = """
+        SELECT jenis_kelamin, IFNULL(COUNT(DISTINCT nik), 0) mustahik
+        FROM t_mustahik
+        WHERE tanggal_terima >= :start_date
+        AND tanggal_terima < :end_date
+        """
+
+        lembaga = params.get("lembaga") or None
+        if lembaga:
+            sql_text += "AND laz_kode = :lembaga"
+
+        sql_text += """
+        GROUP BY jenis_kelamin;
+        """
+
+        sql = text(sql_text)
+
+        rows = db.session.execute(sql, {
+            'start_date': f'{tahun_awal}-01-01',
+            'end_date':   f'{tahun_akhir}-01-01',
+            'lembaga': lembaga
+        }).mappings().all()
+
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_bidang(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+
+        sql_text = """
+        SELECT
+            b.bidang_kode,
+            UPPER(b.bidang_label) AS bidang_label,
+            COALESCE(x.total_penyaluran,0) AS total_penyaluran,
+            COALESCE(x.total_mustahik,0) AS total_mustahik
+        FROM m_bidang b
+        LEFT JOIN (
+            SELECT
+                p.bidang_kode,
+                SUM(m.rupiah) total_penyaluran,
+                COUNT(DISTINCT m.nik) total_mustahik
+            FROM t_program p
+            JOIN t_mustahik m
+                ON m.program_kode = p.program_kode
+            WHERE m.tanggal_terima >= :start_date
+            AND m.tanggal_terima < :end_date
+        """
+
+        lembaga = params.get("lembaga") or None
+        if lembaga:
+            sql_text += "AND m.laz_kode = :lembaga"
+
+        sql_text += """
+            GROUP BY p.bidang_kode
+        ) x
+        ON x.bidang_kode = b.bidang_kode
+        ORDER BY b.is_prioritas DESC, b.bidang_kode;
+        """
+
+        sql = text(sql_text)
+
+        rows = db.session.execute(sql, {
+            'start_date': f'{tahun_awal}-01-01',
+            'end_date':   f'{tahun_akhir}-01-01',
+            'lembaga': lembaga
+        }).mappings().all()
+
+        return [dict(row) for row in rows]
+
+    @staticmethod
+    def get_map_provinsi(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        
+        sql = text("""
+            SELECT t_mustahik.ktp_provinsi_kode, m_provinsi.provinsi_nama, SUM(rupiah) penyaluran, COUNT(DISTINCT nik) mustahik, COUNT(DISTINCT laz_kode) laz_count
+            FROM t_mustahik
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+            WHERE t_mustahik.tanggal_terima >= :start_date
+            AND t_mustahik.tanggal_terima < :end_date
+            GROUP BY t_mustahik.ktp_provinsi_kode
+            ORDER BY t_mustahik.ktp_provinsi_kode
+        """)
+
+        result = db.session.execute(sql, {
+            'start_date': f'{tahun_awal}-01-01',
+            'end_date':   f'{tahun_akhir}-01-01'
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_map_kabkota(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+
+        sql = text("""
+            SELECT t_mustahik.ktp_provinsi_kode, t_mustahik.ktp_kabkota_kode, m_kabkota.kabkota_nama, SUM(rupiah) penyaluran, COUNT(DISTINCT nik) mustahik, COUNT(DISTINCT laz_kode) laz_count
+            FROM t_mustahik
+            JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+            WHERE t_mustahik.tanggal_terima >= :start_date
+            AND t_mustahik.tanggal_terima < :end_date
+            GROUP BY t_mustahik.ktp_provinsi_kode, t_mustahik.ktp_kabkota_kode
+            ORDER BY t_mustahik.ktp_provinsi_kode, t_mustahik.ktp_kabkota_kode
+        """)
+
+        result = db.session.execute(sql, {
+            'start_date': f'{tahun_awal}-01-01',
+            'end_date':   f'{tahun_akhir}-01-01'
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+
+    @staticmethod
+    def get_map_kecamatan(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+
+        sql = text("""
+            SELECT t_mustahik.ktp_provinsi_kode, t_mustahik.ktp_kabkota_kode, t_mustahik.ktp_kecamatan_kode, m_kecamatan.kecamatan_nama, SUM(rupiah) penyaluran, COUNT(DISTINCT nik) mustahik, COUNT(DISTINCT laz_kode) laz_count
+            FROM t_mustahik
+            JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_mustahik.ktp_kecamatan_kode
+            WHERE t_mustahik.tanggal_terima >= :start_date
+            AND t_mustahik.tanggal_terima < :end_date
+            GROUP BY t_mustahik.ktp_provinsi_kode, t_mustahik.ktp_kabkota_kode, t_mustahik.ktp_kecamatan_kode
+            ORDER BY t_mustahik.ktp_provinsi_kode, t_mustahik.ktp_kabkota_kode, t_mustahik.ktp_kecamatan_kode
+        """)
+
+        result = db.session.execute(sql, {
+            'start_date': f'{tahun_awal}-01-01',
+            'end_date':   f'{tahun_akhir}-01-01'
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+
+# ==============================================================================================================================  
+# DASHBOARD 
+# ==============================================================================================================================
+    @staticmethod
+    def get_param_laz(params: dict) -> list:
+        email = (params.get("email") or '')
+        sql = text("""
+        SELECT DISTINCT t_laz.laz_kode kode, t_laz.laz_nama nama
+        FROM t_laz
+        WHERE t_laz.skala != 0
+        AND t_laz.laz_kode = COALESCE((SELECT t_dtsen_akses.laz_kode FROM t_dtsen_akses WHERE email = :email), t_laz.laz_kode);
+        """)
+
+        result = db.session.execute(sql, {
+            'email': email
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_param_provinsi(params: dict) -> list:
+        email = (params.get("email") or '')
+
+        sql = text("""
+            SELECT t_dtsen_wilayah.provinsi_kode kode, m_provinsi.provinsi_nama nama
+            FROM t_dtsen_akses
+            JOIN t_dtsen_wilayah ON t_dtsen_wilayah.dtsen_akses_id = t_dtsen_akses.dtsen_akses_id
+            JOIN t_laz ON (t_laz.laz_kode = t_dtsen_akses.laz_kode OR t_dtsen_akses.laz_kode IS NULL)
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+            WHERE t_dtsen_akses.email = :email
+            AND t_dtsen_akses.statuses = 'aktif'
+            UNION
+            SELECT t_laz.provinsi_kode kode, m_provinsi.provinsi_nama nama
+            FROM t_dtsen_akses
+            JOIN t_laz ON t_laz.laz_kode = t_dtsen_akses.laz_kode
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_laz.provinsi_kode
+            WHERE t_dtsen_akses.email = :email
+            AND t_dtsen_akses.statuses = 'aktif'
+            ORDER BY nama;
+        """)
+
+        result = db.session.execute(sql, {
+            'email': email
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_param_kabkota(params: dict) -> list:
+        email = (params.get("email") or '')
+        provinsi_kode = (params.get("provinsi_kode") or None)
+
+        sql = text("""
+            SELECT DISTINCT m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama
+            FROM m_kabkota
+            JOIN t_dtsen_wilayah ON t_dtsen_wilayah.provinsi_kode = m_kabkota.provinsi_kode
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            WHERE (t_dtsen_wilayah.kabkota_kode = m_kabkota.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL)
+            AND (t_dtsen_wilayah.provinsi_kode = :provinsi_kode OR t_dtsen_wilayah.provinsi_kode IS NULL)
+            AND t_dtsen_akses.email = :email
+            ORDER BY nama;
+        """)
+
+        result = db.session.execute(sql, {
+            'provinsi_kode': provinsi_kode,
+            'email': email
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+ 
+    @staticmethod
+    def get_param_kecamatan(params: dict) -> list:
+        email = (params.get("email") or '')
+        kabkota_kode = (params.get("kabkota_kode") or None)
+
+        sql_text = """
+        SELECT DISTINCT m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama
+        FROM m_kecamatan
+        LEFT JOIN t_dtsen_wilayah ON t_dtsen_wilayah.provinsi_kode = LEFT(m_kecamatan.kabkota_kode,2)
+        JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+        WHERE (t_dtsen_wilayah.kecamatan_kode = m_kecamatan.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL)
+        AND t_dtsen_akses.email = :email
+        AND m_kecamatan.kabkota_kode = :kabkota_kode
+        ORDER BY nama;
+        """
+
+        sql = text(sql_text)
+
+        result = db.session.execute(sql, {
+            'email': email,
+            'kabkota_kode': kabkota_kode
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_data_bidang(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
+        provinsi_kode = (params.get("provinsi_kode") or None)
+        kabkota_kode = (params.get("kabkota_kode") or None)
+        kecamatan_kode = (params.get("kecamatan_kode") or None)
+
+        sql_level = 1
+        sql_param_data = "ktp_provinsi_kode"
+        sql_where = ""
+        sql_laz = ""
+
+        if lembaga:
+            sql_laz = " AND t_mustahik.laz_kode = :lembaga"
+
+        if provinsi_kode:
+            sql_level = 2
+            sql_param_data = "ktp_kabkota_kode"
+            sql_where = " AND provinsi_kode = :provinsi_kode"
+
+        if kabkota_kode:
+            sql_level = 3
+            sql_param_data = "ktp_kecamatan_kode"
+            sql_where = " AND kabkota_kode = :kabkota_kode"
+
+        if kecamatan_kode:
+            sql_level = 3
+            sql_param_data = "ktp_kecamatan_kode"
+            sql_where = " AND kecamatan_kode = :kecamatan_kode"
+
+        sql_text = """
+        SELECT DISTINCT *
+        FROM
+        (
+            SELECT m_provinsi.provinsi_kode zawa, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, t_dtsen_akses.laz_kode laz, 1 lvl,
+            m_provinsi.provinsi_nama lvl_1, '-' lvl_2, '-' lvl_3, m_provinsi.provinsi_kode, null kabkota_kode, null kecamatan_kode
+            FROM m_provinsi
+            JOIN t_dtsen_wilayah ON t_dtsen_wilayah.provinsi_kode = m_provinsi.provinsi_kode OR t_dtsen_wilayah.provinsi_kode IS NULL
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            WHERE t_dtsen_akses.email = :email
+            AND provinsi_aktif = 'y'
+            UNION
+            SELECT CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa, 
+            m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama, t_dtsen_akses.laz_kode laz, 2 lvl,
+            m_provinsi.provinsi_nama lvl_1, m_kabkota.kabkota_nama lvl_2, '-' lvl_3, m_provinsi.provinsi_kode, m_kabkota.kabkota_kode, null kecamatan_kode
+            FROM m_kabkota
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode 
+            JOIN t_dtsen_wilayah ON t_dtsen_wilayah.provinsi_kode = m_kabkota.provinsi_kode 
+            AND (t_dtsen_wilayah.kabkota_kode = m_kabkota.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL)
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            WHERE t_dtsen_akses.email = :email
+            AND kabkota_aktif = 'y'
+            UNION
+            SELECT CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa, 
+            m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama, t_dtsen_akses.laz_kode laz, 3 lvl,
+            m_provinsi.provinsi_nama lvl_1, m_kabkota.kabkota_nama lvl_2, m_kecamatan.kecamatan_nama lvl_3, m_provinsi.provinsi_kode, m_kabkota.kabkota_kode, m_kecamatan.kecamatan_kode
+            FROM m_kecamatan
+            JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+            JOIN t_dtsen_wilayah ON t_dtsen_wilayah.provinsi_kode = m_kabkota.provinsi_kode 
+            AND (t_dtsen_wilayah.kabkota_kode = m_kabkota.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL)
+            AND (t_dtsen_wilayah.kecamatan_kode = m_kecamatan.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL)
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            WHERE t_dtsen_akses.email = :email
+            AND kecamatan_aktif = 'y'
+            UNION
+            SELECT DISTINCT t_mustahik.ktp_provinsi_kode zawa, t_mustahik.ktp_provinsi_kode kode, m_provinsi.provinsi_nama nama, t_dtsen_akses.laz_kode laz, 1 lvl,
+            m_provinsi.provinsi_nama lvl_1, '-' lvl_2, '-' lvl_3, m_provinsi.provinsi_kode, null kabkota_kode, null kecamatan_kode
+            FROM t_mustahik
+            JOIN t_mustahik_bappenas ON t_mustahik_bappenas.nik = t_mustahik.nik AND t_mustahik_bappenas.desil BETWEEN 1 AND 5
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+            JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+            WHERE t_dtsen_akses.email = :email
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
+            UNION
+            SELECT DISTINCT CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa, 
+            m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama, t_dtsen_akses.laz_kode laz, 2 lvl,
+            m_provinsi.provinsi_nama lvl_1, m_kabkota.kabkota_nama lvl_2, '-' lvl_3, m_provinsi.provinsi_kode, m_kabkota.kabkota_kode, null kecamatan_kode
+            FROM t_mustahik
+            JOIN t_mustahik_bappenas ON t_mustahik_bappenas.nik = t_mustahik.nik AND t_mustahik_bappenas.desil BETWEEN 1 AND 5
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+            JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
+            JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+            WHERE t_dtsen_akses.email = :email
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
+            UNION
+            SELECT DISTINCT CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa, 
+            m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama, t_dtsen_akses.laz_kode laz, 3 lvl, 
+            m_provinsi.provinsi_nama lvl_1, m_kabkota.kabkota_nama lvl_2, m_kecamatan.kecamatan_nama lvl_3, m_provinsi.provinsi_kode, m_kabkota.kabkota_kode, m_kecamatan.kecamatan_kode
+            FROM t_mustahik
+            JOIN t_mustahik_bappenas ON t_mustahik_bappenas.nik = t_mustahik.nik AND t_mustahik_bappenas.desil BETWEEN 1 AND 5
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+            JOIN m_kabkota ON m_kabkota.provinsi_kode = m_provinsi.provinsi_kode
+            JOIN m_kecamatan ON m_kecamatan.kabkota_kode = m_kabkota.kabkota_kode
+            JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+            WHERE t_dtsen_akses.email = :email
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+            """ + sql_laz + """ 
+        ) wilayah
+        WHERE wilayah.lvl = :sql_level
+        """
+
+        sql = text(sql_text + sql_where)
+
+        result = db.session.execute(sql, {
+            'tahun_awal'    : f'{tahun_awal}-01-01',
+            'tahun_akhir'   : f'{tahun_akhir}-01-01',
+            'email'         : email,
+            'lembaga'       : lembaga,
+            'sql_level'     : sql_level,
+            'provinsi_kode' : provinsi_kode,
+            'kabkota_kode'  : kabkota_kode,
+            'kecamatan_kode': kecamatan_kode
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+
+    @staticmethod
+    def get_baseline_wilayah(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
+        provinsi_kode = (params.get("provinsi_kode") or None)
+        kabkota_kode = (params.get("kabkota_kode") or None)
+        kecamatan_kode = (params.get("kecamatan_kode") or None)
+
+        sql_param_base = "kode_provinsi"
+        sql_base_table = """
+            SELECT DISTINCT 1 lvl, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, m_provinsi.provinsi_kode zawa
+            , m_provinsi.provinsi_nama lvl_1 , '-' lvl_2 , '-' lvl_3 , '-' lvl_4
+            FROM t_dtsen_wilayah
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+            WHERE t_dtsen_akses.email = :email
+        """
+
+        if provinsi_kode:
+            sql_param_base = "kode_kabupaten_kota"
+            sql_base_table = """
+                SELECT DISTINCT 2 lvl, m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama,
+                CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , '-' lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kabkota ON m_kabkota.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                AND (m_kabkota.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL)
+                WHERE t_dtsen_akses.email = :email
+                AND m_kabkota.provinsi_kode = :provinsi_kode
+            """
+
+        if kabkota_kode:
+            sql_param_base = "kode_kecamatan"
+            sql_base_table = """
+                SELECT DISTINCT 3 lvl, m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama,
+                CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL
+                AND (m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL)
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kecamatan.kabkota_kode = :kabkota_kode
+            """
+
+        if kecamatan_kode:
+            sql_param_base = "kode_kelurahan_desa"
+            sql_base_table = """
+                SELECT DISTINCT 4 lvl, m_kelurahan.kelurahan_kode kode, m_kelurahan.kelurahan_nama nama,
+                CONCAT(SUBSTRING(m_kelurahan.kelurahan_kode, 1, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 3, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 5, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 7, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , m_kelurahan.kelurahan_nama lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL
+                JOIN m_kelurahan ON m_kelurahan.kecamatan_kode = m_kecamatan.kecamatan_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kelurahan.kecamatan_kode = :kecamatan_kode
+            """
+
+        sql_text = """
+            SELECT DISTINCT wilayah.lvl, wilayah.zawa, wilayah.kode, wilayah.nama, wilayah.lvl_1, wilayah.lvl_2, wilayah.lvl_3
+                , COALESCE((SELECT SUM(jumlah_anggota_keluarga)
+            FROM zawa_keluarga 
+            WHERE desil_nasional BETWEEN 1 AND 5
+            AND """ + sql_param_base + """ COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) baseline
+                , 0 mustahik, 0 rupiah
+            FROM (
+            """ + sql_base_table + """
+            ) wilayah
+        """
+
+        sql = text(sql_text)
+
+        result = db.session.execute(sql, {
+            'tahun_awal'    : f'{tahun_awal}-01-01',
+            'tahun_akhir'   : f'{tahun_akhir}-01-01',
+            'email'         : email,
+            'lembaga'       : lembaga,
+            'provinsi_kode' : provinsi_kode,
+            'kabkota_kode'  : kabkota_kode,
+            'kecamatan_kode': kecamatan_kode
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_data_wilayah(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
+        provinsi_kode = (params.get("provinsi_kode") or None)
+        kabkota_kode = (params.get("kabkota_kode") or None)
+        kecamatan_kode = (params.get("kecamatan_kode") or None)
+
+        param_lembaga_1 = ""
+        param_lembaga_2 = ""
+        if lembaga:
+            sql_param_lembaga_1 = " AND t_mustahik.laz_kode = :lembaga"
+            param_lembaga_2 = " AND datwil.laz = :lembaga"
+
+        sql_base_table = """
+            SELECT DISTINCT 1 lvl, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, m_provinsi.provinsi_kode zawa
+            , m_provinsi.provinsi_nama lvl_1 , '-' lvl_2 , '-' lvl_3 , '-' lvl_4
+            FROM t_dtsen_wilayah
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+            WHERE t_dtsen_akses.email = :email
+            UNION
+            SELECT DISTINCT 1 lvl, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, m_provinsi.provinsi_kode zawa
+            , m_provinsi.provinsi_nama lvl_1 , '-' lvl_2 , '-' lvl_3 , '-' lvl_4
+            FROM t_mustahik
+            JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+            JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+            WHERE t_dtsen_akses.email = :email
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            """ + param_lembaga_1 + """
+        """
+
+        if provinsi_kode:
+            sql_base_table = """
+                SELECT DISTINCT 2 lvl, m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama,
+                CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , '-' lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kabkota ON m_kabkota.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                AND (m_kabkota.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL)
+                WHERE t_dtsen_akses.email = :email
+                AND m_kabkota.provinsi_kode = :provinsi_kode
+                UNION
+                SELECT DISTINCT 2 lvl, m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama,
+                CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , '-' lvl_3 , '-' lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.ktp_provinsi_kode = :provinsi_kode
+                """ + param_lembaga_1 + """
+            """
+
+        if kabkota_kode:
+            sql_base_table = """
+                SELECT DISTINCT 3 lvl, m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama,
+                CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL
+                AND (m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL)
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kecamatan.kabkota_kode = :kabkota_kode
+                UNION
+                SELECT DISTINCT 3 lvl, m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama,
+                CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , '-' lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_mustahik.ktp_kecamatan_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.ktp_kabkota_kode = :kabkota_kode
+                """ + param_lembaga_1 + """
+            """
+
+        if kecamatan_kode:
+            sql_base_table = """
+                SELECT DISTINCT 4 lvl, m_kelurahan.kelurahan_kode kode, m_kelurahan.kelurahan_nama nama,
+                CONCAT(SUBSTRING(m_kelurahan.kelurahan_kode, 1, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 3, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 5, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 7, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , m_kelurahan.kelurahan_nama lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL
+                JOIN m_kelurahan ON m_kelurahan.kecamatan_kode = m_kecamatan.kecamatan_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kelurahan.kecamatan_kode = :kecamatan_kode
+                UNION
+                SELECT DISTINCT 4 lvl, m_kelurahan.kelurahan_kode kode, m_kelurahan.kelurahan_nama nama,
+                CONCAT(SUBSTRING(m_kelurahan.kelurahan_kode, 1, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 3, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 5, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 7, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1, m_kabkota.kabkota_nama lvl_2, m_kecamatan.kecamatan_nama lvl_3, m_kelurahan.kelurahan_nama lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_mustahik.ktp_kecamatan_kode
+                JOIN m_kelurahan ON m_kelurahan.kelurahan_kode = t_mustahik.ktp_kelurahan_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND m_kelurahan.kecamatan_kode = :kecamatan_kode
+                """ + param_lembaga_1 + """
+            """
+
+        sql_text = """
+        SELECT DISTINCT wilayah.lvl, wilayah.zawa, wilayah.kode, wilayah.nama, wilayah.lvl_1, wilayah.lvl_2, wilayah.lvl_3, wilayah.lvl_4
+            , 0 baseline
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil BETWEEN 1 AND 5
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) mustahik
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.jenis = 'M'
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) mustahik_m
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.jenis = 'F'
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) mustahik_f
+            , COALESCE((
+                SELECT COALESCE(SUM(datwil.rupiah),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil BETWEEN 1 AND 5
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ),0) rupiah
+            , COALESCE((
+                SELECT COALESCE(SUM(datwil.rupiah),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ),0) rupiah_all
+        FROM (
+            """ + sql_base_table + """
+        ) wilayah
+        """
+
+        sql = text(sql_text)
+
+        result = db.session.execute(sql, {
+            'tahun_awal'      : f'{tahun_awal}-01-01',
+            'tahun_akhir'     : f'{tahun_akhir}-01-01',
+            'email'           : email,
+            'lembaga'         : lembaga,
+            'provinsi_kode'   : provinsi_kode,
+            'kabkota_kode'    : kabkota_kode,
+            'kecamatan_kode'  : kecamatan_kode,
+            'param_lembaga_1' : param_lembaga_1,
+            'param_lembaga_2' : param_lembaga_2
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_baseline_desil(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
+        provinsi_kode = (params.get("provinsi_kode") or None)
+        kabkota_kode = (params.get("kabkota_kode") or None)
+        kecamatan_kode = (params.get("kecamatan_kode") or None)
+
+        sql_param_base = "kode_provinsi"
+        sql_base_table = """
+            SELECT DISTINCT 1 lvl, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, m_provinsi.provinsi_kode zawa
+            , m_provinsi.provinsi_nama lvl_1 , '-' lvl_2 , '-' lvl_3 , '-' lvl_4
+            FROM t_dtsen_wilayah
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+            WHERE t_dtsen_akses.email = :email
+        """
+
+        if provinsi_kode:
+            sql_param_base = "kode_kabupaten_kota"
+            sql_base_table = """
+                SELECT DISTINCT 2 lvl, m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama,
+                CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , '-' lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kabkota ON m_kabkota.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                AND (m_kabkota.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL)
+                WHERE t_dtsen_akses.email = :email
+                AND m_kabkota.provinsi_kode = :provinsi_kode
+            """
+
+        if kabkota_kode:
+            sql_param_base = "kode_kecamatan"
+            sql_base_table = """
+                SELECT DISTINCT 3 lvl, m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama,
+                CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL
+                AND (m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL)
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kecamatan.kabkota_kode = :kabkota_kode
+            """
+
+        if kecamatan_kode:
+            sql_param_base = "kode_kelurahan_desa"
+            sql_base_table = """
+                SELECT DISTINCT 4 lvl, m_kelurahan.kelurahan_kode kode, m_kelurahan.kelurahan_nama nama,
+                CONCAT(SUBSTRING(m_kelurahan.kelurahan_kode, 1, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 3, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 5, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 7, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , m_kelurahan.kelurahan_nama lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL
+                JOIN m_kelurahan ON m_kelurahan.kecamatan_kode = m_kecamatan.kecamatan_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kelurahan.kecamatan_kode = :kecamatan_kode
+            """
+
+        sql_text = """
+            SELECT DISTINCT wilayah.lvl, wilayah.zawa, wilayah.kode, wilayah.nama, wilayah.lvl_1, wilayah.lvl_2, wilayah.lvl_3
+                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional = 1 AND 
+                """ + sql_param_base + """ 
+                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_1
+                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional = 2 AND 
+                """ + sql_param_base + """ 
+                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_2
+                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional = 3 AND 
+                """ + sql_param_base + """ 
+                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_3
+                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional = 4 AND 
+                """ + sql_param_base + """ 
+                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_4
+            FROM (
+            """ + sql_base_table + """
+            ) wilayah
+        """
+
+        sql = text(sql_text)
+
+        result = db.session.execute(sql, {
+            'tahun_awal'    : f'{tahun_awal}-01-01',
+            'tahun_akhir'   : f'{tahun_akhir}-01-01',
+            'email'         : email,
+            'lembaga'       : lembaga,
+            'provinsi_kode' : provinsi_kode,
+            'kabkota_kode'  : kabkota_kode,
+            'kecamatan_kode': kecamatan_kode
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_data_desil(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
+        provinsi_kode = (params.get("provinsi_kode") or None)
+        kabkota_kode = (params.get("kabkota_kode") or None)
+        kecamatan_kode = (params.get("kecamatan_kode") or None)
+
+        param_lembaga_1 = ""
+        param_lembaga_2 = ""
+        if lembaga:
+            sql_param_lembaga_1 = " AND t_mustahik.laz_kode = :lembaga"
+            param_lembaga_2 = " AND datwil.laz = :lembaga"
+
+        sql_base_table = """
+            SELECT DISTINCT 1 lvl, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, m_provinsi.provinsi_kode zawa
+            , m_provinsi.provinsi_nama lvl_1 , '-' lvl_2 , '-' lvl_3 , '-' lvl_4
+            FROM t_dtsen_wilayah
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+            WHERE t_dtsen_akses.email = :email
+            UNION
+            SELECT DISTINCT 1 lvl, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, m_provinsi.provinsi_kode zawa
+            , m_provinsi.provinsi_nama lvl_1 , '-' lvl_2 , '-' lvl_3 , '-' lvl_4
+            FROM t_mustahik
+            JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+            JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+            WHERE t_dtsen_akses.email = :email
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            """ + param_lembaga_1 + """
+        """
+
+        if provinsi_kode:
+            sql_base_table = """
+                SELECT DISTINCT 2 lvl, m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama,
+                CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , '-' lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kabkota ON m_kabkota.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                AND (m_kabkota.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL)
+                WHERE t_dtsen_akses.email = :email
+                AND m_kabkota.provinsi_kode = :provinsi_kode
+                UNION
+                SELECT DISTINCT 2 lvl, m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama,
+                CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , '-' lvl_3 , '-' lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.ktp_provinsi_kode = :provinsi_kode
+                """ + param_lembaga_1 + """
+            """
+
+        if kabkota_kode:
+            sql_base_table = """
+                SELECT DISTINCT 3 lvl, m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama,
+                CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL
+                AND (m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL)
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kecamatan.kabkota_kode = :kabkota_kode
+                UNION
+                SELECT DISTINCT 3 lvl, m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama,
+                CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , '-' lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_mustahik.ktp_kecamatan_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.ktp_kabkota_kode = :kabkota_kode
+                """ + param_lembaga_1 + """
+            """
+
+        if kecamatan_kode:
+            sql_base_table = """
+                SELECT DISTINCT 4 lvl, m_kelurahan.kelurahan_kode kode, m_kelurahan.kelurahan_nama nama,
+                CONCAT(SUBSTRING(m_kelurahan.kelurahan_kode, 1, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 3, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 5, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 7, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , m_kelurahan.kelurahan_nama lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL
+                JOIN m_kelurahan ON m_kelurahan.kecamatan_kode = m_kecamatan.kecamatan_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kelurahan.kecamatan_kode = :kecamatan_kode
+                UNION
+                SELECT DISTINCT 4 lvl, m_kelurahan.kelurahan_kode kode, m_kelurahan.kelurahan_nama nama,
+                CONCAT(SUBSTRING(m_kelurahan.kelurahan_kode, 1, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 3, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 5, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 7, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1, m_kabkota.kabkota_nama lvl_2, m_kecamatan.kecamatan_nama lvl_3, m_kelurahan.kelurahan_nama lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_mustahik.ktp_kecamatan_kode
+                JOIN m_kelurahan ON m_kelurahan.kelurahan_kode = t_mustahik.ktp_kelurahan_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND m_kelurahan.kecamatan_kode = :kecamatan_kode
+                """ + param_lembaga_1 + """
+            """
+
+        sql_text = """
+        SELECT DISTINCT wilayah.lvl, wilayah.zawa, wilayah.kode, wilayah.nama, wilayah.lvl_1, wilayah.lvl_2, wilayah.lvl_3, wilayah.lvl_4
+            , 0 baseline
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_all
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 0
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_na
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 1
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_1
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 2
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_2
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 3
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_3
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 4
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_4
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 5
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_5
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 6
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_6
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 7
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_7
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 8
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_8
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 9
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_9
+            , (
+                SELECT COALESCE(SUM(datwil.mustahik),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 10
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_10
+            , (
+                SELECT COALESCE(SUM(datwil.rupiah),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_sum_all
+            , (
+                SELECT COALESCE(SUM(datwil.rupiah),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 1
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_sum_1
+            , (
+                SELECT COALESCE(SUM(datwil.rupiah),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 2
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_sum_2
+            , (
+                SELECT COALESCE(SUM(datwil.rupiah),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 3
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_sum_3
+            , (
+                SELECT COALESCE(SUM(datwil.rupiah),0) FROM t_dtsen_data_wilayah datwil
+                WHERE datwil.kode = wilayah.kode AND datwil.desil = 4
+                AND datwil.tahun = :tahun_awal """ + param_lembaga_2 + """
+            ) desil_sum_4
+        FROM (
+            """ + sql_base_table + """
+        ) wilayah
+        """
+
+        sql = text(sql_text)
+
+        result = db.session.execute(sql, {
+            'tahun_awal'      : f'{tahun_awal}-01-01',
+            'tahun_akhir'     : f'{tahun_akhir}-01-01',
+            'email'           : email,
+            'lembaga'         : lembaga,
+            'provinsi_kode'   : provinsi_kode,
+            'kabkota_kode'    : kabkota_kode,
+            'kecamatan_kode'  : kecamatan_kode,
+            'param_lembaga_1' : param_lembaga_1,
+            'param_lembaga_2' : param_lembaga_2
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_data_usia(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
+        provinsi_kode = (params.get("provinsi_kode") or None)
+        kabkota_kode = (params.get("kabkota_kode") or None)
+        kecamatan_kode = (params.get("kecamatan_kode") or None)
+
+        tahun_lahir_1 = datetime.now().year - 10
+        tahun_lahir_2 = tahun_lahir_1 - 10
+        tahun_lahir_3 = tahun_lahir_2 - 10
+        tahun_lahir_4 = tahun_lahir_3 - 10
+        tahun_lahir_5 = tahun_lahir_4 - 10
+        tahun_lahir_6 = tahun_lahir_5 - 10
+
+        param_lembaga_1 = ""
+        param_lembaga_2 = ""
+        if lembaga:
+            sql_param_lembaga_1 = " AND t_mustahik.laz_kode = :lembaga"
+            param_lembaga_2 = " AND datwil.laz = :lembaga"
+
+        sql_base_table = """
+            SELECT DISTINCT 1 lvl, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, m_provinsi.provinsi_kode zawa
+            , m_provinsi.provinsi_nama lvl_1 , '-' lvl_2 , '-' lvl_3 , '-' lvl_4
+            FROM t_dtsen_wilayah
+            JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+            WHERE t_dtsen_akses.email = :email
+            UNION
+            SELECT DISTINCT 1 lvl, m_provinsi.provinsi_kode kode, m_provinsi.provinsi_nama nama, m_provinsi.provinsi_kode zawa
+            , m_provinsi.provinsi_nama lvl_1 , '-' lvl_2 , '-' lvl_3 , '-' lvl_4
+            FROM t_mustahik
+            JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+            JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+            JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+            WHERE t_dtsen_akses.email = :email
+            AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+            """ + param_lembaga_1 + """
+        """
+
+        if provinsi_kode:
+            sql_base_table = """
+                SELECT DISTINCT 2 lvl, m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama,
+                CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , '-' lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kabkota ON m_kabkota.provinsi_kode = t_dtsen_wilayah.provinsi_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                AND (m_kabkota.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL)
+                WHERE t_dtsen_akses.email = :email
+                AND m_kabkota.provinsi_kode = :provinsi_kode
+                UNION
+                SELECT DISTINCT 2 lvl, m_kabkota.kabkota_kode kode, m_kabkota.kabkota_nama nama,
+                CONCAT(SUBSTRING(m_kabkota.kabkota_kode, 1, 2), '.', SUBSTRING(m_kabkota.kabkota_kode, 3, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , '-' lvl_3 , '-' lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.ktp_provinsi_kode = :provinsi_kode
+                """ + param_lembaga_1 + """
+            """
+
+        if kabkota_kode:
+            sql_base_table = """
+                SELECT DISTINCT 3 lvl, m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama,
+                CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , '-' lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kabkota_kode = t_dtsen_wilayah.kabkota_kode OR t_dtsen_wilayah.kabkota_kode IS NULL
+                AND (m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL)
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kecamatan.kabkota_kode = :kabkota_kode
+                UNION
+                SELECT DISTINCT 3 lvl, m_kecamatan.kecamatan_kode kode, m_kecamatan.kecamatan_nama nama,
+                CONCAT(SUBSTRING(m_kecamatan.kecamatan_kode, 1, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 3, 2), '.', SUBSTRING(m_kecamatan.kecamatan_kode, 5, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , '-' lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_mustahik.ktp_kecamatan_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND t_mustahik.ktp_kabkota_kode = :kabkota_kode
+                """ + param_lembaga_1 + """
+            """
+
+        if kecamatan_kode:
+            sql_base_table = """
+                SELECT DISTINCT 4 lvl, m_kelurahan.kelurahan_kode kode, m_kelurahan.kelurahan_nama nama,
+                CONCAT(SUBSTRING(m_kelurahan.kelurahan_kode, 1, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 3, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 5, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 7, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1 , m_kabkota.kabkota_nama lvl_2 , m_kecamatan.kecamatan_nama lvl_3 , m_kelurahan.kelurahan_nama lvl_4
+                FROM t_dtsen_wilayah
+                JOIN t_dtsen_akses ON t_dtsen_akses.dtsen_akses_id = t_dtsen_wilayah.dtsen_akses_id
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_dtsen_wilayah.kecamatan_kode OR t_dtsen_wilayah.kecamatan_kode IS NULL
+                JOIN m_kelurahan ON m_kelurahan.kecamatan_kode = m_kecamatan.kecamatan_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = m_kecamatan.kabkota_kode
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = m_kabkota.provinsi_kode
+                WHERE t_dtsen_akses.email = :email
+                AND m_kelurahan.kecamatan_kode = :kecamatan_kode
+                UNION
+                SELECT DISTINCT 4 lvl, m_kelurahan.kelurahan_kode kode, m_kelurahan.kelurahan_nama nama,
+                CONCAT(SUBSTRING(m_kelurahan.kelurahan_kode, 1, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 3, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 5, 2), '.', SUBSTRING(m_kelurahan.kelurahan_kode, 7, 2)) zawa
+                , m_provinsi.provinsi_nama lvl_1, m_kabkota.kabkota_nama lvl_2, m_kecamatan.kecamatan_nama lvl_3, m_kelurahan.kelurahan_nama lvl_4
+                FROM t_mustahik
+                JOIN t_mustahik_master ON t_mustahik_master.nik = t_mustahik.nik AND t_mustahik_master.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN m_kabkota ON m_kabkota.kabkota_kode = t_mustahik.ktp_kabkota_kode
+                JOIN m_kecamatan ON m_kecamatan.kecamatan_kode = t_mustahik.ktp_kecamatan_kode
+                JOIN m_kelurahan ON m_kelurahan.kelurahan_kode = t_mustahik.ktp_kelurahan_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir
+                AND m_kelurahan.kecamatan_kode = :kecamatan_kode
+                """ + param_lembaga_1 + """
+            """
+
+        sql_level = 1
+        sql_param_data = "ktp_provinsi_kode"
+        sql_param_zawa = "kode_provinsi_ktp"
+        sql_where = ""
+        sql_laz = ""
+
+        if lembaga:
+            sql_laz = " AND t_mustahik.laz_kode = :lembaga"
+
+        if provinsi_kode:
+            sql_level = 2
+            sql_param_data = "ktp_kabkota_kode"
+            sql_param_zawa = "kode_kabupaten_kota_ktp"
+            sql_where = " AND provinsi_kode = :provinsi_kode"
+
+        if kabkota_kode:
+            sql_level = 3
+            sql_param_data = "ktp_kecamatan_kode"
+            sql_param_zawa = "kode_kecamatan_ktp"
+            sql_where = " AND kabkota_kode = :kabkota_kode"
+
+        if kecamatan_kode:
+            sql_level = 3
+            sql_param_data = "ktp_kecamatan_kode"
+            sql_param_zawa = "kode_kecamatan_ktp"
+            sql_where = " AND kecamatan_kode = :kecamatan_kode"
+
+        sql_text = """
+        SELECT DISTINCT wilayah.lvl, wilayah.zawa, wilayah.kode, wilayah.nama, wilayah.lvl_1, wilayah.lvl_2, wilayah.lvl_3
+        , 0 baseline
+        , (
+            SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
+            FROM t_mustahik_bappenas JOIN t_mustahik ON t_mustahik.nik = t_mustahik_bappenas.nik
+            WHERE t_mustahik.lahir_tanggal >= :tahun_lahir_1
+            AND t_mustahik.tanggal_terima >= :tahun_awal 
+            AND t_mustahik.tanggal_terima < :tahun_akhir 
+            AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
+            """ + sql_laz + """
+        ) usia_1
+        , (
+            SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
+            FROM t_mustahik_bappenas JOIN t_mustahik ON t_mustahik.nik = t_mustahik_bappenas.nik
+            WHERE t_mustahik.lahir_tanggal >= :tahun_lahir_2 AND t_mustahik.lahir_tanggal < :tahun_lahir_1
+            AND t_mustahik.tanggal_terima >= :tahun_awal 
+            AND t_mustahik.tanggal_terima < :tahun_akhir 
+            AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
+            """ + sql_laz + """
+        ) usia_2
+        , (
+            SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
+            FROM t_mustahik_bappenas JOIN t_mustahik ON t_mustahik.nik = t_mustahik_bappenas.nik
+            WHERE t_mustahik.lahir_tanggal >= :tahun_lahir_3 AND t_mustahik.lahir_tanggal < :tahun_lahir_2
+            AND t_mustahik.tanggal_terima >= :tahun_awal 
+            AND t_mustahik.tanggal_terima < :tahun_akhir 
+            AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
+            """ + sql_laz + """
+        ) usia_3
+        , (
+            SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
+            FROM t_mustahik_bappenas JOIN t_mustahik ON t_mustahik.nik = t_mustahik_bappenas.nik
+            WHERE t_mustahik.lahir_tanggal >= :tahun_lahir_4 AND t_mustahik.lahir_tanggal < :tahun_lahir_3
+            AND t_mustahik.tanggal_terima >= :tahun_awal 
+            AND t_mustahik.tanggal_terima < :tahun_akhir 
+            AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
+            """ + sql_laz + """
+        ) usia_4
+        , (
+            SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
+            FROM t_mustahik_bappenas JOIN t_mustahik ON t_mustahik.nik = t_mustahik_bappenas.nik
+            WHERE t_mustahik.lahir_tanggal >= :tahun_lahir_5 AND t_mustahik.lahir_tanggal < :tahun_lahir_4
+            AND t_mustahik.tanggal_terima >= :tahun_awal 
+            AND t_mustahik.tanggal_terima < :tahun_akhir 
+            AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
+            """ + sql_laz + """
+        ) usia_5
+        , (
+            SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
+            FROM t_mustahik_bappenas JOIN t_mustahik ON t_mustahik.nik = t_mustahik_bappenas.nik
+            WHERE t_mustahik.lahir_tanggal >= :tahun_lahir_6 AND t_mustahik.lahir_tanggal < :tahun_lahir_5
+            AND t_mustahik.tanggal_terima >= :tahun_awal 
+            AND t_mustahik.tanggal_terima < :tahun_akhir 
+            AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
+            """ + sql_laz + """
+        ) usia_6
+        , (
+            SELECT COUNT(DISTINCT t_mustahik_bappenas.nik) 
+            FROM t_mustahik_bappenas JOIN t_mustahik ON t_mustahik.nik = t_mustahik_bappenas.nik
+            WHERE t_mustahik.lahir_tanggal < :tahun_lahir_6
+            AND t_mustahik.tanggal_terima >= :tahun_awal 
+            AND t_mustahik.tanggal_terima < :tahun_akhir 
+            AND t_mustahik_bappenas.""" + sql_param_data + """ = wilayah.kode 
+            """ + sql_laz + """
+        ) usia_7
+        FROM (
+            """ + sql_base_table + """
+        ) wilayah
+        """
+
+        sql = text(sql_text)
+
+        result = db.session.execute(sql, {
+            'tahun_awal'    : f'{tahun_awal}-01-01',
+            'tahun_akhir'   : f'{tahun_akhir}-01-01',
+            'tahun_lahir_1' : f'{tahun_lahir_1}-01-01',
+            'tahun_lahir_2' : f'{tahun_lahir_2}-01-01',
+            'tahun_lahir_3' : f'{tahun_lahir_3}-01-01',
+            'tahun_lahir_4' : f'{tahun_lahir_4}-01-01',
+            'tahun_lahir_5' : f'{tahun_lahir_5}-01-01',
+            'tahun_lahir_6' : f'{tahun_lahir_6}-01-01',
+            'email'         : email,
+            'lembaga'       : lembaga,
+            'sql_level'     : sql_level,
+            'provinsi_kode' : provinsi_kode,
+            'kabkota_kode'  : kabkota_kode,
+            'kecamatan_kode': kecamatan_kode,
+            'param_lembaga_1' : param_lembaga_1,
+            'param_lembaga_2' : param_lembaga_2
+        }).mappings().all()
+
+        return [dict(row) for row in result]
+    
+    @staticmethod
+    def get_data_bidang(params: dict) -> list:
+        tahun_awal = int(params.get("tahun") or datetime.now().year)
+        tahun_akhir = int(params.get("tahun") or datetime.now().year) + 1
+        email = (params.get("email") or '')
+        lembaga = (params.get("lembaga") or None)
+        provinsi_kode = (params.get("provinsi_kode") or None)
+        kabkota_kode = (params.get("kabkota_kode") or None)
+        kecamatan_kode = (params.get("kecamatan_kode") or None)
+
+        sql_where = ""
+        sql_laz = ""
+
+        if lembaga:
+            sql_laz = " AND t_mustahik.laz_kode = :lembaga"
+
+        if provinsi_kode:
+            sql_where = " AND t_mustahik.ktp_provinsi_kode = :provinsi_kode"
+
+        if kabkota_kode:
+            sql_where = " AND t_mustahik.ktp_kabkota_kode = :kabkota_kode"
+
+        if kecamatan_kode:
+            sql_where = " AND t_mustahik.ktp_kecamatan_kode = :kecamatan_kode"
+
+        sql_text = """
+        SELECT
+            b.bidang_kode,
+            UPPER(b.bidang_label) AS bidang_label,
+            COALESCE(x.total_penyaluran,0) AS total_penyaluran,
+            COALESCE(x.total_mustahik,0) AS total_mustahik
+        FROM m_bidang b
+        LEFT JOIN
+        (
+            SELECT t_program.bidang_kode, SUM(wilayah.rupiah) total_penyaluran, COUNT(DISTINCT wilayah.mustahik) total_mustahik
+            FROM
+            (
+                SELECT DISTINCT t_mustahik.ktp_provinsi_kode kode, t_dtsen_akses.laz_kode laz, t_mustahik.program_kode, SUM(t_mustahik.rupiah) rupiah, COUNT(DISTINCT t_mustahik.nik) mustahik
+                FROM t_mustahik
+                JOIN t_mustahik_bappenas ON t_mustahik_bappenas.nik = t_mustahik.nik AND t_mustahik_bappenas.desil BETWEEN 1 AND 5
+                JOIN m_provinsi ON m_provinsi.provinsi_kode = t_mustahik.ktp_provinsi_kode
+                JOIN t_dtsen_akses ON t_dtsen_akses.laz_kode = t_mustahik.laz_kode OR t_dtsen_akses.laz_kode IS NULL
+                WHERE t_dtsen_akses.email = :email
+                AND t_mustahik.tanggal_terima >= :tahun_awal AND t_mustahik.tanggal_terima < :tahun_akhir 
+                """ + sql_where + """ 
+                """ + sql_laz + """ 
+                GROUP BY kode, laz, program_kode
+            ) wilayah
+            JOIN t_program ON t_program.program_kode = wilayah.program_kode
+            GROUP BY t_program.bidang_kode
+        ) x
+        ON x.bidang_kode = b.bidang_kode
+        ORDER BY b.is_prioritas DESC, b.bidang_kode
+        """
+
+        sql = text(sql_text)
+
+        result = db.session.execute(sql, {
+            'tahun_awal'    : f'{tahun_awal}-01-01',
+            'tahun_akhir'   : f'{tahun_akhir}-01-01',
+            'email'         : email,
+            'lembaga'       : lembaga,
+            'provinsi_kode' : provinsi_kode,
+            'kabkota_kode'  : kabkota_kode,
+            'kecamatan_kode': kecamatan_kode
+        }).mappings().all()
+
+        return [dict(row) for row in result]

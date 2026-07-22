@@ -1,4 +1,6 @@
 import hashlib
+from marshmallow import Schema, fields, validate
+
 import base64
 from marshmallow import Schema, fields, validate
 from datetime import date, datetime
@@ -19,6 +21,15 @@ class MustahikSchema(Schema):
     rupiah = fields.Decimal(required=True, as_string=True)
     tanggal_terima = fields.Date(allow_none=True)
     created_at = fields.DateTime(dump_only=True)
+
+    # Wilayah domisili (dari relationship lazy='joined')
+    kabkota_nama = fields.Method('get_kabkota_nama', dump_only=True)
+
+    def get_nik_hashed(self, obj):
+        return hashlib.md5(str(obj.nik).encode()).hexdigest() if obj.nik else None
+
+    def get_kabkota_nama(self, obj):
+        return obj.kabkota.kabkota_nama if obj.kabkota else None
     usia = fields.Method("_hitung_usia", dump_only=True)
 
     # Wilayah domisili (dari relationship lazy='joined')

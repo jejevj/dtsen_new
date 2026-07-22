@@ -43,6 +43,11 @@ def list_lembaga():
                 AND kabkota_kode IS NOT NULL
                 AND kecamatan_kode IS NULL
             """
+
+    # Gunakan literal :skala hanya jika skala tersedia,
+    # jika tidak pakai NULL langsung agar tidak error bind parameter
+    uker_skala_col = ":skala AS skala" if skala else "NULL AS skala"
+
     sql = text(f"""
     SELECT
         laz_kode AS kode,

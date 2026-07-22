@@ -44,10 +44,10 @@
             <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Desil</label>
             <select v-model="advDesil" style="width:100%;padding:7px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none;background:white;">
               <option value="">Semua</option>
-              <option value="1">Desil 1 – Sangat Miskin</option>
-              <option value="2">Desil 2 – Miskin</option>
-              <option value="3">Desil 3 – Hampir Miskin</option>
-              <option value="4">Desil 4 – Rentan Miskin</option>
+              <option value="1">Desil 1 </option>
+              <option value="2">Desil 2 </option>
+              <option value="3">Desil 3 </option>
+              <option value="4">Desil 4 </option>
             </select>
           </div>
           <div>
@@ -125,6 +125,17 @@
                 <i class="pi pi-map-marker" style="font-size:10px;margin-right:3px;"></i>
                 {{ row.kecamatan }}, {{ row.kab_kota }} · {{ row.provinsi }}
               </p>
+              <!-- NIK & No KK masked -->
+              <div style="display:flex;gap:16px;margin-top:4px;flex-wrap:wrap;">
+                <span v-if="row.nik" style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+                  <i class="pi pi-id-card" style="font-size:10px;"></i>
+                  <span style="font-family:monospace;letter-spacing:.04em;">{{ maskNik(row.nik) }}</span>
+                </span>
+                <span v-if="row.no_kk || row.kk || row.nomor_kartu_keluarga" style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+                  <i class="pi pi-home" style="font-size:10px;"></i>
+                  <span style="font-family:monospace;letter-spacing:.04em;">{{ maskNik(row.no_kk || row.kk || row.nomor_kartu_keluarga) }}</span>
+                </span>
+              </div>
             </div>
 
             <!-- Nominal -->
@@ -155,7 +166,7 @@
 import { ref, computed } from 'vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { MOCK_MUSTAHIK, DESIL_COLORS } from '@/data/mockMustahik'
-import { formatRupiah } from '@/utils/formatter'
+import { formatRupiah, maskNik } from '@/utils/formatter'
 
 const searchQuery  = ref('')
 const showAdvanced = ref(false)

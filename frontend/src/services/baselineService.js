@@ -42,11 +42,38 @@ export async function fetchBaselineAnggota(params = {}) {
   return res.data
 }
 
-// Anggota detail by NIK
+/**
+ * Anggota detail by NIK — iterasi per-provinsi sampai ditemukan.
+ * Backend TIDAK mendukung provinsi:'all', jadi harus loop.
+ * NIK mengandung kode provinsi pada 2 digit pertama sehingga kita
+ * coba provinsi yang sesuai lebih dulu agar cepat.
+ */
 export async function fetchBaselineAnggotaByNik(nik) {
-  const res = await api.get('/baseline/anggota', { params: { provinsi: 'all', search: nik } })
-  const items = res.data?.data ?? []
-  return items.find(r => r.nomor_induk_kependudukan === nik || r.nik === nik) ?? items[0] ?? null
+  const nikStr = String(nik ?? '').trim()
+  const provinsiList = await fetchBaselineProvinsi()
+
+  // Urutkan: provinsi yang kode BPS-nya cocok dengan 2 digit awal NIK didahulukan
+  const nikProv = nikStr.slice(0, 2)
+  const sorted = [
+    ...provinsiList.filter(p => String(p.kode ?? '').padStart(2, '0') === nikProv.padStart(2, '0')),
+    ...provinsiList.filter(p => String(p.kode ?? '').padStart(2, '0') !== nikProv.padStart(2, '0')),
+  ]
+
+  for (const prov of sorted) {
+    try {
+      const res = await api.get('/baseline/anggota', {
+        params: { provinsi: prov.kode, search: nikStr },
+      })
+      const items = res.data?.data ?? []
+      const found = items.find(
+        r => r.nomor_induk_kependudukan === nikStr || r.nik === nikStr,
+      )
+      if (found) return found
+    } catch {
+      // lanjut ke provinsi berikutnya bila timeout / error
+    }
+  }
+  return null
 }
 
 // Keluarga list

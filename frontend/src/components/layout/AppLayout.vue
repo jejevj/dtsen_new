@@ -11,14 +11,14 @@
       <div class="flex items-center h-16 px-4 border-b border-primary-800 gap-3 flex-shrink-0">
         <img
           src="https://simzat.kemenag.go.id/simzat/apps/assets/images/ico.png"
-          alt="DTSEN Logo"
+          alt="Satu Data ZIS DSKL"
           class="flex-shrink-0"
           style="width:32px;height:32px;border-radius:8px;object-fit:contain;"
         />
         <transition name="fade">
           <div v-if="sidebarOpen" class="overflow-hidden whitespace-nowrap">
-            <div class="font-bold text-white text-sm tracking-tight leading-none">DTSEN</div>
-            <div class="text-green-400 text-[10px] leading-none mt-0.5">Zakat</div>
+            <div class="font-bold text-white text-sm tracking-tight leading-none">Satu Data</div>
+            <div class="text-green-400 text-[10px] leading-none mt-0.5">ZIS DSKL</div>
           </div>
         </transition>
       </div>
@@ -76,7 +76,7 @@
             @click="sidebarOpen = !sidebarOpen"
           />
           <div class="hidden sm:flex items-center gap-1.5 text-sm">
-            <span class="text-slate-400">DTSEN</span>
+            <span class="text-slate-400">Satu Data ZIS DSKL</span>
             <i class="pi pi-angle-right text-slate-300" style="font-size: 0.7rem"></i>
             <span class="font-medium text-slate-700">{{ currentPageLabel }}</span>
           </div>
@@ -203,6 +203,7 @@ import Button from 'primevue/button'
 import Avatar from 'primevue/avatar'
 import Dialog from 'primevue/dialog'
 import { useAuthStore } from '@/stores/auth'
+import { useWatermark } from '@/composables/useWatermark'
 
 const route      = useRoute()
 const router     = useRouter()
@@ -213,18 +214,12 @@ const showUserMenu   = ref(false)
 const confirmVisible = ref(false)
 const loggingOut     = ref(false)
 
-const user = computed(() => authStore.user)
-
-const userIdentifier = computed(() => {
-  const u = user.value
-  if (!u) return 'CONFIDENTIAL'
-  return u.email || u.tuser_email || u.notelp || u.username || u.user_id || 'CONFIDENTIAL'
-})
+const { userIdentifier } = useWatermark()
 
 const userDisplayName = computed(() => authStore.userDisplayName || 'Admin')
 const userFirstName   = computed(() => userDisplayName.value.split(' ')[0])
 const userTypeLabel   = computed(() =>
-  user.value?.user_type === 'dtsen' ? 'LAZ / DTSEN' : 'Internal'
+  authStore.user?.user_type === 'dtsen' ? 'LAZ / DTSEN' : 'Internal'
 )
 const userInitials = computed(() =>
   userDisplayName.value.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -232,16 +227,16 @@ const userInitials = computed(() =>
 
 const navItems = [
   { to: '/dashboard',     label: 'Dashboard',              icon: 'pi pi-home'       },
+  { to: '/data-baseline', label: 'Data DTSEN',             icon: 'pi pi-database'   },
   { to: '/mustahik',      label: 'Data Penerima Manfaat',  icon: 'pi pi-users'      },
-  { to: '/data-baseline', label: 'Data Baseline',          icon: 'pi pi-database'   },
-  { to: '/report',        label: 'Pemeriksaan DTSEN',      icon: 'pi pi-chart-line' },
+  { to: '/laporan',       label: 'Pemeriksaan DTSEN',      icon: 'pi pi-chart-line' },
 ]
 
 const pageLabels = {
   '/dashboard':     'Dashboard',
-  '/mustahik':      'Data Penerima Manfaat',
-  '/data-baseline': 'Data Baseline',
-  '/report':        'Pemeriksaan DTSEN',
+  '/data-baseline': 'Data DTSEN',
+  '/mustahik':      'Data Mustahik',
+  '/laporan':       'Pemeriksaan DTSEN',
 }
 const currentPageLabel = computed(() => pageLabels[route.path] || 'Halaman')
 

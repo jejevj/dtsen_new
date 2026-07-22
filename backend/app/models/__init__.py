@@ -1,6 +1,10 @@
 from .user import User
 from .tuser import TUser
 from .laz import Laz
+from .program import Bidang, Program
+from .mustahik import Mustahik
+from .mustahik_bappenas import MustahikBappenas
+from .penerimaan import Penerimaan
 from .program import Program
 from .mustahik import Mustahik
 from .wilayah import Provinsi, KabKota, Kecamatan, Kelurahan
@@ -14,6 +18,11 @@ __all__ = [
     'User',
     'TUser',
     'Laz',
+    'Bidang',
+    'Program',
+    'Mustahik',
+    'MustahikBappenas',
+    'Penerimaan',
     'Program',
     'Mustahik',
     'Provinsi',

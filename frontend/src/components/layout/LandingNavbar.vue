@@ -17,12 +17,12 @@
       <router-link to="/" style="display:flex; align-items:center; gap:10px; text-decoration:none; flex-shrink:0;">
         <img
           src="https://simzat.kemenag.go.id/simzat/apps/assets/images/ico.png"
-          alt="DTSEN Logo"
+          alt="Satu Data ZIS DSKL"
           style="width:34px;height:34px;border-radius:10px;object-fit:contain;"
         />
         <div style="line-height:1;">
-          <div style="font-weight:700;font-size:15px;letter-spacing:-0.02em;color:#15803d;">DTSEN</div>
-          <div style="font-size:10px;color:#94a3b8;margin-top:2px;">Zakat</div>
+          <div style="font-weight:700;font-size:15px;letter-spacing:-0.02em;color:#15803d;">Satu Data</div>
+          <div style="font-size:10px;color:#5c705d;margin-top:2px;">ZIS DSKL</div>
         </div>
       </router-link>
 

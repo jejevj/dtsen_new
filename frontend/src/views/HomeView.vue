@@ -24,18 +24,29 @@
           <div>
             <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:99px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);margin-bottom:20px;">
               <i class="pi pi-star-fill" style="font-size:10px;color:#f59e0b;"></i>
-              <span style="font-size:12px;font-weight:600;color:#fcd34d;">Data Tunggal Sosial dan Ekonomi Nasional</span>
+              <span style="font-size:12px;font-weight:600;color:#fcd34d;">Satu Data ZIS DSKL</span>
             </div>
-
+<!--
             <h1 style="font-size:clamp(2rem,4vw,3.25rem);font-weight:800;color:#fff;line-height:1.15;margin:0 0 20px;letter-spacing:-0.02em;">
-              Sistem Informasi<br />
-              <span style="color:#fbbf24;">Zakat</span><br />
-              Nasional
+              Satu Data<br>
+               <span style="color:#fbbf24;">Z</span>akat
+               <span style="color:#fbbf24;">I</span>nfak
+               <span style="color:#fbbf24;">S</span>edekah
+               dan
+               <span style="color:#fbbf24;">D</span>ana
+               <span style="color:#fbbf24;">S</span>osial
+               <span style="color:#fbbf24;">K</span>eagamaan
+               <span style="color:#fbbf24;">L</span>ainnya
+            </h1>
+-->
+            <h1 style="font-size:clamp(1rem,4vw,2rem);font-weight:800;color:#fff;line-height:1.15;margin:0 0 20px;letter-spacing:-0.02em;">
+              Satu Data<br><span style="color:#fbbf24;">Zakat Infak Sedekah</span><br>
+              dan
+              <span style="color:#fbbf24;">Dana Sosial Keagamaan Lainnya</span>
             </h1>
 
             <p style="font-size:16px;color:#a7f3d0;line-height:1.7;max-width:480px;margin:0 0 32px;">
-              Platform pemantauan penyaluran zakat berbasis data desil kemiskinan.
-              Transparan, terukur, dan tepat sasaran.
+              Halaman pemantauan pendistribusian dan pendayagunaan ZIS DSKL yang terukur dan tepat sasaran.
             </p>
 
             <div style="display:flex;flex-wrap:wrap;gap:12px;">
@@ -98,37 +109,73 @@
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
 
         <div style="text-align:center;margin-bottom:48px;">
-          <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#dcfce7;color:#15803d;font-size:12px;font-weight:600;margin-bottom:12px;">Data Real-time</span>
+          <!--<span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#dcfce7;color:#15803d;font-size:12px;font-weight:600;margin-bottom:12px;">Data kumulatif</span>-->
           <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 8px;">Statistik Nasional</h2>
-          <p style="font-size:15px;color:#64748b;max-width:480px;margin:0 auto;">Agregat penyaluran zakat seluruh LAZ terdaftar di Indonesia.</p>
+          <Select
+              v-model="selectedYear"
+              :options="paramTahun"
+              optionLabel="tahun"
+              optionValue="tahun"
+              placeholder="Pilih Tahun"
+              style="width:150px"
+          />
         </div>
 
-        <div class="grid-4" style="display:grid;gap:16px;margin-bottom:40px;">
+        <div class="grid-4" style="display:grid;gap:8px;margin-bottom:10px;">
           <div
             v-for="stat in aggStats"
             :key="stat.label"
             style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
           >
-            <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'16px' }">
-              <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <div style="width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;" :style="{ background:stat.iconBg }">
+                <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+              </div>
+              <span style="font-size:1.2rem;font-weight:800;text-transform:uppercase;" :style="{ color:stat.iconColor }">{{ stat.label }}</span>
             </div>
-            <p style="font-size:1.6rem;font-weight:800;color:#1e293b;margin:0 0 4px;">{{ stat.value }}</p>
-            <p style="font-size:14px;font-weight:600;color:#374151;margin:0 0 4px;">{{ stat.label }}</p>
-            <p style="font-size:12px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
+            
+            <p style="font-size:12px;color:#94a3b8;margin:8px 0 0;">{{ stat.base_sub }}</p>
+            <p style="font-size:1.6rem;font-weight:800;color:#1e293b;margin:0 0 4px;">{{ stat.base_val }}</p>
+            <p style="font-size:12px;color:#94a3b8;margin:8px 0 0;">{{ stat.lap_sub }}</p>
+            <p style="font-size:1.6rem;font-weight:800;color:#1e293b;margin:0 0 4px;">{{ stat.lap_val }}</p>
+            <p style="font-size:12px;color:#94a3b8;margin:8px 0 0;">{{ stat.agg_sub }}</p>
+            <p style="font-size:1.6rem;font-weight:800;color:#1e293b;margin:0;">{{ stat.agg_val }}</p>
           </div>
         </div>
 
-        <div class="grid-3" style="display:grid;gap:16px;">
+        <div class="grid-2" style="display:grid;gap:8px;margin-bottom:10px;">
+          <div
+            v-for="stat in cummulStats"
+            :key="stat.label"
+            style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
+          >
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:64px;height:64px;border-radius:8px;display:flex;align-items:center;justify-content:center;" :style="{ background:stat.iconBg }">
+                <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+              </div>
+              <p>
+                <span style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">{{ stat.agg_sub }}</span><br>
+                <span style="font-size:1.6rem;font-weight:800;color:#1e293b;margin:0;">{{ stat.agg_val }}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="display:grid;gap:8px;">
           <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
+            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jenis Kelamin Penerima Manfaat</p>
             <Chart type="doughnut" :data="genderChartData" :options="doughnutOpts" style="height:170px;" />
+            <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
+              <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>Laki-laki: {{ formatAngka(genderData.male_count||0) }}</span>
+              <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f472b6;margin-right:5px;"></span>Perempuan: {{ formatAngka(genderData.female_count||0) }}</span>
+            </div>
           </div>
           <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Penyaluran per Bidang</p>
+            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Pendistribusian dan Pendayagunaan per Bidang</p>
             <Chart type="bar" :data="bidangChartData" :options="barOpts" style="height:170px;" />
           </div>
           <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Tren Penyaluran Tahunan</p>
+            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Tren Pendistribusian dan Pendayagunaan Tahunan</p>
             <Chart type="line" :data="trendChartData" :options="lineOpts" style="height:170px;" />
           </div>
         </div>
@@ -137,15 +184,22 @@
 
     <!-- PETA -->
     <section id="map" style="padding:80px 0;background:white;">
-      <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
+      <div style="max-width:1280px;margin:0 auto;padding:0 18px;">
 
-        <div style="text-align:center;margin-bottom:48px;">
-          <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:12px;font-weight:600;margin-bottom:12px;">Sebaran Wilayah</span>
+        <div style="text-align:center;margin-bottom:18px;">
+          <!--<span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:16px;font-weight:600;margin-bottom:12px;">Sebaran Wilayah</span>-->
           <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 8px;">Peta Sebaran Penerima Manfaat</h2>
-          <p style="font-size:15px;color:#64748b;max-width:480px;margin:0 auto;">Distribusi penerima manfaat zakat per provinsi seluruh Indonesia.</p>
+          <Select
+              v-model="selectedYear"
+              :options="paramTahun"
+              optionLabel="tahun"
+              optionValue="tahun"
+              placeholder="Pilih Tahun"
+              style="width:150px"
+          />
         </div>
 
-        <div style="display:flex;justify-content:center;margin-bottom:24px;">
+        <div style="display:flex;justify-content:center;margin-bottom:18px;">
           <div style="display:inline-flex;background:#f1f5f9;border-radius:10px;padding:4px;gap:4px;">
             <button
               v-for="opt in metricOptions"
@@ -170,7 +224,7 @@
         </div>
 
         <div style="border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
-          <IndonesiaMap :map-data="mapData" :metric="mapMetric" height="480px" />
+          <IndonesiaMap :key="refreshKey" :map-data="mapData" :metric="mapMetric" :tahun="selectedYear" height="480px" />
         </div>
 
         <div class="grid-2" style="display:grid;gap:24px;margin-top:32px;">
@@ -218,9 +272,16 @@
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
 
         <div style="text-align:center;margin-bottom:48px;">
-          <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#fef9c3;color:#b45309;font-size:12px;font-weight:600;margin-bottom:12px;">Kategori Penyaluran</span>
+          <!--<span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#fef9c3;color:#b45309;font-size:12px;font-weight:600;margin-bottom:12px;">Kategori Penyaluran</span>-->
           <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 8px;">Program Bidang Zakat</h2>
-          <p style="font-size:15px;color:#64748b;max-width:480px;margin:0 auto;">Penyaluran berdasarkan kategori bidang program BAZNAS dan LAZ.</p>
+          <Select
+              v-model="selectedYear"
+              :options="paramTahun"
+              optionLabel="tahun"
+              optionValue="tahun"
+              placeholder="Pilih Tahun"
+              style="width:150px"
+          />
         </div>
 
         <div class="grid-3" style="display:grid;gap:16px;">
@@ -228,13 +289,15 @@
             v-for="(bidang, i) in bidangProgram"
             :key="bidang.bidang_label"
             style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:24px;box-shadow:0 1px 4px rgba(0,0,0,0.05);"
+            :style="{ background:bidangColors[i%bidangColors.length].back, borderRadius:'16px', border:bidangColors[i%bidangColors.length].bordersize + ' solid ' + bidangColors[i%bidangColors.length].border, padding:'24px', boxShadow:'0 1px 4px rgba(0,0,0,0.05)' }"
           >
             <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:bidangColors[i%bidangColors.length].bg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
               <i :class="bidangIcons[i%bidangIcons.length]" :style="{ color:bidangColors[i%bidangColors.length].icon, fontSize:'18px' }"></i>
             </div>
             <h3 style="font-size:14px;font-weight:700;color:#1e293b;margin:0 0 4px;">{{ bidang.bidang_label }}</h3>
-            <p style="font-size:1.3rem;font-weight:800;color:#15803d;margin:0 0 4px;">Rp {{ formatShort(bidang.total_penyaluran||0) }}</p>
-            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px;">{{ bidang.laz_type || 'BAZNAS & LAZ' }}</p>
+            <p style="font-size:1.3rem;font-weight:800;color:#15803d;margin:0 0 4px;">{{ formatRupiah(bidang.total_penyaluran) }}</p>
+            <p style="font-size:11px;color:#94a3b8;margin:0 0 12px;">kepada {{ formatAngka(bidang.total_mustahik) }} Penerima Manfaat</p>
+            <!-- 
             <div>
               <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px;">
                 <span>Porsi dari total</span>
@@ -244,6 +307,7 @@
                 <div :style="{ width: (bidang.pct||0)+'%', height:'100%', background:'#16a34a', borderRadius:'99px' }"></div>
               </div>
             </div>
+            -->
           </div>
         </div>
       </div>
@@ -254,11 +318,11 @@
       <div style="max-width:1280px;margin:0 auto;padding:0 24px;">
         <div class="tentang-grid">
           <div>
-            <span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;margin-bottom:16px;">Tentang Sistem</span>
+            <!--<span style="display:inline-block;padding:4px 14px;border-radius:99px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;margin-bottom:16px;">Tentang Sistem</span>-->
             <h2 style="font-size:2rem;font-weight:800;color:#1e293b;margin:0 0 14px;">Mengapa DTSEN?</h2>
             <p style="font-size:15px;color:#64748b;line-height:1.7;margin:0 0 28px;max-width:480px;">
-              DTSEN mengintegrasikan data penerima manfaat zakat dari seluruh LAZ terdaftar dengan data
-              desil kemiskinan — memastikan penyaluran tepat sasaran.
+              Satu Data ZAS DSKL mengintegrasikan data penerima manfaat zakat dari seluruh LAZ terdaftar dengan data
+              desil — memastikan penyaluran tepat sasaran.
             </p>
             <div style="display:flex;flex-direction:column;gap:16px;">
               <div v-for="feat in features" :key="feat.title" style="display:flex;gap:14px;align-items:flex-start;">
@@ -288,61 +352,113 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import Chart         from 'primevue/chart'
+import { ref, computed, onMounted, watch } from 'vue'
+import Select from 'primevue/select'
+import Chart  from 'primevue/chart'
 import LandingLayout from '@/components/layout/LandingLayout.vue'
 import IndonesiaMap  from '@/components/charts/IndonesiaMap.vue'
 import ReportService from '@/services/report'
-import { formatShort }        from '@/utils/formatter'
+import { formatShort }  from '@/utils/formatter'
+import { formatShortM } from '@/utils/formatter'
+import { formatRupiah } from '@/utils/formatter'
+import { formatAngka }  from '@/utils/formatter'
 import { useLoginModalStore } from '@/stores/loginModal'
-import { useAuthStore }       from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
 
 const loginModal = useLoginModalStore()
 const authStore  = useAuthStore()
 const mapMetric  = ref('mustahik')
+const paramTahun = ref([])
 const mapData    = ref([])
 const genderData = ref({ male_count: 0, female_count: 0 })
 const bidangData = ref([])
 const trendData  = ref([])
 const summary    = ref({ total_penyaluran: 0, penerima_manfaat: 0, nasional: 0, provinsi: 0, kabkota: 0 })
-
+const refreshKey = ref(0)
 const metricOptions = [
   { label: 'Jumlah Penerima Manfaat',  value: 'mustahik'   },
-  { label: 'Total Penyaluran', value: 'penyaluran' },
+  { label: 'Total Pendistribusian dan Pendayagunaan', value: 'penyaluran' },
 ]
 
+const selectedYear = ref(new Date().getFullYear())
+
 onMounted(async () => {
-  try {
-    const [s, g, b, t, m] = await Promise.all([
-      ReportService.getHomeSummary(),
-      ReportService.getByGender({}),
-      ReportService.getByBidang({}),
-      ReportService.getTimeseries({}),
-      ReportService.getMapData('1'),
-    ])
-    summary.value    = s
-    genderData.value = g
-    bidangData.value = b
-    trendData.value  = t
-    mapData.value    = Array.isArray(m) ? m : []
-  } catch (e) {
-    console.error('Failed to load landing data', e)
-  }
+  const [
+    paramTahunRes,
+    summaryRes,
+    genderRes,
+    bidangRes,
+    trendRes,
+    mapRes
+  ] = await Promise.allSettled([
+    ReportService.getParamTahun(),
+    ReportService.getSummary(),
+    ReportService.getGender(),
+    ReportService.getBidang(),
+    ReportService.getTimeseries(),
+    ReportService.getMapData()
+  ])
+
+  if (paramTahunRes.status === 'fulfilled')
+    paramTahun.value = paramTahunRes.value
+
+  if (summaryRes.status === 'fulfilled')
+    summary.value = summaryRes.value
+
+  if (genderRes.status === 'fulfilled')
+    genderData.value = genderRes.value
+
+  if (bidangRes.status === 'fulfilled')
+    bidangData.value = bidangRes.value
+
+  if (trendRes.status === 'fulfilled')
+    trendData.value = trendRes.value
+
+  if (mapRes.status === 'fulfilled')
+    mapData.value = Array.isArray(mapRes.value) ? mapRes.value : []
+    refreshKey.value++
 })
 
-const heroStats = computed(() => [
-  { label: 'Total Penyaluran', value: 'Rp ' + formatShort(summary.value?.total_penyaluran||0), icon:'pi pi-wallet',     sub:'Seluruh LAZ terdaftar' },
-  { label: 'LAZ Nasional',     value: formatShort(summary.value?.nasional||0),                   icon:'pi pi-building',   sub:'Lembaga aktif' },
-  { label: 'LAZ Provinsi',     value: formatShort(summary.value?.provinsi||0),                   icon:'pi pi-map-marker', sub:'Lembaga aktif' },
-  { label: 'Penerima Manfaat',         value: formatShort(summary.value?.penerima_manfaat||0),            icon:'pi pi-users',      sub:'Penerima manfaat' },
-])
+async function loadData() {
+  const params = { tahun: selectedYear.value }
 
-const aggStats = computed(() => [
-  { label:'Total Penyaluran',  value:'Rp ' + formatShort(summary.value?.total_penyaluran||0),   sub:'Akumulasi seluruh LAZ',          icon:'pi pi-wallet',   iconBg:'#f0fdf4', iconColor:'#16a34a' },
-  { label:'Penerima Manfaat',  value:formatShort(summary.value?.penerima_manfaat||0),             sub:'Total mustahik unik',            icon:'pi pi-users',    iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'LAZ Terdaftar',     value:formatShort((summary.value?.nasional||0)+(summary.value?.provinsi||0)+(summary.value?.kabkota||0)), sub:'Nasional + Provinsi + Kab/Kota', icon:'pi pi-building', iconBg:'#faf5ff', iconColor:'#7c3aed' },
-  { label:'Provinsi Terlibat', value:'34',                                                        sub:'Seluruh Indonesia',              icon:'pi pi-map',      iconBg:'#fff7ed', iconColor:'#ea580c' },
-])
+  const [
+    summaryRes,
+    genderRes,
+    bidangRes,
+    trendRes,
+    mapRes
+  ] = await Promise.allSettled([
+    ReportService.getSummary(params),
+    ReportService.getGender(params),
+    ReportService.getBidang(params),
+    ReportService.getTimeseries(params),
+    ReportService.getMapData(selectedYear.value)
+  ])
+ 
+  if (summaryRes.status === 'fulfilled')
+    summary.value = summaryRes.value
+
+  if (genderRes.status === 'fulfilled')
+    genderData.value = genderRes.value
+
+  if (bidangRes.status === 'fulfilled')
+    bidangData.value = bidangRes.value
+
+  if (trendRes.status === 'fulfilled')
+    trendData.value = trendRes.value
+
+  if (mapRes.status === 'fulfilled')
+    mapData.value = Array.isArray(mapRes.value) ? mapRes.value : []
+    refreshKey.value++
+}
+
+watch(selectedYear, loadData)
+
+const trendChartData = computed(() => ({
+  labels: trendData.value.map(d=>d.tahun),
+  datasets:[{ label:'Penyaluran', data:trendData.value.map(d=>(d.Bantuan_Langsung||0)+(d.Bantuan_Tidak_Langsung||0)), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.1)', fill:true, tension:0.4, pointRadius:3 }]
+}))
 
 const topProvinces = computed(() => {
   const sorted = [...mapData.value].sort((a,b)=>(b.mustahik||0)-(a.mustahik||0)).slice(0,5)
@@ -361,21 +477,51 @@ const bidangProgram = computed(() => {
   return bidangData.value.map(b=>({...b, pct:((b.total_penyaluran||0)/total)*100}))
 })
 
-const genderChartData = computed(() => ({
-  labels:['Laki-laki','Perempuan'],
-  datasets:[{ data:[genderData.value?.male_count||0, genderData.value?.female_count||0], backgroundColor:['#3b82f6','#ec4899'], borderWidth:0 }]
-}))
 const bidangChartData = computed(() => ({
   labels: bidangData.value.map(d=>d.bidang_label),
   datasets:[{ data:bidangData.value.map(d=>d.total_penyaluran||0), backgroundColor:'rgba(22,163,74,0.7)', borderRadius:4 }]
 }))
-const trendChartData = computed(() => ({
-  labels: trendData.value.map(d=>d.tahun),
-  datasets:[{ label:'Penyaluran', data:trendData.value.map(d=>(d.Bantuan_Langsung||0)+(d.Bantuan_Tidak_Langsung||0)), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.1)', fill:true, tension:0.4, pointRadius:3 }]
+
+const bidangColors = [
+  { bg:'#c6fcd6', icon:'#16a34a', border:'#16a34a', bordersize:'3px', back:'#f0fdf4' },
+  { bg:'#eff6ff', icon:'#2563eb', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#fef2f2', icon:'#dc2626', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#fafab6', icon:'#b9bd02', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#faf5ff', icon:'#7c3aed', border:'#eff6ff', bordersize:'1px', back:'white' },
+  { bg:'#fff7ed', icon:'#ea580c', border:'#eff6ff', bordersize:'1px', back:'white' },
+]
+
+const bidangIcons = ['pi pi-star','pi pi-users','pi pi-heart','pi pi-book','pi pi-chart-line','pi pi-shield','pi pi-briefcase','pi pi-home']
+
+
+const heroStats = computed(() => [ 
+  { label: 'BAZNAS RI', value: formatShort(summary.value?.bzn_nasional_sub||0), icon:'pi pi-wallet', sub:'Lembaga Aktif' },
+  { label: 'BAZNAS Provinsi', value: formatShort(summary.value?.bzn_provinsi_sub||0), icon:'pi pi-wallet', sub:'Lembaga Aktif' },
+  { label: 'BAZNAS Kab/Kota', value: formatShort(summary.value?.bzn_kabkota_sub||0), icon:'pi pi-wallet', sub:'Lembaga Aktif' },
+  { label: 'LAZ Skala Nasional',    value: formatShort(summary.value?.laz_nasional_sub||0), icon:'pi pi-wallet', sub:'dari ' + formatShort(summary.value?.laz_nasional_ina||0) + ' Lembaga Terdaftar' },
+  { label: 'LAZ Skala Provinsi',    value: formatShort(summary.value?.laz_provinsi_sub||0), icon:'pi pi-wallet', sub:'dari ' + formatShort(summary.value?.laz_provinsi_ina||0) + ' Lembaga Terdaftar' },
+  { label: 'LAZ Skala Kab/Kota',    value: formatShort(summary.value?.laz_kabkota_sub||0), icon:'pi pi-wallet', sub:'dari ' + formatShort(summary.value?.laz_kabkota_ina||0) + ' Lembaga Terdaftar' },
+])
+
+const aggStats = computed(() => [
+  { label:'Desil 1',  base_val:'' + formatAngka(summary.value?.desil_1_sub||0), base_sub:'Data DTSEN', icon:'pi pi-users', iconBg:'#fcdcdc', iconColor:'#dc2626', lap_val:'' + formatAngka(summary.value?.desil_1||0), agg_val:'Rp ' + formatShortM(summary.value?.desil_1_agg||0), lap_sub:'Penerima Manfaat Lembaga', agg_sub:'Pendistribusian dan Pendayagunaan' },
+  { label:'Desil 2',  base_val:'' + formatAngka(summary.value?.desil_2_sub||0), base_sub:'Data DTSEN', icon:'pi pi-users', iconBg:'#faeedc', iconColor:'#e68c05', lap_val:'' + formatAngka(summary.value?.desil_2||0), agg_val:'Rp ' + formatShortM(summary.value?.desil_2_agg||0), lap_sub:'Penerima Manfaat Lembaga', agg_sub:'Pendistribusian dan Pendayagunaan' },
+  { label:'Desil 3',  base_val:'' + formatAngka(summary.value?.desil_3_sub||0), base_sub:'Data DTSEN', icon:'pi pi-users', iconBg:'#faf1d9', iconColor:'#f5be27', lap_val:'' + formatAngka(summary.value?.desil_3||0), agg_val:'Rp ' + formatShortM(summary.value?.desil_3_agg||0), lap_sub:'Penerima Manfaat Lembaga', agg_sub:'Pendistribusian dan Pendayagunaan' },
+  { label:'Desil 4',  base_val:'' + formatAngka(summary.value?.desil_4_sub||0), base_sub:'Data DTSEN', icon:'pi pi-users', iconBg:'#f0fdf4', iconColor:'#16a34a', lap_val:'' + formatAngka(summary.value?.desil_4||0), agg_val:'Rp ' + formatShortM(summary.value?.desil_4_agg||0), lap_sub:'Penerima Manfaat Lembaga', agg_sub:'Pendistribusian dan Pendayagunaan' },
+])
+
+const cummulStats = computed(() => [
+  { icon:'pi pi-wallet', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'Rp ' + formatShortM(summary.value?.desil_agg||0), agg_sub:'Total Pendistribusian dan Pendayagunaan' },
+  { icon:'pi pi-users', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'' + formatAngka(summary.value?.desil_all||0), agg_sub:'Jumlah Penerima Manfaat' },
+])
+
+const genderChartData = computed(() => ({
+  labels:['Laki-laki','Perempuan'],
+  datasets:[{ data:[genderData.value?.male_count||0, genderData.value?.female_count||0], backgroundColor:['#3b82f6','#ec4899'], borderWidth:0 }]
 }))
 
 const doughnutOpts = {
-  plugins:{ legend:{ position:'bottom', labels:{ font:{ size:11 } } } },
+  plugins:{ legend:{ display:false  } },
   responsive:true, maintainAspectRatio:false
 }
 const barOpts = {
@@ -398,22 +544,11 @@ const lineOpts = {
   responsive:true, maintainAspectRatio:false,
   scales:{ y:{ ticks:{ font:{ size:9 }, callback: v => formatShort(v) } } }
 }
-
-const bidangColors = [
-  { bg:'#f0fdf4', icon:'#16a34a' },
-  { bg:'#eff6ff', icon:'#2563eb' },
-  { bg:'#faf5ff', icon:'#7c3aed' },
-  { bg:'#fff7ed', icon:'#ea580c' },
-  { bg:'#fef2f2', icon:'#dc2626' },
-  { bg:'#f0fdfa', icon:'#0d9488' },
-]
-const bidangIcons = ['pi pi-heart','pi pi-book','pi pi-briefcase','pi pi-home','pi pi-shield','pi pi-star']
-
 const features = [
   { icon:'pi pi-shield',     title:'Data Terverifikasi',       desc:'Terintegrasi langsung dengan DTSEN.' },
   { icon:'pi pi-map',        title:'Pemetaan Wilayah',         desc:'Sebaran mustahik hingga tingkat kelurahan di seluruh Indonesia.' },
   { icon:'pi pi-chart-line', title:'Analitik Real-time',       desc:'Dashboard interaktif dengan filter multidimensi dan ekspor data.' },
-  { icon:'pi pi-users',      title:'Profil Penerima Manfaat Lengkap',  desc:'Data sosiodemografi penerima termasuk desil kemiskinan.' },
+  { icon:'pi pi-users',      title:'Profil Penerima Manfaat Lengkap',  desc:'Data sosiodemografi penerima termasuk desil.' },
 ]
 
 const aboutMetrics = [
@@ -429,10 +564,10 @@ function scrollTo(id) {
 </script>
 
 <style scoped>
-.hero-grid    { display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; }
-.hero-cards   { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.hero-grid    { display:grid; grid-template-columns:1fr 2fr; gap:48px; align-items:center; }
+.hero-cards   { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
 .grid-4       { grid-template-columns: repeat(4, 1fr); }
-.grid-3       { grid-template-columns: repeat(3, 1fr); }
+.grid-3       { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
 .grid-2       { grid-template-columns: 1fr 1fr; }
 .tentang-grid { display:grid; grid-template-columns:1fr 1fr; gap:64px; align-items:start; }
 .about-cards  { display:grid; grid-template-columns:1fr 1fr; gap:16px; }

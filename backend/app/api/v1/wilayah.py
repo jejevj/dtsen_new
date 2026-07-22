@@ -3,6 +3,7 @@ from flask import jsonify, request
 from flask_jwt_extended import jwt_required
 from . import api_v1_bp
 from ...extensions import db
+from ...models.wilayah import Provinsi, KabKota, Kecamatan
 from ...models.wilayah import Provinsi, KabKota, Kecamatan, Kelurahan
 from ...models.t_dtsen_akses import TDtsenAkses
 from ...models.t_dtsen_wilayah import TDtsenWilayah

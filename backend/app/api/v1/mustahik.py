@@ -8,7 +8,7 @@ from ...services.mustahik_service import MustahikService
 @jwt_required()
 def list_mustahik():
     """
-    List data penerima manfaat dengan filter dan pagination
+    List data mustahik dengan filter dan pagination
     ---
     tags:
       - Mustahik
@@ -38,6 +38,52 @@ def list_mustahik():
     return jsonify(result), 200
 
 
+# ⚠️ Route spesifik HARUS didefinisikan SEBELUM route generik /<nik_hashed>
+# agar Flask tidak menangkap "by-nik" sebagai nik_hashed.
+@api_v1_bp.get('/mustahik/by-nik/<string:nik>')
+@jwt_required()
+def detail_mustahik_by_nik(nik):
+    """
+    Get detail mustahik berdasarkan NIK plain (tidak di-hash)
+    ---
+    tags:
+      - Mustahik
+    security:
+      - Bearer: []
+    parameters:
+      - in: path
+        name: nik
+        type: string
+        required: true
+        description: |
+          NIK mustahik (16 digit). Query langsung ke kolom nik
+          tanpa fungsi MD5 sehingga dapat memanfaatkan index.
+    responses:
+      200:
+        description: Detail mustahik berhasil diambil
+        schema:
+          properties:
+            data:
+              type: array
+              items:
+                type: object
+      404:
+        description: Mustahik tidak ditemukan
+      400:
+        description: NIK tidak valid
+      401:
+        description: Token tidak valid
+    """
+    nik = nik.strip()
+    if not nik.isdigit() or len(nik) != 16:
+        return jsonify({'message': 'NIK tidak valid. Harus 16 digit angka.'}), 400
+
+    result = MustahikService.get_detail_by_nik(nik)
+    if result.get('status_code') == 404:
+        return jsonify(result), 404
+    return jsonify(result), 200
+
+
 @api_v1_bp.get('/mustahik/<string:nik_hashed>')
 @jwt_required()
 def detail_mustahik(nik_hashed):
@@ -63,7 +109,10 @@ def detail_mustahik(nik_hashed):
         description: Token tidak valid
     """
     result = MustahikService.get_detail(nik_hashed)
+    if result.get('status_code') == 404:
+        return jsonify(result), 404
     return jsonify(result), 200
+
 
 @api_v1_bp.get('/mustahik/<string:nik_hashed>/riwayat')
 @jwt_required()
@@ -71,9 +120,9 @@ def riwayat_mustahik(nik_hashed):
     result = MustahikService.get_riwayat(nik_hashed)
     return jsonify(result), 200
 
-@api_v1_bp.get("/mustahik/<string:nik_hashed>/program")
+
+@api_v1_bp.get('/mustahik/<string:nik_hashed>/program')
 @jwt_required()
 def program(nik_hashed):
     result = MustahikService.get_program(nik_hashed)
     return jsonify(result), 200
-    

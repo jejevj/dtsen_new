@@ -9,19 +9,19 @@
         <div class="footer-brand">
           <!-- Logo -->
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-            <div
-              style="width:36px;height:36px;border-radius:10px;background:#16a34a;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-              <i class="pi pi-chart-bar" style="color:white;font-size:14px;"></i>
-            </div>
+            <img
+              src="https://simzat.kemenag.go.id/simzat/apps/assets/images/ico.png"
+              alt="Satu Data ZIS DSKL"
+              style="width:34px;height:34px;border-radius:10px;object-fit:contain;"
+            />
             <div>
-              <div style="font-weight:700;font-size:16px;color:white;line-height:1;">DTSEN</div>
-              <div style="font-size:11px;color:#86efac;margin-top:2px;line-height:1;">Zakat </div>
+              <div style="font-weight:700;font-size:16px;color:white;line-height:1;">Satu Data</div>
+              <div style="font-size:11px;color:#86efac;margin-top:2px;line-height:1;">ZIS DSKL</div>
             </div>
           </div>
 
           <p style="font-size:13.5px;color:#a7f3d0;line-height:1.7;max-width:280px;margin:0 0 20px;">
-            Platform pemantauan penyaluran zakat berbasis Data Tunggal Sosial Ekonomi Nasional (DTSEN). Transparan,
-            terukur, tepat sasaran.
+            Halaman pemantauan pendistribusian dan pendayagunaan ZIS DSKL yang terukur dan tepat sasaran.
           </p>
 
           <!-- Badges -->
@@ -53,11 +53,11 @@
           <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
             <div style="display:flex;align-items:flex-start;gap:8px;">
               <i class="pi pi-envelope" style="font-size:12px;color:#4ade80;margin-top:2px;flex-shrink:0;"></i>
-              <span style="font-size:13px;color:#a7f3d0;line-height:1.5;">bimasislam@kemenag.go.id</span>
+              <span style="font-size:13px;color:#a7f3d0;line-height:1.5;">zakatdanwakaf@kemenag.go.id</span>
             </div>
             <div style="display:flex;align-items:flex-start;gap:8px;">
               <i class="pi pi-map-marker" style="font-size:12px;color:#4ade80;margin-top:2px;flex-shrink:0;"></i>
-              <span style="font-size:13px;color:#a7f3d0;line-height:1.5;">Jl. M. H. Thamrin No.6 lantai 6, Jakarta Pusat
+              <span style="font-size:13px;color:#a7f3d0;line-height:1.5;">Jl. M. H. Thamrin No.6 lantai 9, Jakarta Pusat
                 10340</span>
             </div>
           </div>
@@ -82,12 +82,12 @@
       <!-- Bottom bar -->
       <div class="footer-bottom"
         style="padding-top:24px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;">
-        <span style="font-size:12px;color:#6ee7b7;">&copy; {{ year }} DTSEN &mdash; Hak Cipta Dilindungi</span>
+        <span style="font-size:12px;color:#6ee7b7;">&copy; {{ year }} Kementerian Agama Republik Indonesia &bull; Hak Cipta Dilindungi</span>
         <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;">
-          <a href="#" class="footer-link" style="font-size:12px;color:#6ee7b7;text-decoration:none;">Kebijakan
-            Privasi</a>
-          <a href="#" class="footer-link" style="font-size:12px;color:#6ee7b7;text-decoration:none;">Syarat
-            Penggunaan</a>
+          <a href="#" class="footer-link" style="font-size:12px;color:#6ee7b7;text-decoration:none;">Regulasi</a>
+          <a href="#" class="footer-link" style="font-size:12px;color:#6ee7b7;text-decoration:none;">Format KAK</a>
+          <a href="#" class="footer-link" style="font-size:12px;color:#6ee7b7;text-decoration:none;">Narasi Kebijakan</a>
+          <a href="#" class="footer-link" style="font-size:12px;color:#6ee7b7;text-decoration:none;">Panduan Pengguna</a>
         </div>
       </div>
     </div>
