@@ -466,20 +466,38 @@ onMounted(async () => {
 
   datatableLoading.value = false
 
-  if (paramLembagaRes.status === 'fulfilled') paramLembaga.value = paramLembagaRes.value
-  if (paramTahunRes.status   === 'fulfilled') paramTahun.value   = paramTahunRes.value
-  if (paramProvRes.status    === 'fulfilled') paramProv.value    = paramProvRes.value
-  if (bidangRes.status       === 'fulfilled') bidangData.value   = bidangRes.value
-  if (usiaRes.status         === 'fulfilled') usiaData.value     = usiaRes.value
-  if (basewilayahRes.status  === 'fulfilled') wilayahBase.value  = basewilayahRes.value
-  if (datawilayahRes.status  === 'fulfilled') wilayahData.value  = datawilayahRes.value
-  if (basedesilRes.status    === 'fulfilled') desilBase.value    = basedesilRes.value
-  if (datadesilRes.status    === 'fulfilled') desilData.value    = datadesilRes.value
+  if (paramLembagaRes.status === 'fulfilled')
+    paramLembaga.value = paramLembagaRes.value
 
-  if (paramProv.value.length === 1) {
+  if (paramTahunRes.status === 'fulfilled')
+    paramTahun.value = paramTahunRes.value
+
+  if (paramProvRes.status === 'fulfilled')
+    paramProv.value = paramProvRes.value
+
+  if (bidangRes.status === 'fulfilled')
+    bidangData.value = bidangRes.value
+  
+  if (usiaRes.status === 'fulfilled')
+    usiaData.value = usiaRes.value
+
+  if (basewilayahRes.status === 'fulfilled')
+    wilayahBase.value = basewilayahRes.value
+
+  if (datawilayahRes.status === 'fulfilled')
+    wilayahData.value = datawilayahRes.value
+
+  if (basedesilRes.status === 'fulfilled')
+    desilBase.value = basedesilRes.value
+
+  if (datadesilRes.status === 'fulfilled')
+    desilData.value = datadesilRes.value
+/*
+  if (paramProv.value.length === 1){
     selectedProvinsi.value = paramProv.value[0].kode
     await optKabupaten()
   }
+*/
 })
 
 async function loadData() {
@@ -519,36 +537,67 @@ async function loadData() {
 async function optKabupaten() {
   const params = { email: authStore.user.email, provinsi_kode: selectedProvinsi.value }
   wilayahLoading.value = true
-  const [ paramkabRes ] = await Promise.allSettled([ ReportService.getDashParamkab(params) ])
-  if (paramkabRes.status === 'fulfilled') paramKab.value = paramkabRes.value
-  wilayahLoading.value = false
-  if (paramKab.value.length === 0) {
-    paramKab.value = []
-  } else if (paramKab.value.length === 1) {
+
+  const [
+    paramkabRes,
+  ] = await Promise.allSettled([
+    ReportService.getDashParamkab(params)
+  ])
+ 
+  if (paramkabRes.status === 'fulfilled'){
+    paramKab.value = paramkabRes.value
+    wilayahLoading.value = false
+  }
+
+  if (paramKab.value.length === 0){
+    paramKab = ref([])
+    paramKec = ref([])
+  }
+/*
+  else if (paramKab.value.length === 1){
     selectedKabupaten.value = paramKab.value[0].kode
     await optKecamatan()
   }
+*/
 }
 
 async function optKecamatan() {
   const params = { email: authStore.user.email, kabkota_kode: selectedKabupaten.value }
   wilayahLoading.value = true
-  const [ paramkecRes ] = await Promise.allSettled([ ReportService.getDashParamkec(params) ])
-  if (paramkecRes.status === 'fulfilled') paramKec.value = paramkecRes.value
-  wilayahLoading.value = false
-  if (paramKec.value.length === 0) paramKec.value = []
+
+  const [
+    paramkecRes,
+  ] = await Promise.allSettled([
+    ReportService.getDashParamkec(params)
+  ])
+ 
+  if (paramkecRes.status === 'fulfilled'){
+    paramKec.value = paramkecRes.value
+    wilayahLoading.value = false
+  }
+
+  if (paramKec.value.length === 0)
+    paramKec = ref([])
 }
 
 async function resetOption() {
   selectedProvinsi.value  = null
   selectedKabupaten.value = null
   selectedKecamatan.value = null
-  paramKab.value = []
-  paramKec.value = []
-  if (paramProv.value.length === 1) {
+/*
+  if (paramProv.value.length === 1){
     selectedProvinsi.value = paramProv.value[0].kode
     await optKabupaten()
   }
+
+  if (paramKab.value.length === 1){
+    selectedKabupaten.value = paramKab.value[0].kode
+    await optKecamatan()
+  }
+
+  if (paramKec.value.length === 1)
+    selectedKecamatan.value = paramKec.value[0].kode
+*/
 }
 
 // wmId = slug aman untuk ID SVG (tanpa spasi)
