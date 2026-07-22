@@ -378,7 +378,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import api from '@/services/api'
 import MustahikService from '@/services/mustahik'
-import { fetchBaselineProvinsi } from '@/services/baselineService'
+import { fetchBaselineAnggotaByNik } from '@/services/baselineService'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
@@ -402,10 +402,6 @@ const { resolveValue, getDetailFields } = useBaselineRefs()
 const { userIdentifier } = useWatermark()
 
 // ── Field keys yang disembunyikan dari tampilan ──
-// Mencakup:
-//   1. Kode wilayah generik (_kode suffix, kode_* prefix, *_id)
-//   2. Semua field KTP (ktp_*) — baik _kode maupun _nama — karena sudah
-//      direpresentasikan oleh group "Alamat KTP" yang lebih readable
 const HIDDEN_FIELD_KEYS = new Set([
   'provinsi_kode',
   'kabupaten_kota_kode',
@@ -426,12 +422,8 @@ function visibleFields(fields) {
   if (!fields) return []
   return fields.filter(f => {
     const key = f.field_key ?? ''
-    // Sembunyikan field yang ada di daftar eksplisit
     if (HIDDEN_FIELD_KEYS.has(key)) return false
-    // Sembunyikan semua field KTP (prefix ktp_) — _kode maupun _nama
-    // karena sudah direpresentasikan oleh section "Alamat KTP"
     if (key.startsWith('ktp_')) return false
-    // Sembunyikan field kode wilayah lain (suffix _kode), kecuali field NIK
     if (key.endsWith('_kode') && !isNikField(key)) return false
     return true
   })
@@ -619,16 +611,15 @@ function goToMember(nik) {
   router.push({ name: 'baseline-anggota-detail', params: { nik } })
 }
 
+// FIX: Pakai fetchBaselineAnggotaByNik yang sudah teroptimasi
+// (prioritas provinsi dari 2 digit awal NIK, tidak loop brutal tanpa urutan)
 async function loadData(nik) {
   data.value = null
   try {
-    const provinsiList = await fetchBaselineProvinsi()
-    for (const prov of provinsiList) {
-      const res = await api.get('/baseline/anggota', { params: { provinsi: prov.kode, search: nik } })
-      const found = (res.data?.data ?? []).find(r => r.nomor_induk_kependudukan === nik || r.nik === nik)
-      if (found) { data.value = found; break }
-    }
-  } catch (e) { console.error('[AnggotaDetail] gagal load:', e) }
+    data.value = await fetchBaselineAnggotaByNik(nik)
+  } catch (e) {
+    console.error('[AnggotaDetail] gagal load:', e)
+  }
 }
 
 async function loadMustahikData(nik) {
