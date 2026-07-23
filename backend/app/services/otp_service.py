@@ -104,7 +104,7 @@ def send_otp_email(
         smtp_port   = int(_get_option('smtp_port') or 587)
         mail_acc    = _get_option('mail_account')
         smtp_secure = _get_option('smtp_secure') or 'TLS'
-        mail_pass   = _get_option('sendinblue_key_v3') or _get_option('mail_pass')
+        mail_pass   = _get_option('mail_pass')
         mail_from   = _get_option('mail_content_from') or 'DTSEN Kemenag RI'
         mail_footer = _get_option('mail_content_footer') or 'Admin DTSEN Kemenag RI'
         nm_instansi = _get_option('nm_instansi')   or 'Kementerian Agama RI'
