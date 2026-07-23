@@ -40,20 +40,22 @@ class Report:
     @staticmethod
     def get_skala_bzn() -> list:
         sql = text("""
-        SELECT 1 skala, COUNT(uker_kode) bzn_count
-        FROM m_uker
-        WHERE uker_kode = 'BZN'
-        GROUP BY uker_kode
-        UNION
-        SELECT 2 skala, COUNT(DISTINCT uker_kode) bzn_count
-        FROM m_uker
-        WHERE uker_parent = 'BZN'
-        GROUP BY uker_parent
-        UNION
-        SELECT 3 skala, COUNT(DISTINCT uker_kode) bzn_count
-        FROM m_uker
-        WHERE kabkota_kode IS NOT NULL OR TRIM(kabkota_kode) != ''
-        GROUP BY uker_parent;
+        SELECT skala, SUM(bzn_count) bzn_count
+        FROM
+        (
+            SELECT 1 skala, COUNT(uker_kode) bzn_count
+            FROM m_uker
+            WHERE uker_kode = 'BZN' AND uker_status = 'Y' AND is_kemenag = 0
+            UNION
+            SELECT 2 skala, COUNT(DISTINCT uker_kode) bzn_count
+            FROM m_uker
+            WHERE provinsi_kode IS NOT NULL and (kabkota_kode IS NULL or kabkota_kode = '') and uker_parent = 'BZN' AND uker_status = 'Y' AND is_kemenag = 0
+            UNION
+            SELECT 3 skala, COUNT(DISTINCT uker_kode) bzn_count
+            FROM m_uker
+            WHERE kabkota_kode IS NOT NULL AND uker_status = 'Y' AND is_kemenag = 0
+        ) bzn
+        GROUP BY skala;
         """)
 
         rows = db.session.execute(sql, {}).mappings().all()
