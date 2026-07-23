@@ -178,7 +178,10 @@ def send_otp_email(
 
         with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
             server.ehlo()
-            server.starttls()
+            if smtp_secure.upper() == 'TLS':
+                server.starttls()
+                server.ehlo()
+
             server.login(mail_acc, mail_pass)
             server.sendmail(mail_acc, [to_email], msg.as_string())
 
