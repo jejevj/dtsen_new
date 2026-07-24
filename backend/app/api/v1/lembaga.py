@@ -55,7 +55,7 @@ def list_lembaga():
     sql = text(f"""
         SELECT
             laz_kode AS kode,
-            laz_nama AS nama,
+            UPPER(laz_nama) AS nama,
             skala,
             'laz' AS jenis
         FROM t_laz
@@ -65,7 +65,7 @@ def list_lembaga():
 
         SELECT
             uker_kode AS kode,
-            uker_nama AS nama,
+            UPPER(singkatan) AS nama,
             {uker_skala},
             'kemenag' AS jenis
         FROM m_uker
