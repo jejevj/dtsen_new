@@ -15,26 +15,26 @@ def public_param_tahun():
 
 @api_v1_bp.get('/public/report/summary')
 def public_summary():
-    tahun = request.args.get('tahun', None)
-    return jsonify(ReportService.get_summary({'tahun': tahun})), 200
+    params = request.args.to_dict()
+    return jsonify(ReportService.get_summary(params)), 200
 
 
 @api_v1_bp.get('/public/report/gender')
 def public_by_gender():
-    tahun = request.args.get('tahun', None)
-    return jsonify(ReportService.get_by_gender({'tahun': tahun})), 200
+    params = request.args.to_dict()
+    return jsonify(ReportService.get_by_gender(params)), 200
 
 
 @api_v1_bp.get('/public/report/bidang')
 def public_by_bidang():
-    tahun = request.args.get('tahun', None)
-    return jsonify(ReportService.get_by_bidang({'tahun': tahun})), 200
+    params = request.args.to_dict()
+    return jsonify(ReportService.get_by_bidang(params)), 200
 
 
 @api_v1_bp.get('/public/report/timeseries')
 def public_timeseries():
-    tahun = request.args.get('tahun', None)
-    return jsonify(ReportService.get_timeseries({'tahun': tahun})), 200
+    params = request.args.to_dict()
+    return jsonify(ReportService.get_timeseries(params)), 200
 
 
 @api_v1_bp.get('/public/report/map')
@@ -159,6 +159,13 @@ def timeseries():
 def desil_summary():
     params = request.args.to_dict()
     return jsonify(ReportService.get_desil_summary(params)), 200
+
+
+@api_v1_bp.get('/report/mustahik')
+@jwt_required()
+def desil_mustahik():
+    params = request.args.to_dict()
+    return jsonify(ReportService.get_data_mustahik(params)), 200
 
 
 @api_v1_bp.get('/report/tabulate')

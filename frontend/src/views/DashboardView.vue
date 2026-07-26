@@ -5,7 +5,7 @@
         <div v-if="datatableLoading" class="loading-overlay">
           <div class="loading-box">
             <i class="pi pi-spin pi-spinner"></i>
-            <p>Memuat data...</p>
+            <p>Memuat data{{loadingMsg || loadingMsg || '...'}}</p>
           </div>
         </div>
         <!-- Header -->
@@ -18,7 +18,7 @@
                 :style="roleBadgeStyle">{{ authStore.user?.user_grup || authStore.user?.jabatan || 'operator' }}</span>
             </p>
             <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">
-              Berdasarkan Data DTSEN dan Laporan Penerima Manfaat
+              Berdasarkan Data DTSEN dan Laporan Lembaga Zakat
             </p>
           </div>
         </div>
@@ -54,7 +54,6 @@
 
         <!-- hero grid: 2 tabel baseline -->
         <div class="hero-grid" style="display:grid;gap:16px;">
-
           <div class="detail-card wm-card" style="padding-left:0;padding-right:0;padding-bottom:0;">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
@@ -68,16 +67,17 @@
               </svg>
             </div>
             <div class="wm-content">
-              <p class="section-title" style="padding-left:10px;padding-right:10px;">
-                <i class="pi pi-map"></i> Sebaran Mustahik Berdasarkan Data Baseline
+              <p class="section-title" style="padding-left:10px;padding-right:10px;text-transform:uppercase;margin:0 0 5px;">
+                <i class="pi pi-map"></i> Sebaran Mustahik per Wilayah
                 <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(wilayahBase.length) }}&ensp;</span>
               </p>
               <template v-if="wilayahBase.length">
-                <div style="overflow-x:auto;">
+                <div class="table-wrapper" style="overflow-x:auto;">
+                  <div class="table-footer-note"><span>&emsp;Berdasarkan data DTSEN. Hanya menampilkan wilayah sesuai BAST.</span></div>
                   <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="wilayahBase" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_wilayahBase" @page="onPage_wilayahBase">
                     <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_wilayahBase + slotProps.index + 1 }}</div></template></Column>
                     <Column header="Wilayah" field="nama" sortable><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
-                    <Column header="Mustahik" field="baseline" sortable style="width:30%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.baseline ?? 0) }}</div></template></Column>
+                    <Column header="Mustahik" field="baseline" sortable style="width:30%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.desil_mk ?? 0) }}</div></template></Column>
                   </DataTable>
                 </div>
               </template>
@@ -101,12 +101,13 @@
               </svg>
             </div>
             <div class="wm-content">
-              <p class="section-title" style="padding-left:10px;padding-right:10px;">
-                <i class="pi pi-map"></i> Sebaran Mustahik per Desil Berdasarkan Data Baseline
+              <p class="section-title" style="padding-left:10px;padding-right:10px;text-transform:uppercase;margin:0 0 5px;">
+                <i class="pi pi-map"></i> Sebaran Mustahik per Desil
                 <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(desilBase.length) }}&ensp;</span>
               </p>
               <template v-if="desilBase.length">
-                <div style="overflow-x:auto;">
+                <div class="table-wrapper" style="overflow-x:auto;">
+                  <div class="table-footer-note"><span>&emsp;Berdasarkan data DTSEN. Hanya menampilkan wilayah sesuai BAST.</span></div>
                   <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="desilBase" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_desilBase" @page="onPage_desilBase">
                     <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_desilBase + slotProps.index + 1 }}</div></template></Column>
                     <Column field="nama" sortable header="Provinsi"><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
@@ -140,20 +141,21 @@
             </svg>
           </div>
           <div class="wm-content">
-            <p class="section-title" style="padding-left:10px;padding-right:10px;">
+            <p class="section-title" style="padding-left:10px;padding-right:10px;text-transform:uppercase;margin:0 0 5px;">
               <i class="pi pi-map"></i> Pendistribusian dan Pendayagunaan per Wilayah
               <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(wilayahData.length) }}&ensp;</span>
             </p>
             <template v-if="wilayahData.length">
               <div style="overflow-x:auto;">
+                <div class="table-footer-note"><span>&emsp;Berdasarkan data laporan lembaga zakat. Menampilkan seluruh desil penerima manfaat.</span></div>
                 <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="wilayahData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_wilayahData" @page="onPage_wilayahData">
                   <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_wilayahData + slotProps.index + 1 }}</div></template></Column>
                   <Column field="lvl_1" sortable header="Provinsi"><template #body="{ data }">{{ data.lvl_1 ?? '-' }}</template></Column>
                   <Column field="lvl_2" sortable header="Kab/kota"><template #body="{ data }">{{ data.lvl_2 ?? '-' }}</template></Column>
                   <Column field="lvl_3" sortable header="Kecamatan"><template #body="{ data }">{{ data.lvl_3 ?? '-' }}</template></Column>
                   <Column field="lvl_4" sortable header="Kelurahan"><template #body="{ data }">{{ data.lvl_4 ?? '-' }}</template></Column>
-                  <Column field="mustahik" header="Mustahik" sortable style="width:10%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.mustahik ?? 0) }}</div></template></Column>
-                  <Column field="rupiah" header="Total" sortable style="width:15%"><template #body="{ data }"><div class="text-right">{{ formatRupiah(data.rupiah ?? 0) }}</div></template></Column>
+                  <Column field="mustahik" header="Penerima Manfaat" sortable style="width:15%"><template #body="{ data }"><div class="text-right">{{ formatAngka(data.mustahik_all ?? 0) }}</div></template></Column>
+                  <Column field="rupiah" header="Total" sortable style="width:15%"><template #body="{ data }"><div class="text-right">{{ formatRupiah(data.rupiah_all ?? 0) }}</div></template></Column>
                 </DataTable>
               </div>
             </template>
@@ -178,12 +180,13 @@
             </svg>
           </div>
           <div class="wm-content">
-            <p class="section-title" style="padding-left:10px;padding-right:10px;">
+            <p class="section-title" style="padding-left:10px;padding-right:10px;text-transform:uppercase;margin:0 0 5px;">
               <i class="pi pi-map"></i> Pendistribusian dan Pendayagunaan per Desil
               <span style="margin-left:auto;border-radius:99px;font-size:12px;font-weight:800;" :style="roleBadgeStyle">&ensp;{{ formatAngka(desilData.length) }}&ensp;</span>
             </p>
             <template v-if="desilData.length">
               <div style="overflow-x:auto;">
+                <div class="table-footer-note"><span>&emsp;Berdasarkan data laporan lembaga zakat.</span></div>
                 <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="desilData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_desilData" @page="onPage_desilData">
                   <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_desilData + slotProps.index + 1 }}</div></template></Column>
                   <Column field="nama" sortable header="Wilayah"><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
@@ -241,32 +244,126 @@
         </div>
 
         <!-- Stat Cards -->
-        <div class="grid-1-2-1">
-          <div v-for="stat in statCards" :key="stat.label" class="stat-card wm-card">
-            <div class="wm-overlay" aria-hidden="true">
-              <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <pattern :id="'wm-stat-'+stat.wmId" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
-                    <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
-                    <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.wmId+')'" />
-              </svg>
-            </div>
-            <div class="wm-content">
-              <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
-                <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+        <div class="grid-2">
+          <div class="stat-grid">
+            <div class="stat-row">
+              <div
+                v-for="stat in statCards.slice(0, 2)"
+                :key="stat.label"
+                class="stat-card wm-card"
+              >
+                <div class="wm-overlay" aria-hidden="true">
+                <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern :id="'wm-stat-'+stat.wmId" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                      <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                      <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.wmId+')'" />
+                </svg>
               </div>
-              <p style="font-size:1.5rem;font-weight:800;color:#1e293b;margin:0 0 3px;">{{ stat.value }}</p>
-              <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
-              <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
+              <div class="wm-content">
+                <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+                  <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+                </div>
+                <p style="font-size:1.5rem;font-weight:800;color:#15803d;margin:0 0 3px;">{{ stat.value }}</p>
+                <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
+              </div>
+              </div>
+            </div>
+
+            <div class="stat-row single">
+              <div
+                v-for="stat in statCards.slice(2, 3)"
+                :key="stat.label"
+                class="stat-card wm-card"
+              >
+                <div class="wm-overlay" aria-hidden="true">
+                <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern :id="'wm-stat-'+stat.wmId" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                      <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                      <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.wmId+')'" />
+                </svg>
+              </div>
+              <div class="wm-content">
+                <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+                  <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+                </div>
+                <p style="font-size:1.5rem;font-weight:800;color:#15803d;margin:0 0 3px;">{{ stat.value }}</p>
+                <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-row">
+              <div
+                v-for="stat in statallCards.slice(0, 2)"
+                :key="stat.label"
+                class="stat-card wm-card"
+              >
+                <div class="wm-overlay" aria-hidden="true">
+                <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern :id="'wm-stat-'+stat.wmId" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                      <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                      <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.wmId+')'" />
+                </svg>
+              </div>
+              <div class="wm-content">
+                <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+                  <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+                </div>
+                <p style="font-size:1.5rem;font-weight:800;color:#01696f;margin:0 0 3px;">{{ stat.value }}</p>
+                <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
+              </div>
+              </div>
+            </div>
+
+            <div class="stat-row single">
+              <div
+                v-for="stat in statallCards.slice(2, 3)"
+                :key="stat.label"
+                class="stat-card wm-card"
+              >
+                <div class="wm-overlay" aria-hidden="true">
+                <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern :id="'wm-stat-'+stat.wmId" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)">
+                      <text x="10" y="40" font-family="Inter, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.09)">DO NOT COPY</text>
+                      <text x="10" y="70" font-family="Inter, sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.07)">{{ userIdentifier }}</text>
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" :fill="'url(#wm-stat-'+stat.wmId+')'" />
+                </svg>
+              </div>
+              <div class="wm-content">
+                <div :style="{ width:'44px', height:'44px', borderRadius:'12px', background:stat.iconBg, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'14px' }">
+                  <i :class="stat.icon" :style="{ color:stat.iconColor, fontSize:'18px' }"></i>
+                </div>
+                <p style="font-size:1.5rem;font-weight:800;color:#01696f;margin:0 0 3px;">{{ stat.value }}</p>
+                <p style="font-size:13px;font-weight:600;color:#374151;margin:0 0 2px;">{{ stat.label }}</p>
+                <p style="font-size:11px;color:#94a3b8;margin:0;">{{ stat.sub }}</p>
+              </div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- Charts row -->
-        <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;" class="chart-row">
+        <div class="chart-row">
           <div class="card-box wm-card">
             <div class="wm-overlay" aria-hidden="true">
               <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
@@ -280,7 +377,8 @@
               </svg>
             </div>
             <div class="wm-content">
-              <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Gender Penerima</p>
+            <span style="font-size:13px;font-weight:700;color:#374151;margin:0 0px;">Jenis Kelamin Penerima Manfaat</span><br>
+            <span style="font-size:11px;font-weight:400;color:#6f7e96;margin:0 0px;">Pada Seluruh Desil</span>
               <Chart :key="'pie-'+chartKey" type="pie" :data="genderChartData" :options="pieOpts" style="height:200px;" />
               <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
                 <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>Laki-laki: {{ formatAngka(genderDataM) }}</span>
@@ -321,11 +419,12 @@
             </svg>
           </div>
           <div class="wm-content">
-            <p class="section-title" style="padding-left:10px;padding-right:10px;">
+            <p class="section-title" style="padding-left:10px;padding-right:10px;text-transform:uppercase;margin:0 0 5px;">
               <i class="pi pi-map"></i> Sebaran Penerima Manfaat Berdasarkan Usia
             </p>
             <template v-if="usiaData.length">
               <div style="overflow-x:auto;">
+                <div class="table-footer-note"><span>&emsp;Berdasarkan data laporan lembaga zakat. Menampilkan seluruh desil penerima manfaat.</span></div>
                 <DataTable stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single" :loading="datatableLoading" :value="usiaData" :rows="10" :rowsPerPageOptions="[10,25,50,100]" :first="no_usiaData" @page="onPage_usiaData">
                   <Column header="No" style="width:1%"><template #body="slotProps"><div class="text-center">{{ no_usiaData + slotProps.index + 1 }}</div></template></Column>
                   <Column header="Wilayah" field="nama" sortable><template #body="{ data }">{{ data.nama ?? '-' }}</template></Column>
@@ -424,113 +523,88 @@ const wilayahBase   = ref([])
 const wilayahData   = ref([])
 const desilBase     = ref([])
 const desilData     = ref([])
+const mustahikData  = ref([])
 
 const no_wilayahBase= ref(0)
 const no_wilayahData= ref(0)
 const no_desilBase  = ref(0)
 const no_desilData  = ref(0)
 const no_usiaData   = ref(0)
-
-const onPage_wilayahBase = (event) => { no_wilayahBase.value = event.first }
-const onPage_wilayahData = (event) => { no_wilayahData.value = event.first }
-const onPage_desilBase   = (event) => { no_desilBase.value   = event.first }
-const onPage_desilData   = (event) => { no_desilData.value   = event.first }
-const onPage_usiaData    = (event) => { no_usiaData.value    = event.first }
-
-const mustahikData_desil = computed(() =>
-  desilData.value.reduce((total, item) => total + (item.desil_1 || 0) + (item.desil_2 || 0) + (item.desil_3 || 0) + (item.desil_4 || 0), 0)
-)
-const mustahikData_all = computed(() =>
-  desilData.value.reduce((total, item) => total + (item.desil_na || 0) + (item.desil_1 || 0) + (item.desil_2 || 0) + (item.desil_3 || 0) + (item.desil_4 || 0) + (item.desil_5 || 0) + (item.desil_6 || 0) + (item.desil_7 || 0) + (item.desil_8 || 0) + (item.desil_9 || 0) + (item.desil_10 || 0), 0)
-)
+const loadingMsg    = ref()
 
 onMounted(async () => {
   const params = { email: authStore.user.email, tahun: selectedYear.value }
   datatableLoading.value = true
 
   const [
-    paramLembagaRes, paramTahunRes, paramProvRes,
-    bidangRes, usiaRes, trendRes,
-    basewilayahRes, datawilayahRes, basedesilRes, datadesilRes
+    paramLembagaRes, paramTahunRes, paramProvRes, bidangRes, usiaRes, trendRes, datawilayahRes, basedesilRes, datadesilRes, datamustahikRes
   ] = await Promise.allSettled([
     ReportService.getDashParamLembaga(params),
     ReportService.getDashParamTahun(params),
     ReportService.getDashParamProv(params),
-    ReportService.getDashDataBidang(params),
+    ReportService.getBidang(params),
     ReportService.getDashDataUsia(params),
     ReportService.getDashTimeseries(params),
-    ReportService.getDashBaseWilayah(params),
     ReportService.getDashDataWilayah(params),
     ReportService.getDashBaseDesil(params),
     ReportService.getDashDataDesil(params),
+    ReportService.getDashMustahik(params),
   ])
 
-  datatableLoading.value = false
+  if (paramLembagaRes.status === 'fulfilled') paramLembaga.value = paramLembagaRes.value
+  if (paramTahunRes.status   === 'fulfilled') paramTahun.value = paramTahunRes.value
+  if (paramProvRes.status    === 'fulfilled') paramProv.value = paramProvRes.value
+  if (bidangRes.status       === 'fulfilled') bidangData.value = bidangRes.value
+  if (usiaRes.status         === 'fulfilled') usiaData.value = usiaRes.value
+  if (datawilayahRes.status  === 'fulfilled') wilayahData.value = datawilayahRes.value
+  if (datadesilRes.status    === 'fulfilled') desilData.value = datadesilRes.value
+  if (datamustahikRes.status === 'fulfilled') mustahikData.value = datamustahikRes.value
 
-  if (paramLembagaRes.status === 'fulfilled')
-    paramLembaga.value = paramLembagaRes.value
-
-  if (paramTahunRes.status === 'fulfilled')
-    paramTahun.value = paramTahunRes.value
-
-  if (paramProvRes.status === 'fulfilled')
-    paramProv.value = paramProvRes.value
-
-  if (bidangRes.status === 'fulfilled')
-    bidangData.value = bidangRes.value
-  
-  if (usiaRes.status === 'fulfilled')
-    usiaData.value = usiaRes.value
-
-  if (basewilayahRes.status === 'fulfilled')
-    wilayahBase.value = basewilayahRes.value
-
-  if (datawilayahRes.status === 'fulfilled')
-    wilayahData.value = datawilayahRes.value
-
-  if (basedesilRes.status === 'fulfilled')
+  if (basedesilRes.status    === 'fulfilled') {
     desilBase.value = basedesilRes.value
-
-  if (datadesilRes.status === 'fulfilled')
-    desilData.value = datadesilRes.value
-/*
-  if (paramProv.value.length === 1){
-    selectedProvinsi.value = paramProv.value[0].kode
-    await optKabupaten()
+    wilayahBase.value = basedesilRes.value
   }
-*/
+
+  if (paramLembaga.value.length === 1){
+    selectedLembaga.value = paramLembaga.value[0].kode
+  }
+
+  datatableLoading.value = false
 })
 
 async function loadData() {
   const params = {
-    email: authStore.user.email,
-    tahun: selectedYear.value,
+    tahun:   selectedYear.value,
+    email:   authStore.user.email,
+    lembaga: selectedLembaga.value,
     provinsi_kode:  selectedProvinsi.value,
     kabkota_kode:   selectedKabupaten.value,
-    kecamatan_kode: selectedKecamatan.value,
-    lembaga: selectedLembaga.value
+    kecamatan_kode: selectedKecamatan.value
   }
   datatableLoading.value = true
 
   const [
-    bidangRes, usiaRes, trendRes,
-    basewilayahRes, datawilayahRes, basedesilRes, datadesilRes
+    bidangRes, usiaRes, trendRes, datawilayahRes, basedesilRes, datadesilRes, datamustahikRes
   ] = await Promise.allSettled([
-    ReportService.getDashDataBidang(params),
+    ReportService.getBidang(params),
     ReportService.getDashDataUsia(params),
     ReportService.getDashTimeseries(params),
-    ReportService.getDashBaseWilayah(params),
     ReportService.getDashDataWilayah(params),
     ReportService.getDashBaseDesil(params),
     ReportService.getDashDataDesil(params),
+    ReportService.getDashMustahik(params),
   ])
 
   if (bidangRes.status      === 'fulfilled') bidangData.value  = bidangRes.value
   if (usiaRes.status        === 'fulfilled') usiaData.value    = usiaRes.value
-  if (basewilayahRes.status === 'fulfilled') wilayahBase.value = basewilayahRes.value
   if (datawilayahRes.status === 'fulfilled') wilayahData.value = datawilayahRes.value
-  if (basedesilRes.status   === 'fulfilled') desilBase.value   = basedesilRes.value
   if (datadesilRes.status   === 'fulfilled') desilData.value   = datadesilRes.value
+  if (datamustahikRes.status === 'fulfilled') mustahikData.value = datamustahikRes.value
+
+  if (basedesilRes.status    === 'fulfilled') {
+    desilBase.value = basedesilRes.value
+    wilayahBase.value = basedesilRes.value
+  }
 
   datatableLoading.value = false
 }
@@ -601,6 +675,19 @@ async function resetOption() {
 */
 }
 
+const onPage_wilayahBase = (event) => { no_wilayahBase.value = event.first }
+const onPage_wilayahData = (event) => { no_wilayahData.value = event.first }
+const onPage_desilBase   = (event) => { no_desilBase.value   = event.first }
+const onPage_desilData   = (event) => { no_desilData.value   = event.first }
+const onPage_usiaData    = (event) => { no_usiaData.value    = event.first }
+
+const mustahikData_desil = computed(() =>
+  desilData.value.reduce((total, item) => total + (item.desil_1 || 0) + (item.desil_2 || 0) + (item.desil_3 || 0) + (item.desil_4 || 0), 0)
+)
+const mustahikData_all = computed(() =>
+  desilData.value.reduce((total, item) => total + (item.desil_na || 0) + (item.desil_1 || 0) + (item.desil_2 || 0) + (item.desil_3 || 0) + (item.desil_4 || 0) + (item.desil_5 || 0) + (item.desil_6 || 0) + (item.desil_7 || 0) + (item.desil_8 || 0) + (item.desil_9 || 0) + (item.desil_10 || 0), 0)
+)
+
 // wmId = slug aman untuk ID SVG (tanpa spasi)
 // lightBg = warna lebih muda dari stroke/borderColor masing-masing desil
 const desilStats = computed(() => [
@@ -608,47 +695,53 @@ const desilStats = computed(() => [
     label:'Desil 1', wmId:'desil-1',
     base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_1||0),0)),
     iconColor:'#dc2626', borderColor:'#fca5a5', lightBg:'#fff5f5',
-    lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0),0)),
-    agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0),0))
+    lap_val:''+formatAngka(mustahikData.value?.desil_1||0),
+    agg_val:'Rp '+formatAngka(mustahikData.value?.desil_1_agg||0)
   },
   {
     label:'Desil 2', wmId:'desil-2',
     base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_2||0),0)),
     iconColor:'#e68c05', borderColor:'#fcd34d', lightBg:'#fffbeb',
-    lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_2||0),0)),
-    agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_2||0),0))
+    lap_val:''+formatAngka(mustahikData.value?.desil_2||0),
+    agg_val:'Rp '+formatAngka(mustahikData.value?.desil_2_agg||0)
   },
   {
     label:'Desil 3', wmId:'desil-3',
     base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_3||0),0)),
     iconColor:'#f5be27', borderColor:'#fde68a', lightBg:'#fefce8',
-    lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_3||0),0)),
-    agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_3||0),0))
+    lap_val:''+formatAngka(mustahikData.value?.desil_3||0),
+    agg_val:'Rp '+formatAngka(mustahikData.value?.desil_3_agg||0)
   },
   {
     label:'Desil 4', wmId:'desil-4',
     base_val:''+formatAngka(desilBase.value.reduce((t,i)=>t+Number(i.desil_4||0),0)),
     iconColor:'#16a34a', borderColor:'#86efac', lightBg:'#f0fdf4',
-    lap_val:''+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_4||0),0)),
-    agg_val:'Rp '+formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_4||0),0))
+    lap_val:''+formatAngka(mustahikData.value?.desil_4||0),
+    agg_val:'Rp '+formatAngka(mustahikData.value?.desil_4_agg||0)
   },
 ])
 
 const desilBarData = computed(() => ({
   labels:['Desil 1','Desil 2','Desil 3','Desil 4'],
   datasets: [{ label:'Jumlah Mustahik', data:[
-    desilData.value.reduce((t,i)=>t+Number(i.desil_1||0),0),
-    desilData.value.reduce((t,i)=>t+Number(i.desil_2||0),0),
-    desilData.value.reduce((t,i)=>t+Number(i.desil_3||0),0),
-    desilData.value.reduce((t,i)=>t+Number(i.desil_4||0),0),
+    mustahikData.value?.desil_1||0,
+    mustahikData.value?.desil_2||0,
+    mustahikData.value?.desil_3||0,
+    mustahikData.value?.desil_4||0,
   ], backgroundColor:['#ef4444','#f97316','#eab308','#22c55e'], borderRadius:6 }],
 }))
 
 // wmId = slug aman untuk ID SVG pada stat cards
 const statCards = computed(() => [
-  { label:'Penerima Manfaat',                    wmId:'penerima-manfaat',     value:formatAngka(desilData.value.reduce((t,i)=>t+Number(i.desil_1||0)+Number(i.desil_2||0)+Number(i.desil_3||0)+Number(i.desil_4||0),0)),                  sub:'pada desil 1 - 4',                          icon:'pi pi-users',       iconBg:'#eff6ff', iconColor:'#2563eb' },
-  { label:'Pendistribusian dan Pendayagunaan',   wmId:'pendistribusian',      value:formatRupiah(desilData.value.reduce((t,i)=>t+Number(i.desil_sum_1||0)+Number(i.desil_sum_2||0)+Number(i.desil_sum_3||0)+Number(i.desil_sum_4||0),0)), sub:'Total nilai bantuan pada desil 1 - 4', icon:'pi pi-wallet',      iconBg:'#faf5ff', iconColor:'#7c3aed' },
-  { label:'Cakupan Wilayah',                     wmId:'cakupan-wilayah',      value:formatAngka(wilayahData.value.filter(i=>i.mustahik>0).length)+'', sub:'dari '+formatAngka(wilayahBase.value.length)+' wilayah pengajuan', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Penerima Manfaat',                  wmId:'penerima-manfaat', value:formatAngka(mustahikData.value?.desil_mus||0), sub:'Jumlah penerima manfaat pada desil 1 - 4', icon:'pi pi-users', iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Cakupan Wilayah',                   wmId:'cakupan-wilayah',  value:formatAngka(wilayahData.value.filter(i=>i.mustahik>0).length)+'', sub:'Sebaran wilayah pada desil 1 - 4', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Pendistribusian dan Pendayagunaan', wmId:'pendistribusian',  value:formatRupiah(mustahikData.value?.desil_mus_agg||0), sub:'Total nilai bantuan pada desil 1 - 4', icon:'pi pi-wallet', iconBg:'#faf5ff', iconColor:'#7c3aed' },
+])
+
+const statallCards = computed(() => [
+  { label:'Penerima Manfaat',                  wmId:'penerima-manfaat', value:formatAngka(mustahikData.value?.desil_non||0), sub:'Jumlah penerima manfaat pada desil 5 - 10', icon:'pi pi-users', iconBg:'#eff6ff', iconColor:'#2563eb' },
+  { label:'Cakupan Wilayah',                   wmId:'cakupan-wilayah',  value:formatAngka(wilayahData.value.filter(i=>i.mustahik_all>0).length)+'', sub:'Sebaran wilayah pada desil 5 - 10', icon:'pi pi-map-marker', iconBg:'#fff7ed', iconColor:'#ea580c' },
+  { label:'Pendistribusian dan Pendayagunaan', wmId:'pendistribusian',  value:formatRupiah(mustahikData.value?.desil_non_agg||0), sub:'Total nilai bantuan pada desil 5 - 10', icon:'pi pi-wallet', iconBg:'#faf5ff', iconColor:'#7c3aed' },
 ])
 
 const bidangProgram = computed(() => {
@@ -765,7 +858,7 @@ onBeforeUnmount(() => { ro?.disconnect() })
 :deep(.p-paginator) { padding: 0px; font-size: 12px; justify-content: right !important; display: flex; align-items: center; }
 :deep(.p-paginator-current) { margin-right: auto; }
 :deep(.p-paginator-prev), :deep(.p-paginator-next) { margin-left: 0rem; }
-.hero-grid { display:grid; grid-template-columns:1fr 2fr; gap:48px; align-items:center; }
+.hero-grid   { display:grid; grid-template-columns:1fr 2fr; gap:48px; align-items:center; }
 .detail-card { background:white; border-radius:14px; border:1px solid #f1f5f9; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
 .section-title { font-size:13px; font-weight:700; color:#374151; margin:0 0 14px; display:flex; align-items:center; gap:6px; }
 .text-center { text-align: center !important; }
@@ -773,29 +866,41 @@ onBeforeUnmount(() => { ro?.disconnect() })
 .grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
 .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
 .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-.grid-1-2-1 { display:grid; grid-template-columns:1fr 2fr 1fr; gap:16px; }
-.chart-row  { grid-template-columns:1fr 2fr; }
-.quick-nav  { grid-template-columns:repeat(3,1fr); }
+.grid-1-2-1{ display:grid; grid-template-columns:1fr 2fr 1fr; gap:16px; }
+.chart-row { display:grid;grid-template-columns:1fr 2fr;gap:16px; }
+.quick-nav { grid-template-columns:repeat(3,1fr); }
 .stat-card { background:white; border-radius:16px; border:1px solid #f1f5f9; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+.stat-grid { display: flex; flex-direction: column; gap: 16px; } 
+.stat-row  { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.stat-row.single { grid-template-columns: 1fr; }
 .card-box  { background:white; border-radius:16px; border:1px solid #f1f5f9; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.05); }
 .nav-card  { background:white; border-radius:16px; border:1px solid #f1f5f9; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,0.05); cursor:pointer; transition:box-shadow 0.2s; }
-.nav-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1); }
+.nav-card:hover  { box-shadow:0 4px 16px rgba(0,0,0,0.1); }
 .loading-overlay { position:absolute; inset:0; background:rgba(255,255,255,.7); backdrop-filter:blur(2px); display:flex; justify-content:center; align-items:flex-start; z-index:100; border-radius:12px; }
 .loading-box { display:flex; flex-direction:row; align-items:center; gap:.75rem; background:#fff; margin-top:50px; padding:24px 32px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.1); }
 .loading-box i { font-size:2rem; color:#16a34a; }
 .loading-box p { margin:0; color:#475569; font-size:14px; }
+.table-wrapper { position: relative; }
+.table-footer-note { left: 12px; bottom: 13px; font-size: 10px; color: #64748b; z-index: 1; pointer-events: none; }
+.custom-table .p-paginator { padding-left: 220px; }
 @media (max-width:1024px) {
   .grid-4     { grid-template-columns:repeat(2,1fr); }
-  .grid-1-2-1 { grid-template-columns:1fr 2fr; }
+  .grid-3     { grid-template-columns:1fr; }
+  .grid-2     { grid-template-columns:1fr; }
+  .grid-1-2-1 { grid-template-columns:1fr; }
   .chart-row  { grid-template-columns:1fr; }
-  .desil-grid { grid-template-columns:repeat(2,1fr) !important; }
+  .desil-grid { grid-template-columns:1fr!important; }
+  .hero-grid  { display:grid;grid-template-columns:1fr;align-items:center; }
+  .table-footer-note { left: 12px; bottom: 13px; font-size: 10px; color: #64748b; z-index: 1; pointer-events: none; }
 }
 @media (max-width:640px) {
-  .grid-4     { grid-template-columns:1fr 1fr; }
+  .grid-4     { grid-template-columns:1fr; }
   .grid-3     { grid-template-columns:1fr; }
   .grid-2     { grid-template-columns:1fr; }
   .grid-1-2-1 { grid-template-columns:1fr; }
   .quick-nav  { grid-template-columns:1fr; }
-  .desil-grid { grid-template-columns:repeat(2,1fr) !important; }
+  .desil-grid { grid-template-columns:1fr!important; }
+  .hero-grid  { display:grid;grid-template-columns:1fr;align-items:center; }
+  .table-footer-note { eft: 12px; bottom: 13px; font-size: 10px; color: #64748b; z-index: 1; pointer-events: none; }
 }
 </style>

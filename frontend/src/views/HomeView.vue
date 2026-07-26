@@ -92,7 +92,6 @@
                 <span style="font-size:11px;color:#a7f3d0;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">{{ stat.label }}</span>
               </div>
               <p style="font-size:1.6rem;font-weight:800;color:#fff;margin:0 0 4px;">{{ stat.value }}</p>
-              <p style="font-size:11px;color:#6ee7b7;margin:0;">{{ stat.sub }}</p>
             </div>
           </div>
         </div>
@@ -163,7 +162,8 @@
 
         <div class="grid-3" style="display:grid;gap:8px;">
           <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Jenis Kelamin Penerima Manfaat</p>
+            <span style="font-size:13px;font-weight:700;color:#374151;margin:0 0px;">Jenis Kelamin Penerima Manfaat</span><br>
+            <span style="font-size:11px;font-weight:400;color:#6f7e96;margin:0 0px;">Pada Seluruh Desil</span>
             <Chart type="doughnut" :data="genderChartData" :options="doughnutOpts" style="height:170px;" />
             <div style="display:flex;gap:16px;justify-content:center;margin-top:12px;">
               <span style="font-size:12px;color:#374151;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:5px;"></span>Laki-laki: {{ formatAngka(genderData.male_count||0) }}</span>
@@ -171,11 +171,13 @@
             </div>
           </div>
           <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Pendistribusian dan Pendayagunaan per Bidang</p>
+            <span style="font-size:13px;font-weight:700;color:#374151;margin:0 0px;">Pendistribusian dan Pendayagunaan per Bidang</span><br>
+            <span style="font-size:11px;font-weight:400;color:#6f7e96;margin:0 0px;">Pada Seluruh Desil</span>
             <Chart type="bar" :data="bidangChartData" :options="barOpts" style="height:170px;" />
           </div>
           <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-            <p style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">Tren Pendistribusian dan Pendayagunaan Tahunan</p>
+            <span style="font-size:13px;font-weight:700;color:#374151;margin:0 0px;">Tren Pendistribusian dan Pendayagunaan Tahunan</span><br>
+            <span style="font-size:11px;font-weight:400;color:#6f7e96;margin:0 0px;">Pada Seluruh Desil</span>
             <Chart type="line" :data="trendChartData" :options="lineOpts" style="height:170px;" />
           </div>
         </div>
@@ -248,7 +250,7 @@
 
           <div style="background:#f8fafc;border-radius:16px;padding:24px;">
             <h3 style="font-size:14px;font-weight:700;color:#374151;margin:0 0 16px;display:flex;align-items:center;gap:8px;">
-              <i class="pi pi-wallet" style="color:#16a34a;"></i> Top 5 Penyaluran Terbesar
+              <i class="pi pi-wallet" style="color:#16a34a;"></i> Top 5 Pendistribusian dan Pendayaagunaan Terbesar
             </h3>
             <div v-for="(prov, i) in topProvincesByPenyaluran" :key="prov.provinsi_nama" style="margin-bottom:12px;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -457,7 +459,7 @@ watch(selectedYear, loadData)
 
 const trendChartData = computed(() => ({
   labels: trendData.value.map(d=>d.tahun),
-  datasets:[{ label:'Penyaluran', data:trendData.value.map(d=>(d.Bantuan_Langsung||0)+(d.Bantuan_Tidak_Langsung||0)), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.1)', fill:true, tension:0.4, pointRadius:3 }]
+  datasets:[{ label:'Penyaluran', data:trendData.value.map(d=>(d.Tren||0)), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.1)', fill:true, tension:0.4, pointRadius:3 }]
 }))
 
 const topProvinces = computed(() => {
@@ -511,8 +513,10 @@ const aggStats = computed(() => [
 ])
 
 const cummulStats = computed(() => [
-  { icon:'pi pi-wallet', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'Rp ' + formatShortM(summary.value?.desil_agg||0), agg_sub:'Total Pendistribusian dan Pendayagunaan' },
-  { icon:'pi pi-users', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'' + formatAngka(summary.value?.desil_all||0), agg_sub:'Jumlah Penerima Manfaat' },
+  { icon:'pi pi-wallet', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'Rp ' + formatShortM(summary.value?.desil_agg||0), agg_sub:'Total Pendistribusian dan Pendayagunaan Pada Desil 1 - 4' },
+  { icon:'pi pi-wallet', iconBg:'#f1f0fd', iconColor:'#1645a3', agg_val:'Rp ' + formatShortM(summary.value?.desil_non_agg||0), agg_sub:'Total Pendistribusian dan Pendayagunaan Pada Desil 5 - 10' },
+  { icon:'pi pi-users', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'' + formatAngka(summary.value?.desil_all||0), agg_sub:'Jumlah Penerima Manfaat Pada Desil 1 - 4' },
+  { icon:'pi pi-users', iconBg:'#f1f0fd', iconColor:'#1645a3', agg_val:'' + formatAngka(summary.value?.desil_non||0), agg_sub:'Jumlah Penerima Manfaat Pada Desil 5 - 10' },
 ])
 
 const genderChartData = computed(() => ({
