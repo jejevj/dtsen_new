@@ -35,8 +35,16 @@
                   {{ isLaki ? 'Laki-laki' : 'Perempuan' }}
                 </span>
               </div>
-              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_induk_kependudukan) }}</strong></p>
-              <p style="font-size:13px;color:#64748b;margin:0;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</strong></p>
+              <table style="font-family:monospace;">
+                <tr>
+                  <td style="font-family:monospace;" width="1%">Usia</td>
+                  <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ formatUsia_TB(data.tanggal_lahir) }}</td>
+                </tr>
+                <tr>
+                  <td style="font-family:monospace;" width="1%">Desil</td>
+                  <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ (kkDetail.desil_nasional) }}</td>
+                </tr>
+              </table>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
               <span v-if="data.pbi_nas === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;"><i class="pi pi-shield" style="font-size:10px;"></i> PBI Nasional</span>
@@ -67,25 +75,34 @@
                   <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <template v-if="isDisabGroup(group)">
-                      <table class="disab-table">
-                        <thead><tr><th class="disab-th">Aspek</th><th class="disab-th" style="text-align:right;">Status</th></tr></thead>
-                        <tbody>
-                          <tr v-for="field in group.fields" :key="field.field_key" class="disab-tr">
-                            <td class="disab-td-aspek">{{ stripDisabPrefix(field.field_label) }}</td>
-                            <td class="disab-td-status"><span :style="disabBadgeStyle(data[field.field_key])">{{ disabBadgeLabel(data[field.field_key]) }}</span></td>
-                          </tr>
-                        </tbody>
-                      </table>
+                      <div class="">
+                        <div style="position:relative;z-index:0;">
+                          <div class="grid-stat">
+                            <div v-for="field in group.fields" :key="field.field_key" class="stat-box" :style="disabBgStyle(data[field.field_key])">
+                              <p class="stat-label">{{ stripDisabPrefix(field.field_label) }}</p>
+                              <p class="stat-val" :style="disabBadgeStyle(data[field.field_key])">{{ resolveValue(field.field_key, data[field.field_key]) }}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </template>
                     <template v-else>
                       <table class="info-table">
                         <tbody>
-                          <tr v-for="field in group.fields" :key="field.field_key">
+                          <tr v-for="field in group.fields.filter(g => g.field_label !== 'Kode Provinsi KTP' && g.field_label !== 'Kode Kabupaten / Kota KTP' && g.field_label !== 'Kode Kecamatan KTP' && g.field_label !== 'Kode Kelurahan / Desa KTP')" :key="field.field_key">
                             <td class="td-label">{{ field.field_label }}</td>
                             <td class="td-value">
                               <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
                               <span v-else>{{ renderFieldValue(field.field_key, data[field.field_key]) }}</span>
                             </td>
+                          </tr>
+                          <tr v-if="group.group === 'Wilayah KTP'">
+                            <td class="td-label">Dusun KTP</td>
+                            <td class="td-value">{{ data.dusun_ktp || '-'}}</td>
+                          </tr>
+                          <tr v-if="group.group === 'Wilayah KTP'">
+                            <td class="td-label">Alamat KTP</td>
+                            <td class="td-value">{{ data.alamat_ktp || '-'}}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -206,24 +223,12 @@
           <div class="detail-card">
             <p class="section-title"><i class="pi pi-history"></i> Ringkasan per Tahun</p>
             <div style="overflow-x:auto;">
-              <table class="kk-table">
-                <thead>
-                  <tr>
-                    <th>Tahun</th>
-                    <th>Total Penerimaan</th>
-                    <th>Penerimaan Langsung</th>
-                    <th>Penerimaan Tidak Langsung</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="row in mustahikRekapTahun" :key="row.tahun">
-                    <td><strong>{{ row.tahun }}</strong></td>
-                    <td><span style="padding:2px 10px;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700;">{{ formatRupiah(row.total) }}</span></td>
-                    <td>{{ formatRupiah(row.langsung) }}</td>
-                    <td>{{ formatRupiah(row.tidakLangsung) }}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <DataTable :value="mustahikRekapTahun" :rows="10" :rowsPerPageOptions="[10,25,50,100]" stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single">
+                <Column style="width:10%" field="tahun" sortable header="Tahun"><template #body="{ data }"><div class="text-center">{{ data.tahun ?? '-' }}</div></template></Column>
+                <Column style="width:30%" field="langsung" header="Penerimaan Langsung" sortable><template #body="{ data }"><div class="text-center">{{ formatRupiah(data.langsung ?? 0) }}</div></template></Column>
+                <Column style="width:30%" field="tidakLangsung" header="Penerimaan Tidak Langsung" sortable><template #body="{ data }"><div class="text-center">{{ formatRupiah(data.tidakLangsung ?? 0) }}</div></template></Column>
+                <Column style="width:30%" field="total" header="Total Penerimaan" sortable><template #body="{ data }"><div class="text-center"><span style="padding:2px 10px;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700;">{{ formatRupiah(data.total ?? 0) }}</span></div></template></Column>
+              </DataTable>
             </div>
           </div>
 
@@ -231,35 +236,14 @@
           <div class="detail-card">
             <p class="section-title"><i class="pi pi-list"></i> Riwayat Penerimaan Bantuan</p>
             <div style="overflow-x:auto;">
-              <table class="kk-table">
-                <thead>
-                  <tr>
-                    <th>Tahun</th>
-                    <th>LAZ</th>
-                    <th>Periode</th>
-                    <th>Program</th>
-                    <th>Bidang</th>
-                    <th>Nominal</th>
-                    <th>Tipe Penerimaan</th>
-                    <th>Tanggal Cair</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(item, i) in mustahikRiwayat" :key="i">
-                    <td>{{ item.tahun }}</td>
-                    <td>
-                      <p style="font-weight:600;color:#374151;margin:0;">{{ item.laz || '-' }}</p>
-                      <p style="font-size:10px;color:#94a3b8;margin:0;">{{ item.laz_kode }}</p>
-                    </td>
-                    <td>{{ item.periode }}</td>
-                    <td>{{ item.program }}</td>
-                    <td>{{ item.bidang }}</td>
-                    <td><span style="padding:2px 8px;border-radius:99px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;">{{ formatRupiah(item.nominal) }}</span></td>
-                    <td>{{ item.metode }}</td>
-                    <td>{{ item.tanggal }}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <DataTable :value="mustahikRiwayat" :rows="10" :rowsPerPageOptions="[10,25,50,100]" stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single">
+                <Column field="tanggal" header="Tanggal Terima" sortable><template #body="{ data }"><div class="text-center">{{ data.tanggal ?? '-' }}</div></template></Column>
+                <Column field="laz" header="Lembaga Zakat" sortable/>
+                <Column field="program" header="Program" sortable><template #body="{ data }"><div class="text-center">{{ data.program ?? '-' }}</div></template></Column>
+                <Column field="bidang" header="Bidang" sortable><template #body="{ data }"><div class="text-center">{{ data.bidang ?? '-' }}</div></template></Column>
+                <Column field="metode" header="Tipe Penerimaan" sortable><template #body="{ data }"><div class="text-center">{{ data.metode ?? '-' }}</div></template></Column>
+                <Column field="total" header="Total Penerimaan" sortable><template #body="{ data }"><div class="text-center"><span style="padding:2px 10px;border-radius:99px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;">{{ formatRupiah(data.nominal ?? 0) }}</span></div></template></Column>
+              </DataTable>
             </div>
           </div>
         </template>
@@ -292,7 +276,7 @@
                 <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:0 0 2px;opacity:.75;">Desil Kesejahteraan Nasional</p>
                 <p style="font-size:1.35rem;font-weight:900;margin:0;">
                   Desil {{ kkDetail.desil_nasional ?? '-' }}
-                  <span style="font-size:13px;font-weight:500;margin-left:6px;opacity:.7;">{{ desilLabel(kkDetail.desil_nasional) }}</span>
+                  <span style="font-size:13px;font-weight:500;margin-left:6px;opacity:.7;"></span>
                 </p>
               </div>
               <div style="margin-left:auto;text-align:right;">
@@ -335,28 +319,18 @@
             </p>
             <template v-if="kkMembers.length">
               <div style="overflow-x:auto;">
-                <table class="kk-table">
-                  <thead><tr><th>Nama</th><th>NIK</th><th>Hub. Keluarga</th><th>L/P</th></tr></thead>
-                  <tbody>
-                    <tr
-                      v-for="m in kkMembers" :key="m.nomor_induk_kependudukan"
-                      :class="{ 'kk-active-row': m.nomor_induk_kependudukan === data.nomor_induk_kependudukan }"
-                      :style="{ cursor: m.nomor_induk_kependudukan !== data.nomor_induk_kependudukan ? 'pointer' : 'default' }"
-                      @click="goToMember(m.nomor_induk_kependudukan)"
-                    >
-                      <td>
-                        <span v-if="m.nomor_induk_kependudukan === data.nomor_induk_kependudukan" class="kk-you-badge">Ini</span>
-                        {{ m.nama ?? '-' }}
-                      </td>
-                      <td style="font-family:monospace;font-size:11px;">
-                        <span v-if="m.nomor_induk_kependudukan !== data.nomor_induk_kependudukan" class="nik-link">{{ maskNik(m.nomor_induk_kependudukan) }}</span>
-                        <span v-else>{{ maskNik(m.nomor_induk_kependudukan) }}</span>
-                      </td>
-                      <td>{{ resolveValue('status_hubungan_keluarga', m.status_hubungan_keluarga) }}</td>
-                      <td><span :style="{ padding:'2px 7px', borderRadius:'99px', fontSize:'10px', fontWeight:'700', background:isLakiVal(m.jenis_kelamin)?'#eff6ff':'#fdf2f8', color:isLakiVal(m.jenis_kelamin)?'#2563eb':'#db2777' }">{{ isLakiVal(m.jenis_kelamin)?'L':'P' }}</span></td>
-                    </tr>
-                  </tbody>
-                </table>
+                <DataTable :value="kkMembers" :rows="10" :rowsPerPageOptions="[10,25,50,100]" sortField="tanggal_lahir" :sortOrder="1" stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single">
+                  <Column style="width:10%" field="nomor_induk_kependudukan" header="NIK" sortable><template #body="{ data }"><span class="text-center">{{ maskNik(data.nomor_induk_kependudukan) }}</span></template></Column>
+                  <Column field="nama" header="Nama Anggota Keluarga" sortable/>
+                  <Column style="width:15%" field="jenis_kelamin" header="Jenis Kelamin" sortable><template #body="{ data }"><div class="text-center">{{ isLakiVal(data.jenis_kelamin)?'Laki-laki':'Perempuan' }}</div></template></Column>
+                  <Column style="width:15%" field="status_hubungan_keluarga" header="Hubungan keluarga" sortable><template #body="{ data }"><div class="text-left">{{ resolveValue('status_hubungan_keluarga', data.status_hubungan_keluarga) }}</div></template></Column>
+                  <Column style="width:15%" field="tanggal_lahir" header="Usia" sortable><template #body="{ data }"><div class="">{{ formatUsia_TB(data.tanggal_lahir) }}</div></template></Column>
+                  <Column style="width:1%" field="nomor_induk_kependudukan" header="Aksi" sortable><template #body="{ data }">
+                    <a :href="`/data-baseline/anggota/${data.nomor_induk_kependudukan}`"target="_blank" class="flex items-center gap-1">
+                      <i class="pi pi-external-link"></i>Lihat
+                    </a></template>
+                  </Column>
+                </DataTable>
               </div>
             </template>
             <div v-else style="text-align:center;padding:30px;color:#94a3b8;font-size:12px;">
@@ -382,6 +356,12 @@ import { fetchBaselineProvinsi } from '@/services/baselineService'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
+import {
+  JENIS_KELAMIN, STATUS_KAWIN, HUBUNGAN_KELUARGA,
+  PENDIDIKAN, STATUS_BEKERJA, DESIL_LABEL, DESIL_COLOR, resolveRef,
+} from '@/data/dtsenRef'
+import DataTable  from 'primevue/datatable'
+import Column     from 'primevue/column'
 
 const route  = useRoute()
 const router = useRouter()
@@ -502,7 +482,7 @@ const pairedKeluargaGroups = computed(() => {
 })
 
 function stripDisabPrefix(label) {
-  return String(label ?? '').replace(/^disabilitas[:\s]+/i, '').trim() || label
+  return String(label ?? '').replace(/^disabilitas[:\s]+/i, '').replace(/\s*\/\s*/g, '/').trim() || label
 }
 function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -523,7 +503,11 @@ const DISAB_LEVELS = {
 function disabBadgeLabel(v) { return (DISAB_LEVELS[String(v ?? '').trim()] ?? DISAB_LEVELS['0']).label }
 function disabBadgeStyle(v) {
   const lvl = DISAB_LEVELS[String(v ?? '').trim()] ?? DISAB_LEVELS['0']
-  return { background: lvl.bg, color: lvl.color, padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap', display: 'inline-block' }
+  return { background: lvl.bg, color: lvl.color, padding: '2px 0px', borderRadius: '99px', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap', display: 'inline-block' }
+}
+function disabBgStyle(v) {
+  const lvl = DISAB_LEVELS[String(v ?? '').trim()] ?? DISAB_LEVELS['0']
+  return { background: lvl.bg }
 }
 
 const DESIL_COLORS = [
@@ -573,7 +557,7 @@ const GROUP_ICONS = {
   'Ternak': 'pi pi-star', 'Info Keluarga': 'pi pi-users', 'Alamat': 'pi pi-map-marker',
 }
 function groupIcon(g) {
-  if ((g ?? '').toLowerCase().includes('disabilitas')) return 'pi pi-accessibility'
+  if ((g ?? '').toLowerCase().includes('disabilitas')) return 'pi pi-star-half'
   return GROUP_ICONS[g] ?? 'pi pi-list'
 }
 
@@ -682,6 +666,37 @@ function formatUsia(v) {
   return usia + ' tahun'
 }
 
+function formatUsia_TB(tanggalLahir) {
+  if (!tanggalLahir) return '-'
+
+  try {
+    const lahir = new Date(tanggalLahir)
+    const sekarang = new Date()
+
+    let tahun = sekarang.getFullYear() - lahir.getFullYear()
+    let bulan = sekarang.getMonth() - lahir.getMonth()
+
+    if (sekarang.getDate() < lahir.getDate()) {
+      bulan--
+    }
+
+    if (bulan < 0) {
+      tahun--
+      bulan += 12
+    }
+
+    if (tahun < 1) {
+      return `${bulan} Bulan`
+    }
+
+    return bulan > 0
+      ? `${tahun} Tahun ${bulan} Bulan`
+      : `${tahun} Tahun`
+  } catch {
+    return '-'
+  }
+}
+
 function formatRupiah(n) {
   if (!n && n !== 0) return '-'
   return 'Rp ' + Number(n).toLocaleString('id-ID')
@@ -691,9 +706,24 @@ onMounted(() => init(String(route.params.nik)))
 </script>
 
 <style scoped>
+:deep(.text-right) { text-align: right !important; }
+:deep(.p-datatable) { font-size: 12px; }
+:deep(.p-datatable-column-header-content),
+:deep(.p-datatable .p-datatable-thead > tr > th) { justify-content: center !important; background:#f8fafc;}
+:deep(.p-datatable .p-datatable-tbody > tr > td) { padding-top:10px;padding-bottom:10px;}
+:deep(.p-datatable .p-datatable-thead > tr > th),
+:deep(.p-datatable .p-datatable-tbody > tr > td),
+:deep(.p-datatable .p-paginator) { font-size: 12px; }
+:deep(.p-paginator) { padding: 0px; font-size: 12px; justify-content: right !important; display: flex; align-items: center; }
+:deep(.p-paginator-current) { margin-right: auto; }
+:deep(.p-paginator-prev), :deep(.p-paginator-next) { margin-left: 0rem; }
 .grid-2    { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.grid-stat { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; }
-@media(max-width:768px) { .grid-2 { grid-template-columns:1fr; } .grid-stat { grid-template-columns:1fr 1fr; } }
+.grid-5    { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:5px; }
+.grid-stat { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; }
+@media(max-width:768px) { 
+.grid-2 { grid-template-columns:1fr; } 
+.grid-5 { grid-template-columns:1fr; } 
+.grid-stat { grid-template-columns:1fr 1fr; } }
 .detail-card { background:white; border-radius:14px; border:1px solid #f1f5f9; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
 .wm-card { position:relative; overflow:hidden; }
 .wm-overlay { position:absolute; inset:0; z-index:2; pointer-events:none; user-select:none; }
@@ -704,6 +734,7 @@ onMounted(() => init(String(route.params.nik)))
 .info-table tr:last-child { border-bottom:none; }
 .td-label { font-size:12px; color:#94a3b8; font-weight:500; padding:9px 4px; width:45%; vertical-align:top; }
 .td-value  { font-size:13px; color:#374151; font-weight:600; padding:9px 4px; text-align:right; }
+.stat-9    { border-radius:10px; padding:16px; }
 .stat-box  { border-radius:10px; padding:16px; }
 .stat-label { font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin:0 0 4px; }
 .stat-val   { font-size:1.25rem; font-weight:900; margin:0; }

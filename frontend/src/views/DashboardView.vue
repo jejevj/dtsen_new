@@ -18,7 +18,7 @@
                 :style="roleBadgeStyle">{{ authStore.user?.user_grup || authStore.user?.jabatan || 'operator' }}</span>
             </p>
             <p style="font-size:11px;color:#94a3b8;margin:4px 0 0;">
-              Berdasarkan Data DTSEN dan Laporan Lembaga Zakat
+              Berdasarkan Data DTSEN dan Laporan Lembaga Zakat 
             </p>
           </div>
         </div>
