@@ -423,19 +423,29 @@ onMounted(() => {
     loadRiwayat()
 })
 
+// const riwayatFiltered = computed(() => {
+//     console.log('filterLaz', filterLaz.value)
+
+//     console.log(riwayat.value)
+
+//     return riwayat.value.filter(item => {
+//         console.log(
+//             item.laz,
+//             item.laz_kode
+//         )
+
+//         return item.laz_kode === filterLaz.value
+//     })
+// })
+
 const riwayatFiltered = computed(() => {
-    console.log('filterLaz', filterLaz.value)
+  // belum memilih filter -> tampilkan semua
+  if (!filterLaz.value) {
+    return riwayat.value
+  }
 
-    console.log(riwayat.value)
-
-    return riwayat.value.filter(item => {
-        console.log(
-            item.laz,
-            item.laz_kode
-        )
-
-        return item.laz_kode === filterLaz.value
-    })
+  // ada filter -> filter berdasarkan laz_kode
+  return riwayat.value.filter(item => item.laz_kode === filterLaz.value)
 })
 
 const bantuanTahunIni = computed(() => {

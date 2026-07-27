@@ -343,8 +343,7 @@ def wilayah_kelurahan():
     rows = (
         Kelurahan.query
         .filter_by(
-            kecamatan_kode=kecamatan_kode,
-            kelurahan_aktif='y'
+            kecamatan_kode=kecamatan_kode
         )
         .order_by(Kelurahan.kelurahan_nama)
         .all()

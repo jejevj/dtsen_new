@@ -103,6 +103,7 @@ def send_otp_email(
         smtp_host   = _get_option('smtp_host')   or 'smtp.gmail.com'
         smtp_port   = int(_get_option('smtp_port') or 587)
         mail_acc    = _get_option('mail_account')
+        smtp_secure = _get_option('smtp_secure') or 'TLS'
         mail_pass   = _get_option('mail_pass')
         mail_from   = _get_option('mail_content_from') or 'DTSEN Kemenag RI'
         mail_footer = _get_option('mail_content_footer') or 'Admin DTSEN Kemenag RI'
@@ -166,10 +167,21 @@ def send_otp_email(
         msg['From']    = f"{mail_from} <{mail_acc}>"
         msg['To']      = to_email
         msg.attach(MIMEText(html_body, 'html', 'utf-8'))
+        current_app.logger.info(
+            f"""
+            SMTP CONFIG:
+            host={smtp_host}
+            port={smtp_port}
+            account={mail_acc}
+            secure={smtp_secure}"""
+            )
 
         with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
             server.ehlo()
-            server.starttls()
+            if smtp_secure.upper() == 'TLS':
+                server.starttls()
+                server.ehlo()
+
             server.login(mail_acc, mail_pass)
             server.sendmail(mail_acc, [to_email], msg.as_string())
 

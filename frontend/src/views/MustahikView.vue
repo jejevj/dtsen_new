@@ -25,25 +25,63 @@
       </div>
       <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div class="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100">
-          <div class="flex items-center gap-2">
-            <i class="pi pi-users text-slate-400"></i>
-            <span class="text-sm font-semibold text-slate-700">Daftar Mustahik</span>
-            <span
-              v-if="activeFilterCount > 0"
-              class="ml-1 px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 text-xs font-semibold rounded-full"
-            >{{ activeFilterCount }} filter aktif</span>
+          <div class="flex items-center gap-2 flex-wrap">
+              <i class="pi pi-users text-slate-400"></i>
+              <span class="text-sm font-semibold text-slate-700">
+                  Daftar Penerima Manfaat
+              </span>
+              <span
+                  v-if="activeFilterCount > 0"
+                  class="ml-1 px-2 py-0.5 bg-primary-50 text-primary-700 border border-primary-200 text-xs font-semibold rounded-full"
+              >
+                  {{ activeFilterCount }} Filter Aktif
+              </span>
+              <span
+                  class="px-2 py-0.5 text-xs font-semibold rounded-full border"
+                  :class="
+                      filterInfo.laz_kode
+                          ? 'bg-orange-50 text-orange-700 border-orange-300'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                  "
+              >
+                  <i
+                      :class="filterInfo.laz_kode ? 'pi pi-building' : 'pi pi-globe'"
+                      class="mr-1"
+                  ></i>
+
+                  {{
+                      filterInfo.laz_kode
+                          ? namaLembaga
+                          : 'Semua Lembaga'
+                  }}
+              </span>
+
+              <!-- Jumlah Data -->
+              <span
+                  class="px-2 py-0.5 bg-sky-50 text-sky-700 border border-sky-300 text-xs font-semibold rounded-full"
+              >
+                  <i class="pi pi-database mr-1"></i>
+
+                  {{ rows.length.toLocaleString('id-ID') }}
+                  /
+                  {{ pagination.total.toLocaleString('id-ID') }}
+                  Data
+              </span>
+
           </div>
+
           <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-400">Cari:</span>
-            <InputText
-              v-model="globalSearch"
-              placeholder="Nama / NIK"
-              class="text-sm"
-              style="width:200px"
-              @keyup.enter="applyFilter"
-            />
+              <span class="text-xs text-slate-400">Cari:</span>
+
+              <InputText
+                  v-model="globalSearch"
+                  placeholder="Nama / NIK"
+                  class="text-sm"
+                  style="width:200px"
+                  @keyup.enter="applyFilter"
+              />
           </div>
-        </div>
+      </div>
         <div v-if="tableLoading" class="flex justify-center items-center py-16 text-slate-400">
           <i class="pi pi-spin pi-spinner mr-2"></i> Memuat data…
         </div>
@@ -55,9 +93,7 @@
           <i class="pi pi-inbox text-3xl mb-3 block opacity-30"></i>
           Tidak ada data penerima manfaat yang sesuai filter.
         </div>
-        <!-- Tabel dengan watermark DO NOT COPY -->
         <div v-else class="overflow-x-auto wm-table-wrap">
-          <!-- SVG Watermark Overlay -->
           <div class="wm-overlay" aria-hidden="true">
             <svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
               <defs>
@@ -72,6 +108,7 @@
               <rect width="100%" height="100%" fill="url(#wm-mustahik)" />
             </svg>
           </div>
+          
           <table class="w-full text-sm">
             <thead class="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
               <tr>
@@ -83,6 +120,9 @@
                 <th class="px-5 py-3 text-left">Kab/Kota</th>
                 <th class="px-5 py-3 text-left">Usia</th>
                 <th class="px-5 py-3 text-left">Desil</th>
+                <th class="px-5 py-3 text-left">Jumlah Lembaga Pemberi</th>
+                <th class="px-5 py-3 text-left">Jumlah Penerimaan</th>
+                <th class="px-5 py-3 text-left">Total Nominal Penerimaan</th>
                 <th class="px-5 py-3 text-left">Aksi</th>
               </tr>
             </thead>
@@ -104,6 +144,9 @@
                 <td class="px-5 py-3">
                   {{ row.desil > 0 ? row.desil : 'N/A' }}
                 </td>
+                <td class="px-5 py-3 text-slate-600">{{ row.total_laz_kontribusi ?? '-' }} Lembaga</td>
+                <td class="px-5 py-3 text-slate-600">{{ row.total_transaksi ?? '-' }} Kali</td>
+                <td class="px-5 py-3 text-slate-600">{{ formatRupiah(row.total_rupiah) }}</td>
                 <td class="px-5 py-3">
                   <Button
                     label="Detail"
@@ -114,7 +157,6 @@
                     size="small"
                     class="text-primary-600"
                     @click="$router.push('/mustahik/' + row.nik_hashed)"
-                    v-tooltip="'Lihat Detail'"
                   />
                 </td>
               </tr>
@@ -331,6 +373,117 @@ const programOptions = ref([])
 
 const usiaTouched = ref(false)
 const penyaluranTouched = ref(false)
+const filterInfo = ref({
+    laz_kode: null,
+    laz_nama: null
+})
+
+const namaLembaga = computed(() => filterInfo.value?.laz_nama || '')
+
+const formatRupiah = (value) => {
+  if (value == null) return '-'
+
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(value)
+}
+
+
+const activeFilterCount = computed(() => {
+    let count = 0
+    for (const [k, v] of Object.entries(activeFilters)) {
+        if (k === 'usia') {
+            if (usiaTouched.value) count++
+            continue
+        }
+        if (k === 'jumlah_penyaluran') {
+            if (penyaluranTouched.value) count++
+            continue
+        }
+        if (v !== '' && v != null) {
+            count++
+        }
+    }
+    return count
+})
+
+const groupedFilterFields = computed(() => {
+  const groups = {}
+  for (const f of filterFields.value) {
+    const g = f.field_group || ''
+    if (!groups[g]) groups[g] = []
+    groups[g].push(f)
+  }
+  return groups
+})
+
+
+
+// ── Tabel ──────────────────────────────────────────────────────────────────────────────
+const tableLoading = ref(false)
+const tableError   = ref('')
+const rows         = ref([])
+const pagination   = reactive({ page: 1, perPage: 20, total: 0, totalPages: 1 })
+
+async function fetchMustahik(page = 1) {
+  tableLoading.value = true
+  tableError.value   = ''
+  try {
+    const params = {
+      page,
+      per_page: pagination.perPage,
+      laz_kode: authStore.user?.laz_kode
+    }
+    if (globalSearch.value.trim()) {
+      params.nama = globalSearch.value.trim()
+    }
+    for (const [k, v] of Object.entries(activeFilters)) {
+        if (k === 'usia') {
+            if (usiaTouched.value) {
+                params.usia_min = v[0]
+                params.usia_max = v[1]
+            }
+            continue
+        }
+        if (k === 'jumlah_penyaluran') {
+            if (penyaluranTouched.value) {
+                params.jumlah_penyaluran_min = v[0]
+                params.jumlah_penyaluran_max = v[1]
+            }
+            continue
+        }
+        if (v !== '' && v != null) {
+            params[k] = v
+        }
+    }
+    const res = await api.get('/mustahik', { params })
+    const d = res.data
+
+    rows.value            = d.data ?? d.items ?? []
+    pagination.page       = d.meta?.page  ?? page
+    pagination.total      = d.meta?.total ?? rows.value.length
+    pagination.totalPages = d.meta?.pages ?? 1
+
+    filterInfo.value = res.data.filter || {}
+
+    
+
+  } catch (e) {
+    tableError.value = 'Gagal memuat data penerima manfaat: ' + (e?.response?.data?.message ?? e.message)
+    console.error(e)
+  } finally {
+    tableLoading.value = false
+  }
+}
+
+function applyFilter() {
+  showFilter.value = false
+  pagination.page  = 1
+  fetchMustahik(1)
+}
 
 const activeFilters = reactive({
   skala_laz:'',
@@ -367,7 +520,6 @@ const activeFilters = reactive({
   program_kode: '',
   nama_program: '',
 })
-
 
 
 const filterGroups = computed(() => {
@@ -578,6 +730,7 @@ async function loadLaz() {
         params.skala = activeFilters.skala_laz
     }
     const res = await api.get('/lembaga', { params })
+    console.log(res.data)
     lazOptions.value = [
         {
             label: 'Semua',
@@ -774,96 +927,6 @@ watch(() => activeFilters.provinsi_kode_domisili, loadKabKotaDomisili)
 watch(() => activeFilters.kabkota_kode_domisili, loadKecamatanDomisili)
 watch(() => activeFilters.kecamatan_kode_domisili, loadKelurahanDomisili)
 
-const activeFilterCount = computed(() => {
-    let count = 0
-    for (const [k, v] of Object.entries(activeFilters)) {
-        if (k === 'usia') {
-            if (usiaTouched.value) count++
-            continue
-        }
-        if (k === 'jumlah_penyaluran') {
-            if (penyaluranTouched.value) count++
-            continue
-        }
-        if (v !== '' && v != null) {
-            count++
-        }
-    }
-    return count
-})
-
-const groupedFilterFields = computed(() => {
-  const groups = {}
-  for (const f of filterFields.value) {
-    const g = f.field_group || ''
-    if (!groups[g]) groups[g] = []
-    groups[g].push(f)
-  }
-  return groups
-})
-
-
-
-// ── Tabel ──────────────────────────────────────────────────────────────────────────────
-const tableLoading = ref(false)
-const tableError   = ref('')
-const rows         = ref([])
-const pagination   = reactive({ page: 1, perPage: 20, total: 0, totalPages: 1 })
-
-async function fetchMustahik(page = 1) {
-
-  tableLoading.value = true
-  tableError.value   = ''
-
-  try {
-    const params = {
-      page,
-      per_page: pagination.perPage,
-      laz_kode: authStore.user?.laz_kode
-    }
-    if (globalSearch.value.trim()) {
-      params.nama = globalSearch.value.trim()
-    }
-    for (const [k, v] of Object.entries(activeFilters)) {
-        if (k === 'usia') {
-            if (usiaTouched.value) {
-                params.usia_min = v[0]
-                params.usia_max = v[1]
-            }
-            continue
-        }
-        if (k === 'jumlah_penyaluran') {
-            if (penyaluranTouched.value) {
-                params.jumlah_penyaluran_min = v[0]
-                params.jumlah_penyaluran_max = v[1]
-            }
-            continue
-        }
-        if (v !== '' && v != null) {
-            params[k] = v
-        }
-    }
-    const res = await api.get('/mustahik', { params })
-    const d = res.data
-
-    rows.value            = d.data ?? d.items ?? []
-    pagination.page       = d.meta?.page  ?? page
-    pagination.total      = d.meta?.total ?? rows.value.length
-    pagination.totalPages = d.meta?.pages ?? 1
-
-  } catch (e) {
-    tableError.value = 'Gagal memuat data penerima manfaat: ' + (e?.response?.data?.message ?? e.message)
-    console.error(e)
-  } finally {
-    tableLoading.value = false
-  }
-}
-
-function applyFilter() {
-  showFilter.value = false
-  pagination.page  = 1
-  fetchMustahik(1)
-}
 
 function resetFilter() {
 

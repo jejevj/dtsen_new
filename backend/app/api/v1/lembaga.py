@@ -3,47 +3,59 @@ from . import api_v1_bp
 from sqlalchemy import text
 from ...extensions import db
 
+
 @api_v1_bp.get("/lembaga")
 def list_lembaga():
-    skala = request.args.get("skala")
+    skala = request.args.get("skala", type=int)
     bind = {}
 
     laz_where = """
         WHERE laz_status IN ('aktif','daftar_ulang')
+        AND laz_nama IS NOT NULL
+        AND TRIM(laz_nama) <> ''
     """
+
     uker_where = """
         WHERE is_kemenag = 0
+        AND uker_nama IS NOT NULL
+        AND TRIM(uker_nama) <> ''
     """
-    if skala:
-        bind["skala"] = int(skala)
+
+    # default jika skala tidak dikirim
+    uker_skala = "NULL AS skala"
+
+    if skala is not None:
+        bind["skala"] = skala
+
         laz_where += """
             AND skala = :skala
         """
-        if int(skala) == 1:
+
+        uker_skala = ":skala AS skala"
+
+        if skala == 1:
             uker_where += """
                 AND uker_parent = 0
             """
-        elif int(skala) == 2:
+
+        elif skala == 2:
             uker_where += """
                 AND provinsi_kode IS NOT NULL
                 AND kabkota_kode IS NULL
                 AND kecamatan_kode IS NULL
             """
-        elif int(skala) == 3:
+
+        elif skala == 3:
             uker_where += """
                 AND provinsi_kode IS NOT NULL
                 AND kabkota_kode IS NOT NULL
                 AND kecamatan_kode IS NULL
             """
 
-    # Gunakan literal :skala hanya jika skala tersedia,
-    # jika tidak pakai NULL langsung agar tidak error bind parameter
-    uker_skala_col = ":skala AS skala" if skala else "NULL AS skala"
-
     sql = text(f"""
         SELECT
             laz_kode AS kode,
-            laz_nama AS nama,
+            UPPER(laz_nama) AS nama,
             skala,
             'laz' AS jenis
         FROM t_laz
@@ -53,8 +65,8 @@ def list_lembaga():
 
         SELECT
             uker_kode AS kode,
-            uker_nama AS nama,
-            {uker_skala_col},
+            UPPER(singkatan) AS nama,
+            {uker_skala},
             'kemenag' AS jenis
         FROM m_uker
         {uker_where}
@@ -64,14 +76,12 @@ def list_lembaga():
 
     rows = db.session.execute(sql, bind).mappings().all()
 
-    data = []
-
-    for row in rows:
-        data.append({
+    return jsonify([
+        {
             "kode": row["kode"],
             "nama": row["nama"],
             "jenis": row["jenis"],
             "skala": row["skala"],
-        })
-
-    return jsonify(data), 200
+        }
+        for row in rows
+    ]), 200

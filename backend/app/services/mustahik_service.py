@@ -12,6 +12,10 @@ from sqlalchemy import text
 from datetime import date, datetime
 import time
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 mustahik_schema = MustahikSchema()
 mustahiks_schema = MustahikSchema(many=True)
@@ -80,6 +84,9 @@ def _format_tanggal(d) -> str | None:
         return str(d)
 
 # ── shared SQL builder ──────────────────────────────────────────────────────
+# FIX: Ganti INNER JOIN t_laz → LEFT JOIN agar NIK dengan LAZ non-aktif
+# tetap ditemukan. Filter laz_status dipindah ke kondisi JOIN (bukan WHERE)
+# sehingga row tetap ada meski laz_status tidak memenuhi syarat.
 _DETAIL_SQL = """
     SELECT
         m.*,
@@ -96,8 +103,10 @@ _DETAIL_SQL = """
         ktp_kel.kelurahan_nama  AS ktp_kelurahan_nama,
         '1' AS desil
     FROM t_mustahik m
-    INNER JOIN t_laz l ON m.laz_kode = l.laz_kode
-    INNER JOIN t_program p ON m.program_kode = p.program_kode
+    LEFT JOIN t_laz l
+        ON m.laz_kode = l.laz_kode
+    LEFT JOIN t_program p
+        ON m.program_kode = p.program_kode
     LEFT JOIN m_provinsi prov ON m.provinsi_kode = prov.provinsi_kode
     LEFT JOIN m_kabkota kab ON m.kabkota_kode = kab.kabkota_kode
     LEFT JOIN m_kecamatan kec ON m.kecamatan_kode = kec.kecamatan_kode
@@ -106,8 +115,7 @@ _DETAIL_SQL = """
     LEFT JOIN m_kabkota ktp_kab ON m.ktp_kabkota_kode = ktp_kab.kabkota_kode
     LEFT JOIN m_kecamatan ktp_kec ON m.ktp_kecamatan_kode = ktp_kec.kecamatan_kode
     LEFT JOIN m_kelurahan ktp_kel ON m.ktp_kelurahan_kode = ktp_kel.kelurahan_kode
-    WHERE l.laz_status IN ('aktif','daftar_ulang')
-        AND m.nik = :nik
+    WHERE m.nik = :nik
     ORDER BY m.created_at DESC
 """
 
@@ -154,11 +162,76 @@ class MustahikService:
 
     @staticmethod
     def get_list(params: dict) -> dict:
+        select_total_rupiah = "m.total_rupiah"
+        select_total_transaksi = "m.total_transaksi"
+        select_total_laz_kontribusi = "m.total_laz_kontribusi"
+        if params.get("laz_kode"):
+            select_total_rupiah = """
+            (
+                SELECT COALESCE(SUM(tm.rupiah),0)
+                FROM t_mustahik tm
+                WHERE tm.nik = m.nik
+                AND tm.laz_kode = :laz_kode
+            )
+            """
 
-        where = [
-            "l.laz_status IN ('aktif','daftar_ulang')"
-        ]
+            select_total_transaksi = """
+            (
+                SELECT COUNT(*)
+                FROM t_mustahik tm
+                WHERE tm.nik = m.nik
+                AND tm.laz_kode = :laz_kode
+            )
+            """
+
+            select_total_laz_kontribusi = """
+            (
+                SELECT COUNT(DISTINCT tm.laz_kode)
+                FROM t_mustahik tm
+                WHERE tm.nik = m.nik
+                AND tm.laz_kode = :laz_kode
+            )
+            """
+        where = []
         bind = {}
+        joins = []
+
+        if params.get("laz_kode"):
+            where.append("""
+            EXISTS (
+                SELECT 1
+                FROM t_mustahik tm
+                WHERE tm.nik = m.nik
+                AND tm.laz_kode = :laz_kode
+            )
+            """)
+            bind["laz_kode"] = params["laz_kode"]
+
+        if params.get("skala_laz"):
+            where.append("""
+            EXISTS (
+                SELECT 1
+                FROM t_mustahik tm
+                JOIN t_laz l ON l.laz_kode = tm.laz_kode
+                WHERE tm.nik = m.nik
+                AND l.skala = :skala_laz
+            )
+            """)
+            bind["skala_laz"] = params["skala_laz"]
+
+        if params.get("program_kode"):
+            where.append("""
+            EXISTS (
+                SELECT 1
+                FROM t_mustahik tm
+                JOIN t_program p
+                ON p.program_kode = tm.program_kode
+                WHERE tm.nik = m.nik
+                AND p.bidang_kode = :program_kode
+            )
+            """)
+            bind["program_kode"] = params["program_kode"]
+
         if params.get("nama"):
             where.append("m.nama_lengkap LIKE :nama")
             bind["nama"] = f"%{params['nama']}%"
@@ -179,48 +252,17 @@ class MustahikService:
             where.append("m.agama=:agama")
             bind["agama"] = params["agama"]
 
-        if params.get("laz_kode"):
-            where.append("m.laz_kode=:laz_kode")
-            bind["laz_kode"] = params["laz_kode"]
-
-        if params.get("skala_laz"):
-            where.append("l.skala=:skala_laz")
-            bind["skala_laz"] = params["skala_laz"]
-
-        if params.get("program_kode"):
-            where.append("p.bidang_kode=:program_kode")
-            bind["program_kode"] = params["program_kode"]
 
         if params.get("tipe_penerimaan"):
             where.append("m.tipe_penerimaan=:tipe_penerimaan")
             bind["tipe_penerimaan"] = params["tipe_penerimaan"]
 
         if params.get("jumlah_penyaluran_min"):
-            where.append("""
-            (
-                SELECT SUM(mx.rupiah)
-                FROM t_mustahik mx
-                WHERE mx.nik = m.nik
-                AND (
-                    :laz_kode IS NULL
-                    OR mx.laz_kode = :laz_kode
-                )
-            ) >= :jumlah_min
-            """)
+            where.append("m.total_rupiah >= :jumlah_min")
             bind["jumlah_min"] = params["jumlah_penyaluran_min"]
 
         if params.get("jumlah_penyaluran_max"):
-            where.append("""
-            (
-                SELECT SUM(mx.rupiah)
-                FROM t_mustahik mx
-                WHERE mx.nik = m.nik
-                AND (
-                    :laz_kode IS NULL
-                    OR mx.laz_kode = :laz_kode
-                )
-            ) <= :jumlah_max
-            """)
+            where.append("m.total_rupiah <= :jumlah_max")
             bind["jumlah_max"] = params["jumlah_penyaluran_max"]
 
         if params.get("provinsi_kode_domisili"):
@@ -268,73 +310,104 @@ class MustahikService:
             bind["usia_max"] = params["usia_max"]
 
         if params.get("desil"):
-            where.append("COALESCE(b.desil,1)=:desil")
+            where.append("COALESCE(m.desil,1)=:desil")
             bind["desil"] = params["desil"]
 
         if params.get("nama_program"):
-            where.append("p.program_nama LIKE :program_nama")
+            where.append("""
+            EXISTS (
+                SELECT 1
+                FROM t_mustahik tm
+                JOIN t_program p
+                ON p.program_kode = tm.program_kode
+                WHERE tm.nik = m.nik
+                AND p.program_nama LIKE :program_nama
+            )
+            """)
             bind["program_nama"] = f"%{params['nama_program']}%"
 
         where_sql = " AND ".join(where)
-        page = int(params.get("page", 1))
-        per_page = int(params.get("per_page", 20))
-        offset = (page - 1) * per_page
+        if where_sql:
+            where_sql = "WHERE " + where_sql
+        page = int(params.get("page",1))
+        per_page = int(params.get("per_page",20))
+
+        offset = (page-1)*per_page
 
         bind["limit"] = per_page
         bind["offset"] = offset
 
         total_sql = text(f"""
             SELECT COUNT(DISTINCT m.nik) total
-            FROM t_mustahik m
-            INNER JOIN t_laz l ON m.laz_kode=l.laz_kode
-            INNER JOIN t_program p ON m.program_kode=p.program_kode
-            LEFT JOIN t_mustahik_bappenas b ON b.nik=m.nik
-            WHERE {where_sql}
-        """)
+            FROM t_mustahik_master m
+            {" ".join(joins)}
+            {where_sql}
+            """)
 
         total = db.session.execute(total_sql, bind).scalar()
 
         sql = text(f"""
         SELECT
-            MIN(m.mustahik_id) AS mustahik_id,
             m.nik,
-            MAX(m.nama_lengkap) AS nama_lengkap,
-            MAX(m.jenis_kelamin) AS jenis_kelamin,
-            MAX(m.lahir_tanggal) AS lahir_tanggal,
-            SUM(m.rupiah) AS rupiah,
-            MAX(m.kk) AS kk,
-            MAX(prov.provinsi_nama) AS provinsi_nama,
-            MAX(kab.kabkota_nama) AS kabkota_nama,
-            MAX(l.laz_nama) AS laz_nama,
-            MAX(l.skala) AS skala,
-            MAX(p.program_nama) AS program_nama,
-            COALESCE(MAX(b.desil),1) AS desil,
-            MAX(m.created_at) AS created_at
-        FROM t_mustahik m
-        INNER JOIN t_laz l ON m.laz_kode=l.laz_kode
-        INNER JOIN t_program p ON m.program_kode=p.program_kode
-        LEFT JOIN t_mustahik_bappenas b ON b.nik=m.nik
+            m.nama_lengkap,
+            m.jenis_kelamin,
+            m.tanggal_lahir,
+            prov.provinsi_nama,
+            kab.kabkota_nama,
+            COALESCE(m.desil,1) AS desil,
+            {select_total_rupiah} AS total_rupiah,
+            {select_total_transaksi} AS total_transaksi,
+            {select_total_laz_kontribusi} AS total_laz_kontribusi
+        FROM t_mustahik_master m
+        {" ".join(joins)}
         LEFT JOIN m_provinsi prov ON m.ktp_provinsi_kode=prov.provinsi_kode
         LEFT JOIN m_kabkota kab ON m.ktp_kabkota_kode=kab.kabkota_kode
-        WHERE {where_sql}
-        GROUP BY m.nik
-        ORDER BY MAX(m.created_at) DESC
+        {where_sql}
+        ORDER BY m.ktp_provinsi_kode ASC
         LIMIT :limit OFFSET :offset
         """)
         rows = db.session.execute(sql, bind).mappings().all()
         items = []
         for row in rows:
             items.append({
-                "mustahik_id": row["mustahik_id"],
                 "nik": _mask_nik(row["nik"]),
-                "nik_hashed": base64.urlsafe_b64encode(str(row["nik"]).encode()).decode(),
-                "nama_lengkap": row["nama_lengkap"],
-                "jenis_kelamin": row["jenis_kelamin"],
-                "usia": _hitung_usia(row["lahir_tanggal"]),
-                "provinsi_nama": row["provinsi_nama"],
-                "kabkota_nama": row["kabkota_nama"],
-                "desil": row["desil"]
+                "nik_hashed":base64.urlsafe_b64encode(str(row["nik"]).encode()).decode(),
+                "nama_lengkap":row["nama_lengkap"],
+                "jenis_kelamin":row["jenis_kelamin"],
+                "usia":_hitung_usia(row["tanggal_lahir"]),
+                "provinsi_nama":row["provinsi_nama"],
+                "kabkota_nama":row["kabkota_nama"],
+                "total_rupiah": row["total_rupiah"],
+                "total_transaksi": row["total_transaksi"],
+                "total_laz_kontribusi": row["total_laz_kontribusi"],
+                "desil":row["desil"]
             })
+
+        lembaga = None
+        if params.get("laz_kode"):
+            lembaga = db.session.execute(
+                text("""
+                    (
+                        SELECT laz_nama
+                        FROM t_laz
+                        WHERE laz_kode = :kode
+                        LIMIT 1
+                    )
+
+                    UNION ALL
+
+                    (
+                        SELECT uker_nama
+                        FROM m_uker
+                        WHERE uker_kode = :kode
+                        LIMIT 1
+                    )
+
+                    LIMIT 1
+                """),
+                {"kode": params["laz_kode"]}
+            ).scalar()
+
         return {
             "data": items,
             "meta": {
@@ -342,6 +415,10 @@ class MustahikService:
                 "per_page": per_page,
                 "total": total,
                 "pages": (total + per_page - 1) // per_page
+            },
+            "filter": {
+                "laz_kode": params.get("laz_kode"),
+                "laz_nama": lembaga
             }
         }
 
@@ -379,6 +456,10 @@ class MustahikService:
     @staticmethod
     def get_riwayat(nik_hashed: str):
         nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
+        logger.info(f"nik_hashed : {nik_hashed}")
+        logger.info(f"nik_decode : {nik_dec}")
+        # FIX: Hapus filter laz_status dari WHERE agar riwayat tetap muncul
+        # meski LAZ sudah tidak aktif. Data riwayat historis tetap valid.
         sql = text("""
             SELECT
                 m.tanggal_terima,
@@ -390,7 +471,7 @@ class MustahikService:
                 b.bidang_label,
                 m.laz_kode
             FROM t_mustahik m
-            INNER JOIN t_program p
+            LEFT JOIN t_program p
                 ON m.program_kode = p.program_kode
             LEFT JOIN t_laz l
                 ON m.laz_kode = l.laz_kode
@@ -398,9 +479,7 @@ class MustahikService:
                 ON m.laz_kode = u.uker_kode
             LEFT JOIN m_bidang b
                 ON p.bidang_kode = b.bidang_kode
-            WHERE
-                m.nik = :nik_dec
-                AND l.laz_status IN ('aktif','daftar_ulang')
+            WHERE m.nik = :nik_dec
             ORDER BY m.tanggal_terima DESC
         """)
 

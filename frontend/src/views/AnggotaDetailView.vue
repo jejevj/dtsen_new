@@ -45,6 +45,12 @@
                   <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ (kkDetail.desil_nasional) }}</td>
                 </tr>
               </table>
+              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_induk_kependudukan) }}</strong></p>
+              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</strong></p>
+              <!-- Usia + Tanggal Lahir -->
+              <p v-if="data.tanggal_lahir" style="font-size:13px;color:#64748b;margin:0;">
+                Usia: <strong style="color:#374151;">{{ usiaLabel }}</strong>
+              </p>
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
               <span v-if="data.pbi_nas === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;"><i class="pi pi-shield" style="font-size:10px;"></i> PBI Nasional</span>
@@ -119,7 +125,7 @@
                   <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <div class="grid-stat">
-                      <div v-for="field in group.fields" :key="field.field_key" class="stat-box" :style="statBoxBg(field.field_key, data[field.field_key])">
+                      <div v-for="field in visibleFields(group.fields)" :key="field.field_key" class="stat-box" :style="statBoxBg(field.field_key, data[field.field_key])">
                         <p class="stat-label">{{ field.field_label }}</p>
                         <template v-if="field.field_key === 'id_pelanggan_pln'">
                           <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;" :style="{ color: data[field.field_key]?'#15803d':'#94a3b8' }">{{ data[field.field_key] ?? 'Tidak ada' }}</p>
@@ -148,7 +154,7 @@
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <table class="info-table">
                       <tbody>
-                        <tr v-for="field in group.fields" :key="field.field_key">
+                        <tr v-for="field in visibleFields(group.fields)" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
                           <td class="td-value">
                             <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
@@ -232,7 +238,7 @@
             </div>
           </div>
 
-          <!-- Riwayat detail -->
+          <!-- Riwayat detail — grouped rowspan per LAZ per tahun -->
           <div class="detail-card">
             <p class="section-title"><i class="pi pi-list"></i> Riwayat Penerimaan Bantuan</p>
             <div style="overflow-x:auto;">
@@ -295,7 +301,7 @@
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <table class="info-table">
                       <tbody>
-                        <tr v-for="field in group.fields" :key="field.field_key">
+                        <tr v-for="field in visibleFields(group.fields)" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
                           <td class="td-value">
                             <template v-if="isNikField(field.field_key)">
@@ -352,7 +358,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import api from '@/services/api'
 import MustahikService from '@/services/mustahik'
-import { fetchBaselineProvinsi } from '@/services/baselineService'
+import { fetchBaselineAnggotaByNik } from '@/services/baselineService'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
@@ -381,6 +387,60 @@ const mustahikRiwayat = ref([])   // raw array dari /mustahik/{nikHashed}/riwaya
 const { resolveValue, getDetailFields } = useBaselineRefs()
 const { userIdentifier } = useWatermark()
 
+// ── Field keys yang disembunyikan dari tampilan ──
+const HIDDEN_FIELD_KEYS = new Set([
+  'provinsi_kode',
+  'kabupaten_kota_kode',
+  'kecamatan_kode',
+  'kelurahan_desa_kode',
+  'kode_provinsi',
+  'kode_kabupaten_kota',
+  'kode_kecamatan',
+  'kode_kelurahan',
+  'kode_wilayah',
+  'provinsi_id',
+  'kabkota_id',
+  'kecamatan_id',
+  'kelurahan_id',
+  'kode_provinsi_ktp',
+  'kode_kabupaten_kota_ktp',
+  'kode_kecamatan_ktp',
+  'kode_kelurahan_desa_ktp',
+])
+
+function visibleFields(fields) {
+  if (!fields) return []
+  return fields.filter(f => {
+    const key = f.field_key ?? ''
+    if (HIDDEN_FIELD_KEYS.has(key)) return false
+    if (key.startsWith('ktp_')) return false
+    if (key.endsWith('_kode') && !isNikField(key)) return false
+    return true
+  })
+}
+
+// ── Computed: Usia dari tanggal_lahir ──
+const usiaLabel = computed(() => {
+  if (!data.value?.tanggal_lahir) return ''
+  const lahir = new Date(String(data.value.tanggal_lahir))
+  if (isNaN(lahir.getTime())) return '-'
+  const today = new Date()
+  let usia = today.getFullYear() - lahir.getFullYear()
+  const belumUltah =
+    today.getMonth() < lahir.getMonth() ||
+    (today.getMonth() === lahir.getMonth() && today.getDate() < lahir.getDate())
+  if (belumUltah) usia--
+  return usia + ' tahun'
+})
+
+// ── Format tanggal lahir ──
+function formatTanggalLahir(v) {
+  if (!v) return ''
+  const d = new Date(String(v))
+  if (isNaN(d.getTime())) return String(v)
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 // ── Computed stats mustahik ──
 const mustahikBantuanTahunIni = computed(() => {
   const tahun = new Date().getFullYear()
@@ -405,6 +465,41 @@ const mustahikRekapTahun = computed(() => {
     if (r.metode === 'Penerima Manfaat Tidak Langsung') map[t].tidakLangsung += n
   })
   return Object.values(map).sort((a, b) => b.tahun - a.tahun)
+})
+
+/**
+ * mustahikRiwayatGrouped
+ * Mengelompokkan mustahikRiwayat berdasarkan kombinasi (tahun + laz_kode).
+ * Setiap group hanya merender 1 baris untuk kolom No & LAZ (rowspan),
+ * sedangkan kolom Program, Bidang, Nominal, dll dirender per item.
+ * Urutan: sort by tahun DESC, laz_kode ASC.
+ */
+const mustahikRiwayatGrouped = computed(() => {
+  const raw = mustahikRiwayat.value
+  if (!raw.length) return []
+
+  // Pakai ordered Map untuk menjaga urutan kemunculan pertama
+  const map = new Map()
+  raw.forEach(item => {
+    // Key per (tahun, laz_kode) — jika LAZ yang sama muncul di tahun berbeda, dipisah
+    const key = `${item.tahun}__${item.laz_kode}`
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        tahun:    item.tahun,
+        laz:      item.laz,
+        laz_kode: item.laz_kode,
+        items:    [],
+      })
+    }
+    map.get(key).items.push(item)
+  })
+
+  // Sort: tahun DESC, laz_kode ASC
+  return Array.from(map.values()).sort((a, b) => {
+    if (b.tahun !== a.tahun) return b.tahun - a.tahun
+    return String(a.laz_kode).localeCompare(String(b.laz_kode))
+  })
 })
 
 const NIK_FIELDS = new Set(['nomor_induk_kependudukan', 'nik', 'nomor_kartu_keluarga', 'nkk'])
@@ -512,16 +607,16 @@ function disabBgStyle(v) {
 
 const DESIL_COLORS = [
   null,
-  { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'Desil 1' },
-  { bg:'#fff7ed', border:'#fed7aa', text:'#9a3412', icon:'#fb923c', label:'Desil 2' },
-  { bg:'#fefce8', border:'#fde68a', text:'#92400e', icon:'#fbbf24', label:'Desil 3' },
-  { bg:'#fefce8', border:'#fde68a', text:'#a16207', icon:'#fbbf24', label:'Desil 4' },
-  { bg:'#f0fdf4', border:'#bbf7d0', text:'#166534', icon:'#4ade80', label:'Desil 5' },
-  { bg:'#f0fdf4', border:'#bbf7d0', text:'#15803d', icon:'#22c55e', label:'Desil 6' },
-  { bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', icon:'#10b981', label:'Desil 7' },
-  { bg:'#eff6ff', border:'#bfdbfe', text:'#1e40af', icon:'#60a5fa', label:'Desil 8' },
-  { bg:'#eff6ff', border:'#bfdbfe', text:'#1d4ed8', icon:'#3b82f6', label:'Desil 9' },
-  { bg:'#f5f3ff', border:'#ddd6fe', text:'#4c1d95', icon:'#a78bfa', label:'Desil 10' },
+  { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'' },
+  { bg:'#fff7ed', border:'#fed7aa', text:'#9a3412', icon:'#fb923c', label:'' },
+  { bg:'#fefce8', border:'#fde68a', text:'#92400e', icon:'#fbbf24', label:'' },
+  { bg:'#fefce8', border:'#fde68a', text:'#a16207', icon:'#fbbf24', label:'' },
+  { bg:'#f0fdf4', border:'#bbf7d0', text:'#166534', icon:'#4ade80', label:'' },
+  { bg:'#f0fdf4', border:'#bbf7d0', text:'#15803d', icon:'#22c55e', label:'' },
+  { bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', icon:'#10b981', label:'' },
+  { bg:'#eff6ff', border:'#bfdbfe', text:'#1e40af', icon:'#60a5fa', label:'' },
+  { bg:'#eff6ff', border:'#bfdbfe', text:'#1d4ed8', icon:'#3b82f6', label:'' },
+  { bg:'#f5f3ff', border:'#ddd6fe', text:'#4c1d95', icon:'#a78bfa', label:'' },
 ]
 function _desilIdx(v) {
   const n = parseInt(String(v ?? '').trim())
@@ -570,13 +665,10 @@ function goToMember(nik) {
 async function loadData(nik) {
   data.value = null
   try {
-    const provinsiList = await fetchBaselineProvinsi()
-    for (const prov of provinsiList) {
-      const res = await api.get('/baseline/anggota', { params: { provinsi: prov.kode, search: nik } })
-      const found = (res.data?.data ?? []).find(r => r.nomor_induk_kependudukan === nik || r.nik === nik)
-      if (found) { data.value = found; break }
-    }
-  } catch (e) { console.error('[AnggotaDetail] gagal load:', e) }
+    data.value = await fetchBaselineAnggotaByNik(nik)
+  } catch (e) {
+    console.error('[AnggotaDetail] gagal load:', e)
+  }
 }
 
 async function loadMustahikData(nik) {
@@ -586,11 +678,16 @@ async function loadMustahikData(nik) {
     const detailRes = await MustahikService.getDetailByNik(nik)
     const rows = detailRes?.data ?? []
     if (rows.length === 0) return
-    const nikHashed = rows[0]?.nik_hashed ?? btoa(nik)
+
+    const nikHashed = rows[0]?.nik_hashed
+    if (!nikHashed) {
+      console.warn('[AnggotaDetail] nik_hashed tidak ada di response mustahik')
+      return
+    }
+
     const riwayatRes = await MustahikService.getRiwayatByNikHashed(nikHashed)
     mustahikRiwayat.value = riwayatRes?.data ?? []
   } catch (e) {
-    // 404 = bukan mustahik, abaikan; error lain log saja
     if (e?.response?.status !== 404) console.error('[AnggotaDetail] gagal load mustahik:', e)
   } finally {
     loadingMustahik.value = false
@@ -633,7 +730,6 @@ async function init(nik) {
   keluargaGroups.value = kkGroups
   loading.value = false
 
-  // load paralel: KK + mustahik
   const tasks = []
   if (data.value?.nomor_kartu_keluarga) tasks.push(loadKKData(data.value.nomor_kartu_keluarga))
   tasks.push(loadMustahikData(nik))

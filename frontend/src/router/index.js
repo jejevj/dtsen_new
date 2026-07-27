@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore }       from '@/stores/auth'
+import { useAuthStore } from '@/stores/auth'
 import { useLoginModalStore } from '@/stores/loginModal'
 
 const routes = [
@@ -66,16 +66,19 @@ const routes = [
     meta: { requiresAuth: true }
   },
   { path: '/report', redirect: '/laporan' },
-  { path: '/:pathMatch(.*)*', redirect: '/' },
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/zis-dskl/',
+  }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/zis-dskl/'),
   routes,
 })
 
 router.beforeEach(async (to, _from, next) => {
-  const auth       = useAuthStore()
+  const auth = useAuthStore()
   const loginModal = useLoginModalStore()
 
   if (to.meta.requiresOtp) {
