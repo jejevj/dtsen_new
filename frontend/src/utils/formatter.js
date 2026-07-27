@@ -28,7 +28,7 @@ export const formatGender = (value) => {
  * @param {number} [decimals=1] - jumlah desimal (default 1)
  * @returns {string}
  */
-export const formatShort = (value, decimals = 1) => {
+export const formatShort = (value, decimals = 2) => {
   if (value === null || value === undefined || isNaN(value)) return '-'
 
   const abs = Math.abs(value)
@@ -46,7 +46,7 @@ export const formatShort = (value, decimals = 1) => {
   return `${sign}${abs}`
 }
 
-export const formatShortM = (value, decimals = 1) => {
+export const formatShortM = (value, decimals = 2) => {
   if (value === null || value === undefined || isNaN(value)) return '-'
 
   const abs = Math.abs(value)

@@ -189,15 +189,15 @@
                   <div><p class="text-xs text-gray-400">NIK</p><p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskNik(zawaData.nomor_induk_kependudukan || lastSearchedNik) }}</p></div>
                   <div><p class="text-xs text-gray-400">No. KK</p><p class="text-sm font-medium text-gray-800 font-mono tracking-wide">{{ maskNik(zawaData.nomor_kartu_keluarga) }}</p></div>
                   <div><p class="text-xs text-gray-400">Jenis Kelamin</p><p class="text-sm font-medium text-gray-800">{{ resolveRef(JENIS_KELAMIN, zawaData.jenis_kelamin) }}</p></div>
-                  <div><p class="text-xs text-gray-400">Tanggal Lahir</p><p class="text-sm font-medium text-gray-800">{{ formatTanggal(zawaData.tanggal_lahir) }}</p></div>
+                  <div><p class="text-xs text-gray-400">Usia</p><p class="text-sm font-medium text-gray-800">{{ formatUsia(zawaData.tanggal_lahir) }}</p></div>
                   <div><p class="text-xs text-gray-400">Status Kawin</p><p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_KAWIN, zawaData.status_kawin) }}</p></div>
                   <div><p class="text-xs text-gray-400">Hubungan Keluarga</p><p class="text-sm font-medium text-gray-800">{{ resolveRef(HUBUNGAN_KELUARGA, zawaData.status_hubungan_keluarga) }}</p></div>
                   <div><p class="text-xs text-gray-400">Pendidikan Tertinggi</p><p class="text-sm font-medium text-gray-800">{{ resolveRef(PENDIDIKAN, zawaData.ijazah_tertinggi_yang_dimiliki) }}</p></div>
-                  <div><p class="text-xs text-gray-400">Status Bekerja</p><p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_BEKERJA, zawaData.status_bekerja) }}</p></div>
                   <div><p class="text-xs text-gray-400">Alamat KTP</p><p class="text-sm font-medium text-gray-800">{{ zawaData.alamat_ktp || '-' }}</p></div>
                   <div><p class="text-xs text-gray-400">Kecamatan KTP</p><p class="text-sm font-medium text-gray-800">{{ zawaData.kecamatan_ktp || '-' }}</p></div>
                   <div><p class="text-xs text-gray-400">Kab/Kota KTP</p><p class="text-sm font-medium text-gray-800">{{ zawaData.kabupaten_kota_ktp || '-' }}</p></div>
                   <div><p class="text-xs text-gray-400">Provinsi KTP</p><p class="text-sm font-medium text-gray-800">{{ zawaData.provinsi_ktp || '-' }}</p></div>
+                  <div><p class="text-xs text-gray-400">Status Bekerja</p><p class="text-sm font-medium text-gray-800">{{ resolveRef(STATUS_BEKERJA, zawaData.status_bekerja) }}</p></div>
                   <div><p class="text-xs text-gray-400">PBI Nasional</p><p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_nas != null ? (zawaData.pbi_nas ? 'Ya' : 'Tidak') : '-' }}</p></div>
                   <div><p class="text-xs text-gray-400">PBI Pemda</p><p class="text-sm font-medium text-gray-800">{{ zawaData.pbi_pemda != null ? (zawaData.pbi_pemda ? 'Ya' : 'Tidak') : '-' }}</p></div>
                 </div>
@@ -668,6 +668,36 @@ function formatTanggal(val) {
   try {
     return new Date(val).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })
   } catch { return val }
+}
+function formatUsia(tanggalLahir) {
+  if (!tanggalLahir) return '-'
+
+  try {
+    const lahir = new Date(tanggalLahir)
+    const sekarang = new Date()
+
+    let tahun = sekarang.getFullYear() - lahir.getFullYear()
+    let bulan = sekarang.getMonth() - lahir.getMonth()
+
+    if (sekarang.getDate() < lahir.getDate()) {
+      bulan--
+    }
+
+    if (bulan < 0) {
+      tahun--
+      bulan += 12
+    }
+
+    if (tahun < 1) {
+      return `${bulan} Bulan`
+    }
+
+    return bulan > 0
+      ? `${tahun} Tahun ${bulan} Bulan`
+      : `${tahun} Tahun`
+  } catch {
+    return '-'
+  }
 }
 </script>
 

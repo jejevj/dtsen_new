@@ -30,6 +30,7 @@ export default {
   getDashDataBidang:  (params) => api.get(`/report/databidang`,{ params }).then(r => r.data),
   getDashDataUsia:    (params) => api.get(`/report/datausia`,  { params }).then(r => r.data),
   getDashSummary:     (params) => api.get(`/report/summary`,   { params }).then(r => r.data),
+  getDashMustahik:    (params) => api.get(`/report/mustahik`,  { params }).then(r => r.data),
   getDashGender:      (params) => api.get(`/report/gender`,    { params }).then(r => r.data),
   getDashBidang:      (params) => api.get(`/report/bidang`,    { params }).then(r => r.data),
   getDashTimeseries:  (params) => api.get(`/report/timeseries`,{ params }).then(r => r.data),

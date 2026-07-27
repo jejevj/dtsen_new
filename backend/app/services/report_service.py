@@ -18,37 +18,49 @@ class ReportService:
         laz = Report.get_skala_laz()
         desil_baseline = Report.get_desil_baseline()
         desil_mustahik = Report.get_desil_mustahik(params)
-        total = Report.get_bidang(params)
 
         bzn_nasional_sub = sum((p.get('bzn_count') or 0) for p in (bzn or []) if p.get("skala") == 1)
         bzn_provinsi_sub = sum((p.get('bzn_count') or 0) for p in (bzn or []) if p.get("skala") == 2)
         bzn_kabkota_sub = sum((p.get('bzn_count') or 0) for p in (bzn or []) if p.get("skala") == 3)
         
-        laz_nasional_sub = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 1 and p.get("laz_status") in ("aktif", "daftar_ulang"))
-        laz_provinsi_sub = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 2 and p.get("laz_status") in ("aktif", "daftar_ulang"))
-        laz_kabkota_sub = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 3 and p.get("laz_status") in ("aktif", "daftar_ulang"))
-
-        laz_nasional_ina = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 1 and p.get("laz_status"))
-        laz_provinsi_ina = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 2 and p.get("laz_status"))
-        laz_kabkota_ina = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 3 and p.get("laz_status"))
+        laz_nasional_sub = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 1)
+        laz_provinsi_sub = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 2)
+        laz_kabkota_sub = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 3)
 
         desil_1_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == "1")
         desil_2_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == "2")
         desil_3_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == "3")
         desil_4_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == "4")
 
+        desil_0 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 0)
         desil_1 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 1)
         desil_2 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 2)
         desil_3 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 3)
         desil_4 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 4)
+        desil_5 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 5)
+        desil_6 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 6)
+        desil_7 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 7)
+        desil_8 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 8)
+        desil_9 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 9)
+        desil_10 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 10)
 
+        desil_0_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 0)
         desil_1_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 1)
         desil_2_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 2)
         desil_3_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 3)
         desil_4_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 4)
+        desil_5_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 5)
+        desil_6_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 6)
+        desil_7_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 7)
+        desil_8_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 8)
+        desil_9_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 9)
+        desil_10_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 10)
 
-        desil_all = sum((p.get('total_mustahik') or 0) for p in (total or []))
-        desil_agg = sum((p.get('total_penyaluran') or 0) for p in (total or []))
+        desil_all = desil_1 + desil_2 + desil_3 + desil_4
+        desil_agg = desil_1_agg + desil_2_agg + desil_3_agg + desil_4_agg
+
+        desil_non = desil_5 + desil_6 + desil_7 + desil_8 + desil_9 + desil_10 + desil_0
+        desil_non_agg = desil_5_agg + desil_6_agg + desil_7_agg + desil_8_agg + desil_9_agg + desil_10_agg + desil_0_agg
 
         return {
             'bzn_nasional_sub': bzn_nasional_sub, 
@@ -57,9 +69,6 @@ class ReportService:
             'laz_nasional_sub': laz_nasional_sub, 
             'laz_provinsi_sub': laz_provinsi_sub, 
             'laz_kabkota_sub': laz_kabkota_sub,
-            'laz_nasional_ina': laz_nasional_ina,
-            'laz_provinsi_ina': laz_provinsi_ina,
-            'laz_kabkota_ina': laz_kabkota_ina,
             'desil_1': desil_1,
             'desil_2': desil_2,
             'desil_3': desil_3,
@@ -73,7 +82,9 @@ class ReportService:
             'desil_3_agg': desil_3_agg,
             'desil_4_agg': desil_4_agg,
             'desil_all': desil_all,
-            'desil_agg': desil_agg
+            'desil_agg': desil_agg,
+            'desil_non': desil_non,
+            'desil_non_agg': desil_non_agg
         }
 
     @staticmethod
@@ -180,6 +191,55 @@ class ReportService:
     @staticmethod
     def get_data_desil(params: dict) -> list:
         return Report.get_data_desil(params)
+    
+    @staticmethod
+    def get_data_mustahik(params: dict) -> list:
+        desil_mustahik = Report.get_desil_mustahik(params)
+
+        desil_0 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 0)
+        desil_1 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 1)
+        desil_2 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 2)
+        desil_3 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 3)
+        desil_4 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 4)
+        desil_5 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 5)
+        desil_6 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 6)
+        desil_7 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 7)
+        desil_8 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 8)
+        desil_9 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 9)
+        desil_10 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 10)
+
+        desil_0_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 0)
+        desil_1_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 1)
+        desil_2_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 2)
+        desil_3_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 3)
+        desil_4_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 4)
+        desil_5_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 5)
+        desil_6_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 6)
+        desil_7_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 7)
+        desil_8_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 8)
+        desil_9_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 9)
+        desil_10_agg = sum((p.get('rupiah') or 0) for p in (desil_mustahik or []) if p.get("desil") == 10)
+
+        desil_mus = desil_1 + desil_2 + desil_3 + desil_4
+        desil_mus_agg = desil_1_agg + desil_2_agg + desil_3_agg + desil_4_agg
+
+        desil_non = desil_5 + desil_6 + desil_7 + desil_8 + desil_9 + desil_10 + desil_0
+        desil_non_agg = desil_5_agg + desil_6_agg + desil_7_agg + desil_8_agg + desil_9_agg + desil_10_agg + desil_0_agg
+
+        return {
+            'desil_1': desil_1,
+            'desil_2': desil_2,
+            'desil_3': desil_3,
+            'desil_4': desil_4,
+            'desil_1_agg': desil_1_agg,
+            'desil_2_agg': desil_2_agg,
+            'desil_3_agg': desil_3_agg,
+            'desil_4_agg': desil_4_agg,
+            'desil_mus': desil_mus,
+            'desil_mus_agg': desil_mus_agg,
+            'desil_non': desil_non,
+            'desil_non_agg': desil_non_agg
+        }
     
     @staticmethod
     def get_data_bidang(params: dict) -> list:
