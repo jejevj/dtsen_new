@@ -31,3 +31,7 @@ logs/
 
 # Uploads
 app/static/uploads/
+
+# env
+frontend/env
+backend/env

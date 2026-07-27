@@ -162,34 +162,75 @@ class MustahikService:
 
     @staticmethod
     def get_list(params: dict) -> dict:
+        select_total_rupiah = "m.total_rupiah"
+        select_total_transaksi = "m.total_transaksi"
+        select_total_laz_kontribusi = "m.total_laz_kontribusi"
+        if params.get("laz_kode"):
+            select_total_rupiah = """
+            (
+                SELECT COALESCE(SUM(tm.rupiah),0)
+                FROM t_mustahik tm
+                WHERE tm.nik = m.nik
+                AND tm.laz_kode = :laz_kode
+            )
+            """
 
+            select_total_transaksi = """
+            (
+                SELECT COUNT(*)
+                FROM t_mustahik tm
+                WHERE tm.nik = m.nik
+                AND tm.laz_kode = :laz_kode
+            )
+            """
+
+            select_total_laz_kontribusi = """
+            (
+                SELECT COUNT(DISTINCT tm.laz_kode)
+                FROM t_mustahik tm
+                WHERE tm.nik = m.nik
+                AND tm.laz_kode = :laz_kode
+            )
+            """
         where = []
         bind = {}
         joins = []
 
-        if (
-            params.get("laz_kode")
-            or params.get("program_kode")
-            or params.get("nama_program")
-            or params.get("skala_laz")
-            
-        ):
-            joins.append("""
-            INNER JOIN t_mustahik tm
-                ON tm.nik = m.nik
+        if params.get("laz_kode"):
+            where.append("""
+            EXISTS (
+                SELECT 1
+                FROM t_mustahik tm
+                WHERE tm.nik = m.nik
+                AND tm.laz_kode = :laz_kode
+            )
             """)
+            bind["laz_kode"] = params["laz_kode"]
 
-        if params.get("laz_kode") or params.get("skala_laz"):
-            joins.append("""
-            INNER JOIN t_laz l
-                ON l.laz_kode = tm.laz_kode
+        if params.get("skala_laz"):
+            where.append("""
+            EXISTS (
+                SELECT 1
+                FROM t_mustahik tm
+                JOIN t_laz l ON l.laz_kode = tm.laz_kode
+                WHERE tm.nik = m.nik
+                AND l.skala = :skala_laz
+            )
             """)
+            bind["skala_laz"] = params["skala_laz"]
 
-        if params.get("program_kode") or params.get("nama_program"):
-            joins.append("""
-            INNER JOIN t_program p
+        if params.get("program_kode"):
+            where.append("""
+            EXISTS (
+                SELECT 1
+                FROM t_mustahik tm
+                JOIN t_program p
                 ON p.program_kode = tm.program_kode
+                WHERE tm.nik = m.nik
+                AND p.bidang_kode = :program_kode
+            )
             """)
+            bind["program_kode"] = params["program_kode"]
 
         if params.get("nama"):
             where.append("m.nama_lengkap LIKE :nama")
@@ -211,17 +252,6 @@ class MustahikService:
             where.append("m.agama=:agama")
             bind["agama"] = params["agama"]
 
-        if params.get("laz_kode"):
-            where.append("tm.laz_kode=:laz_kode")
-            bind["laz_kode"] = params["laz_kode"]
-
-        if params.get("skala_laz"):
-            where.append("l.skala=:skala_laz")
-            bind["skala_laz"] = params["skala_laz"]
-
-        if params.get("program_kode"):
-            where.append("p.bidang_kode=:program_kode")
-            bind["program_kode"] = params["program_kode"]
 
         if params.get("tipe_penerimaan"):
             where.append("m.tipe_penerimaan=:tipe_penerimaan")
@@ -284,7 +314,16 @@ class MustahikService:
             bind["desil"] = params["desil"]
 
         if params.get("nama_program"):
-            where.append("p.program_nama LIKE :program_nama")
+            where.append("""
+            EXISTS (
+                SELECT 1
+                FROM t_mustahik tm
+                JOIN t_program p
+                ON p.program_kode = tm.program_kode
+                WHERE tm.nik = m.nik
+                AND p.program_nama LIKE :program_nama
+            )
+            """)
             bind["program_nama"] = f"%{params['nama_program']}%"
 
         where_sql = " AND ".join(where)
@@ -316,9 +355,9 @@ class MustahikService:
             prov.provinsi_nama,
             kab.kabkota_nama,
             COALESCE(m.desil,1) AS desil,
-            m.total_rupiah,
-            m.total_transaksi,
-            m.total_laz_kontribusi
+            {select_total_rupiah} AS total_rupiah,
+            {select_total_transaksi} AS total_transaksi,
+            {select_total_laz_kontribusi} AS total_laz_kontribusi
         FROM t_mustahik_master m
         {" ".join(joins)}
         LEFT JOIN m_provinsi prov ON m.ktp_provinsi_kode=prov.provinsi_kode
@@ -338,11 +377,37 @@ class MustahikService:
                 "usia":_hitung_usia(row["tanggal_lahir"]),
                 "provinsi_nama":row["provinsi_nama"],
                 "kabkota_nama":row["kabkota_nama"],
-                "total_rupiah":row["total_rupiah"],
-                "total_transaksi":row["total_transaksi"],
-                "total_laz_kontribusi":row["total_laz_kontribusi"],
+                "total_rupiah": row["total_rupiah"],
+                "total_transaksi": row["total_transaksi"],
+                "total_laz_kontribusi": row["total_laz_kontribusi"],
                 "desil":row["desil"]
             })
+
+        lembaga = None
+        if params.get("laz_kode"):
+            lembaga = db.session.execute(
+                text("""
+                    (
+                        SELECT laz_nama
+                        FROM t_laz
+                        WHERE laz_kode = :kode
+                        LIMIT 1
+                    )
+
+                    UNION ALL
+
+                    (
+                        SELECT uker_nama
+                        FROM m_uker
+                        WHERE uker_kode = :kode
+                        LIMIT 1
+                    )
+
+                    LIMIT 1
+                """),
+                {"kode": params["laz_kode"]}
+            ).scalar()
+
         return {
             "data": items,
             "meta": {
@@ -350,6 +415,10 @@ class MustahikService:
                 "per_page": per_page,
                 "total": total,
                 "pages": (total + per_page - 1) // per_page
+            },
+            "filter": {
+                "laz_kode": params.get("laz_kode"),
+                "laz_nama": lembaga
             }
         }
 
