@@ -979,11 +979,11 @@ class Report:
 
         sql_text = """
             SELECT DISTINCT wilayah.lvl, wilayah.zawa, wilayah.kode, wilayah.nama, wilayah.lvl_1, wilayah.lvl_2, wilayah.lvl_3
-                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 1 LIMIT 1),0) desil_1
-                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 2 LIMIT 1),0) desil_2
-                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 3 LIMIT 1),0) desil_3
-                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 4 LIMIT 1),0) desil_4
-                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil BETWEEN 1 AND 4 LIMIT 1),0) desil_mk
+                , COALESCE((SELECT SUM(mustahik) FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 1),0) desil_1
+                , COALESCE((SELECT SUM(mustahik) FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 2),0) desil_2
+                , COALESCE((SELECT SUM(mustahik) FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 3),0) desil_3
+                , COALESCE((SELECT SUM(mustahik) FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 4),0) desil_4
+                , COALESCE((SELECT SUM(mustahik) FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil BETWEEN 1 AND 4),0) desil_mk
             FROM (
             """ + sql_base_table + """
             ) wilayah
