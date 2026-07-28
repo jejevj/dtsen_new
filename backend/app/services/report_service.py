@@ -27,10 +27,10 @@ class ReportService:
         laz_provinsi_sub = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 2)
         laz_kabkota_sub = sum((p.get('laz_count') or 0) for p in (laz or []) if p.get("skala") == 3)
 
-        desil_1_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == "1")
-        desil_2_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == "2")
-        desil_3_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == "3")
-        desil_4_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == "4")
+        desil_1_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == 1)
+        desil_2_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == 2)
+        desil_3_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == 3)
+        desil_4_sub = sum((p.get('nik_count') or 0) for p in (desil_baseline or []) if p.get("desil") == 4)
 
         desil_0 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 0)
         desil_1 = sum((p.get('nik_count') or 0) for p in (desil_mustahik or []) if p.get("desil") == 1)
