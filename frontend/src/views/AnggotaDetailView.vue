@@ -327,7 +327,7 @@
                   <Column style="width:15%" field="status_hubungan_keluarga" header="Hubungan keluarga" sortable><template #body="{ data }"><div class="text-left">{{ resolveValue('status_hubungan_keluarga', data.status_hubungan_keluarga) }}</div></template></Column>
                   <Column style="width:15%" field="tanggal_lahir" header="Usia" sortable><template #body="{ data }"><div class="">{{ formatUsia_TB(data.tanggal_lahir) }}</div></template></Column>
                   <Column style="width:1%" field="nomor_induk_kependudukan" header="Aksi" sortable><template #body="{ data }">
-                    <a :href="`/data-baseline/anggota/${data.nomor_induk_kependudukan}`"target="_blank" class="flex items-center gap-1">
+                    <a :href="`/zis-dskl/data-baseline/anggota/${data.nomor_induk_kependudukan}`"target="_blank" class="flex items-center gap-1">
                       <i class="pi pi-external-link"></i>Lihat
                     </a></template>
                   </Column>
