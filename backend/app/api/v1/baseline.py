@@ -201,6 +201,9 @@ _RESERVED_PARAMS = {
     'usia_min', 'usia_max',
 }
 
+# Kolom internal yang tidak perlu dikembalikan ke client
+_EXCLUDE_COLUMNS = {"id", "synced_at", "provinsi_slug"}
+
 
 # ─── Kode wilayah normalizer ────────────────────────────────
 
@@ -357,12 +360,10 @@ def _is_nkk(s: str) -> bool:
     return bool(re.fullmatch(r'\d{16}', s.strip()))
 
 def _row_to_dict(row) -> dict:
-    if row.raw_data and isinstance(row.raw_data, dict):
-        return row.raw_data
+    """Serialize SQLAlchemy model row ke dict, tanpa kolom internal."""
     d = {c.name: getattr(row, c.name) for c in row.__table__.columns}
-    d.pop("raw_data", None)
-    d.pop("synced_at", None)
-    d.pop("id", None)
+    for col in _EXCLUDE_COLUMNS:
+        d.pop(col, None)
     return d
 
 def _ok_payload(items, label, provinsi, meta_override=None):
@@ -1156,8 +1157,6 @@ def baseline_anggota():
     # --- NIK search path: enforce desil via join ---
     if search and _is_numeric_id(search):
         # FIX: Tambahkan filter provinsi agar NIK cross-province tidak muncul.
-        # Query harus mencocokkan kode_provinsi_ktp ATAU provinsi_slug dengan
-        # provinsi yang diminta, mencegah data salah label muncul di provinsi lain.
         db_row = ZawaAnggota.query.filter(
             ZawaAnggota.nomor_induk_kependudukan == search.strip(),
             db.or_(
