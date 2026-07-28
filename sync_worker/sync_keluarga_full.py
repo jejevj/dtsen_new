@@ -51,7 +51,7 @@ if not ZAWA_API_KEY:
 # ── SQLAlchemy (standalone, tanpa Flask) ───────────────────────
 from sqlalchemy import create_engine, text, distinct, select
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, mapped_column, Mapped
-from sqlalchemy import String, Integer, Text, DateTime, JSON, Numeric, BigInteger
+from sqlalchemy import String, Integer, Text, DateTime, Numeric, BigInteger
 from datetime import datetime as dt
 from decimal import Decimal, InvalidOperation
 
@@ -135,7 +135,6 @@ class ZawaKeluarga(Base):
     desil_nasional              = mapped_column(String(5), nullable=True)
     id_pelanggan_pln            = mapped_column(String(20), nullable=True)
     synced_at                   = mapped_column(DateTime, default=dt.utcnow)
-    raw_data                    = mapped_column(JSON, nullable=True)
 
     @classmethod
     def from_api(cls, item: dict):
@@ -190,7 +189,6 @@ class ZawaKeluarga(Base):
             pbi_pemda                   = _s(item.get("pbi_pemda")),
             desil_nasional              = _s(item.get("desil_nasional")),
             id_pelanggan_pln            = _s(item.get("id_pelanggan_pln")),
-            raw_data                    = item,
         )
 
 
@@ -241,13 +239,12 @@ def fetch_keluarga_by_nkk(nkk: str):
 
     data = raw.get("data")
     if isinstance(data, dict) and data:
-        # Cek apakah object tunggal (bukan pagination wrapper)
         non_meta_keys = {k for k in data if k not in (
             "items", "data", "limit", "currentPage", "totalItems",
             "totalPages", "hasNextPage", "hasPreviousPage", "nextCursor"
         )}
         if non_meta_keys:
-            return data, None, False  # object tunggal
+            return data, None, False
         items = data.get("items") or []
         return items[0] if items else None, None, not bool(items)
     return None, "Empty response", False
@@ -276,14 +273,12 @@ def main():
     session.commit()
 
     try:
-        # Semua NKK yang sudah ada
         existing_set = set(
             row[0] for row in session.execute(
                 select(ZawaKeluarga.nomor_kartu_keluarga)
             ).fetchall()
         )
 
-        # Semua NKK unik dari zawa_anggota
         all_nkk = [
             row[0] for row in session.execute(
                 select(distinct(ZawaAnggota.nomor_kartu_keluarga))
@@ -315,7 +310,6 @@ def main():
                 error += 1
             elif item:
                 nkk_str = str(item.get("nomor_kartu_keluarga") or "").strip()
-                # Double-check duplikat
                 exists = session.execute(
                     select(ZawaKeluarga.id).where(
                         ZawaKeluarga.nomor_kartu_keluarga == nkk_str
@@ -336,7 +330,6 @@ def main():
             else:
                 skipped += 1
 
-            # Progress log
             if i % LOG_EVERY == 0 or i == total:
                 elapsed = round((dt.utcnow() - started).total_seconds())
                 remaining = total - i
@@ -349,7 +342,6 @@ def main():
 
             time.sleep(SLEEP_BETWEEN)
 
-        # Update sync log
         sync_log.status        = "success" if error == 0 or saved > 0 else "failed"
         sync_log.total_fetched = saved + error
         sync_log.total_saved   = saved
@@ -362,7 +354,6 @@ def main():
         logger.info("=" * 60)
         logger.info(f"SELESAI  saved={saved}  skipped={skipped}  error={error}")
         logger.info(f"Durasi   : {duration} detik ({round(duration/60, 1)} menit)")
-        logger.info(f"Total zawa_keluarga: {session.execute(select(ZawaKeluarga.id)).rowcount}")
         logger.info("=" * 60)
 
     except Exception as e:
