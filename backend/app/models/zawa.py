@@ -275,3 +275,20 @@ class ZawaKeluarga(db.Model):
             desil_nasional              = _s(item.get("desil_nasional")),
             id_pelanggan_pln            = _s(item.get("id_pelanggan_pln")),
         )
+
+
+class ZawaSyncLog(db.Model):
+    """Log untuk mencatat setiap proses sinkronisasi data ZAWA."""
+    __tablename__ = "zawa_sync_log"
+
+    id         = db.Column(db.Integer,     primary_key=True, autoincrement=True)
+    sync_type  = db.Column(db.String(50),  nullable=False)          # 'anggota' | 'keluarga'
+    status     = db.Column(db.String(20),  nullable=False)          # 'running' | 'success' | 'failed'
+    provinsi   = db.Column(db.String(100), nullable=True)
+    total_rows = db.Column(db.Integer,     nullable=True)
+    message    = db.Column(db.Text,        nullable=True)
+    started_at = db.Column(db.DateTime,    default=datetime.utcnow)
+    finished_at = db.Column(db.DateTime,   nullable=True)
+
+    def __repr__(self):
+        return f"<ZawaSyncLog {self.sync_type} {self.status} @ {self.started_at}>"
