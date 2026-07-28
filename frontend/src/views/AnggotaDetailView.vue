@@ -45,12 +45,7 @@
                   <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ (kkDetail.desil_nasional) }}</td>
                 </tr>
               </table>
-              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">NIK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_induk_kependudukan) }}</strong></p>
-              <p style="font-size:13px;color:#64748b;margin:0 0 4px;">No. KK: <strong style="color:#374151;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</strong></p>
-              <!-- Usia + Tanggal Lahir -->
-              <p v-if="data.tanggal_lahir" style="font-size:13px;color:#64748b;margin:0;">
-                Usia: <strong style="color:#374151;">{{ usiaLabel }}</strong>
-              </p>
+             
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
               <span v-if="data.pbi_nas === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;"><i class="pi pi-shield" style="font-size:10px;"></i> PBI Nasional</span>
