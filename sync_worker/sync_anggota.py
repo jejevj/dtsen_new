@@ -113,7 +113,7 @@ _BPS_TO_SLUG = {v: k for k, v in BPS_MAP.items()}
 # ─── SQLAlchemy standalone ─────────────────────────────────────
 from sqlalchemy import (
     create_engine, select, String, Integer, Text, DateTime,
-    JSON, Numeric, BigInteger,
+    Numeric, BigInteger,
 )
 from sqlalchemy.orm import sessionmaker, DeclarativeBase, mapped_column
 from decimal import Decimal, InvalidOperation
@@ -195,7 +195,6 @@ class ZawaAnggota(Base):
     id_pelanggan_pln                                   = mapped_column(String(20),  nullable=True)
     provinsi_slug                                      = mapped_column(String(20),  nullable=True, index=True)
     synced_at                                          = mapped_column(DateTime,    default=dt.utcnow)
-    raw_data                                           = mapped_column(JSON,        nullable=True)
 
     @classmethod
     def from_api(cls, item: dict, provinsi_slug: str):
@@ -250,7 +249,6 @@ class ZawaAnggota(Base):
             pbi_pemda                                          = _s(item.get("pbi_pemda")),
             id_pelanggan_pln                                   = _s(item.get("id_pelanggan_pln")),
             provinsi_slug                                      = provinsi_slug,
-            raw_data                                           = item,
         )
 
 
