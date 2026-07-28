@@ -227,14 +227,14 @@ const userInitials = computed(() =>
 
 const navItems = [
   { to: '/dashboard',     label: 'Dashboard',              icon: 'pi pi-home'       },
-  { to: '/data-baseline', label: 'Data DTSEN',             icon: 'pi pi-database'   },
+  { to: '/data-baseline', label: 'Data Baseline',             icon: 'pi pi-database'   },
   { to: '/mustahik',      label: 'Data Penerima Manfaat',  icon: 'pi pi-users'      },
   { to: '/laporan',       label: 'Pemeriksaan DTSEN',      icon: 'pi pi-chart-line' },
 ]
 
 const pageLabels = {
   '/dashboard':     'Dashboard',
-  '/data-baseline': 'Data DTSEN',
+  '/data-baseline': 'Data Baseline',
   '/mustahik':      'Data Mustahik',
   '/laporan':       'Pemeriksaan DTSEN',
 }
