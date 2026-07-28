@@ -1,36 +1,49 @@
 <template>
-  <router-view />
-  <LoginModal :visible="loginModal.visible" @close="loginModal.close()" />
+  <!-- Tampilkan MaintenanceView jika maintenance aktif -->
+  <MaintenanceView v-if="maintenanceStore.isMaintenance" />
 
-  <!-- Toast global — digunakan oleh useViewGuard dan komponen lain -->
-  <Toast position="top-right" />
+  <!-- Loading awal saat cek maintenance belum selesai -->
+  <div v-else-if="!maintenanceStore.checked" class="app-loading">
+    <span class="spinner" />
+  </div>
+
+  <!-- Aplikasi normal -->
+  <RouterView v-else />
 </template>
 
 <script setup>
-import Toast             from 'primevue/toast'
-import { useToast }      from 'primevue/usetoast'
-import LoginModal        from '@/components/common/LoginModal.vue'
-import { useLoginModalStore } from '@/stores/loginModal'
+import { onMounted } from 'vue'
+import { RouterView } from 'vue-router'
+import { useMaintenanceStore } from '@/stores/maintenance'
+import MaintenanceView from '@/views/MaintenanceView.vue'
 
-const loginModal = useLoginModalStore()
-const toast      = useToast()
+const maintenanceStore = useMaintenanceStore()
 
-/**
- * Bridge: useViewGuard.js berjalan di luar Vue context (sebelum app.mount),
- * sehingga ia tidak bisa langsung memanggil useToast().
- * Solusinya: viewGuard dispatch CustomEvent 'vg:blocked',
- * dan komponen ini mendengarkan lalu meneruskan ke PrimeVue Toast.
- */
-window.addEventListener('vg:blocked', (e) => {
-  toast.add({
-    severity: 'warn',
-    summary:  'Aksi Dilarang',
-    detail:   e.detail?.message ?? 'Tindakan ini tidak diizinkan pada halaman ini.',
-    life:     3000,
-  })
+// Cek status maintenance saat pertama kali app di-mount
+onMounted(() => {
+  maintenanceStore.check()
 })
 </script>
 
-<style>
-/* tidak ada global style di sini — semua di assets/main.css */
+<style scoped>
+.app-loading {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2d7dd2;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 </style>
