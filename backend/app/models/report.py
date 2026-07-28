@@ -167,11 +167,9 @@ class Report:
     @staticmethod
     def get_desil_baseline() -> list:
         sql = text("""
-        SELECT desil_nasional desil, SUM(jumlah_anggota_keluarga) nik_count 
-        FROM (
-        SELECT DISTINCT nomor_kartu_keluarga, desil_nasional, jumlah_anggota_keluarga FROM zawa_keluarga WHERE desil_nasional BETWEEN 1 AND 4
-        )zawa
-        GROUP BY desil_nasional;
+        SELECT desil, mustahik nik_count 
+        FROM zawa_desil_summary
+        WHERE zawa = 'NASIONAL';
         """)
 
         rows = db.session.execute(sql, {}).mappings().all()
@@ -712,10 +710,9 @@ class Report:
             SELECT DISTINCT wilayah.lvl, wilayah.zawa, wilayah.kode, wilayah.nama, wilayah.lvl_1, wilayah.lvl_2, wilayah.lvl_3
             , COALESCE(
                 (  
-                    SELECT SUM(jumlah_anggota_keluarga)
-                    FROM zawa_keluarga 
-                    WHERE desil_nasional BETWEEN 1 AND 4
-                    AND """ + sql_param_base + """ COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0
+                    SELECT mustahik
+                    FROM zawa_desil_summary
+                    WHERE zawa = wilayah.kode
                 ) baseline
                 , 0 mustahik, 0 rupiah
             FROM (
@@ -982,21 +979,11 @@ class Report:
 
         sql_text = """
             SELECT DISTINCT wilayah.lvl, wilayah.zawa, wilayah.kode, wilayah.nama, wilayah.lvl_1, wilayah.lvl_2, wilayah.lvl_3
-                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional = 1 AND 
-                """ + sql_param_base + """ 
-                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_1
-                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional = 2 AND 
-                """ + sql_param_base + """ 
-                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_2
-                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional = 3 AND 
-                """ + sql_param_base + """ 
-                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_3
-                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional = 4 AND 
-                """ + sql_param_base + """ 
-                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_4
-                , COALESCE((SELECT SUM(jumlah_anggota_keluarga) FROM zawa_keluarga WHERE desil_nasional BETWEEN 1 AND 4 AND 
-                """ + sql_param_base + """ 
-                COLLATE utf8mb4_unicode_ci = wilayah.zawa COLLATE utf8mb4_unicode_ci),0) desil_mk
+                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 1 LIMIT 1),0) desil_1
+                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 2 LIMIT 1),0) desil_2
+                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 3 LIMIT 1),0) desil_3
+                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil = 4 LIMIT 1),0) desil_4
+                , COALESCE((SELECT mustahik FROM zawa_desil_summary WHERE zawa = wilayah.kode AND desil BETWEEN 1 AND 4 LIMIT 1),0) desil_mk
             FROM (
             """ + sql_base_table + """
             ) wilayah
