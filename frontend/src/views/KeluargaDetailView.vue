@@ -71,7 +71,7 @@
                   <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                   <table class="info-table">
                     <tbody>
-                      <tr v-for="field in group.fields" :key="field.field_key">
+                      <tr v-for="field in group.fields" :key="field.field_key" v-show="!isKodeField(field.field_key)">
                         <td class="td-label">{{ field.field_label }}</td>
                         <td class="td-value">
                           <template v-if="isNikField(field.field_key)">
@@ -165,6 +165,22 @@ const NIK_FIELDS = new Set([
   'nomor_kartu_keluarga', 'nkk',
 ])
 function isNikField(key) { return NIK_FIELDS.has(key) }
+
+// Field kode daerah yang disembunyikan — label tetap tampil lewat field teks pasangannya
+const KODE_FIELDS = new Set([
+  'kode_provinsi',
+  'kode_kabupaten_kota',
+  'kode_kecamatan',
+  'kode_kelurahan_desa',
+  'kode_wilayah',
+  'kode_desa',
+  'kode_dusun',
+])
+function isKodeField(key) {
+  if (!key) return false
+  const k = key.toLowerCase()
+  return KODE_FIELDS.has(k) || k.startsWith('kode_')
+}
 
 function isLakiVal(v) {
   const s = (v ?? '').toString()
