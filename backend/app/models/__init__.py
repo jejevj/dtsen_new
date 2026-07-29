@@ -1,6 +1,7 @@
 from .user import User
 from .tuser import TUser
 from .laz import Laz
+from .m_uker import MUker
 from .program import Bidang, Program
 from .mustahik import Mustahik
 from .mustahik_bappenas import MustahikBappenas
@@ -18,6 +19,7 @@ __all__ = [
     'User',
     'TUser',
     'Laz',
+    'MUker',
     'Bidang',
     'Program',
     'Mustahik',
