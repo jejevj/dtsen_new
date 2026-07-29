@@ -8,18 +8,24 @@
   </div>
 
   <!-- Aplikasi normal -->
-  <RouterView v-else />
+  <template v-else>
+    <RouterView />
+    <!-- Modal login global: dipasang di sini agar bisa dipanggil dari mana saja -->
+    <LoginModal :visible="loginModal.visible" @close="loginModal.close()" />
+  </template>
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
-import { useMaintenanceStore } from '@/stores/maintenance'
+import { useMaintenanceStore }  from '@/stores/maintenance'
+import { useLoginModalStore }   from '@/stores/loginModal'
 import MaintenanceView from '@/views/MaintenanceView.vue'
+import LoginModal      from '@/components/common/LoginModal.vue'
 
 const maintenanceStore = useMaintenanceStore()
+const loginModal       = useLoginModalStore()
 
-// Cek status maintenance saat pertama kali app di-mount
 onMounted(() => {
   maintenanceStore.check()
 })
