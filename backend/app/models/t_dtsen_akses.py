@@ -14,6 +14,7 @@ class TDtsenAkses(db.Model):
 
     dtsen_akses_id         = db.Column(db.Integer, primary_key=True, autoincrement=True)
     laz_kode               = db.Column(db.String(50), nullable=True, index=True)
+    nip                    = db.Column(db.String(50), nullable=True)
     nik                    = db.Column(db.String(20), nullable=True, index=True)
     nama_lengkap           = db.Column(db.String(255), nullable=True)
     lahir_tanggal          = db.Column(db.Date, nullable=True)
@@ -21,6 +22,7 @@ class TDtsenAkses(db.Model):
     notelp                 = db.Column(db.String(50), nullable=True)
     email                  = db.Column(db.String(100), nullable=True)
     jabatan                = db.Column(db.String(255), nullable=True)
+    instansi               = db.Column(db.String(255), nullable=True)
     berkas_surat_pengajuan = db.Column(db.String(255), nullable=True)
     berkas_ktp             = db.Column(db.String(255), nullable=True)
     berkas_kak             = db.Column(db.String(255), nullable=True)
@@ -34,14 +36,18 @@ class TDtsenAkses(db.Model):
         default='draf',
         index=True
     )
+    akun_types             = db.Column(db.String(20), nullable=True,
+                                       comment='laz,baznas,external,internal')
     catatan                = db.Column(db.Text, nullable=True)
     dtsen_akses_password   = db.Column(db.String(255), nullable=True, comment='MD5')
     deleted_at             = db.Column(db.DateTime, nullable=True)
     sent_at                = db.Column(db.DateTime, nullable=True)
+    verified_at            = db.Column(db.DateTime, nullable=True)
     activated_at           = db.Column(db.DateTime, nullable=True)
-    valid_from_at          = db.Column(db.DateTime, nullable=True, comment='Tanggal mulai akses aktif')
-    valid_until_at         = db.Column(db.DateTime, nullable=True, comment='Tanggal berakhir akses')
-    created_at             = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
+    valid_from_at          = db.Column(db.Date, nullable=True, comment='Tanggal mulai akses aktif')
+    valid_end_at           = db.Column(db.Date, nullable=True, comment='Tanggal berakhir akses')
+    created_at             = db.Column(db.DateTime, nullable=True,
+                                       server_default=db.func.current_timestamp())
     updated_at             = db.Column(db.DateTime, nullable=True)
 
     # Relasi ke wilayah dan dokumen
@@ -51,8 +57,6 @@ class TDtsenAkses(db.Model):
                               foreign_keys='TDtsenDokumen.dtsen_akses_id')
 
     # Relasi ke Laz — join manual pakai non-FK karena laz_kode bukan FK DDL
-    # backref ini ada di sisi Laz sebagai 'laz_info', di sini kita pakai
-    # primaryjoin langsung tanpa backref tambahan
     laz = db.relationship(
         'Laz',
         primaryjoin='foreign(TDtsenAkses.laz_kode) == Laz.laz_kode',
@@ -83,6 +87,7 @@ class TDtsenAkses(db.Model):
             'user_type':              self.user_type,
             'laz_kode':               self.laz_kode,
             'laz_skala':              self.laz_skala,
+            'nip':                    self.nip,
             'nik':                    self.nik,
             'nama_lengkap':           self.nama_lengkap,
             'lahir_tanggal':          self.lahir_tanggal.isoformat() if self.lahir_tanggal else None,
@@ -90,17 +95,20 @@ class TDtsenAkses(db.Model):
             'notelp':                 self.notelp,
             'email':                  self.email,
             'jabatan':                self.jabatan,
+            'instansi':               self.instansi,
             'berkas_surat_pengajuan': self.berkas_surat_pengajuan,
             'berkas_ktp':             self.berkas_ktp,
             'berkas_kak':             self.berkas_kak,
             'berkas_bast':            self.berkas_bast,
             'statuses':               self.statuses,
+            'akun_types':             self.akun_types,
             'catatan':                self.catatan,
             'deleted_at':             self.deleted_at.isoformat() if self.deleted_at else None,
             'sent_at':                self.sent_at.isoformat() if self.sent_at else None,
+            'verified_at':            self.verified_at.isoformat() if self.verified_at else None,
             'activated_at':           self.activated_at.isoformat() if self.activated_at else None,
             'valid_from_at':          self.valid_from_at.isoformat() if self.valid_from_at else None,
-            'valid_until_at':         self.valid_until_at.isoformat() if self.valid_until_at else None,
+            'valid_end_at':           self.valid_end_at.isoformat() if self.valid_end_at else None,
             'created_at':             self.created_at.isoformat() if self.created_at else None,
             'updated_at':             self.updated_at.isoformat() if self.updated_at else None,
         }
