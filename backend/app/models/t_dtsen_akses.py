@@ -39,6 +39,8 @@ class TDtsenAkses(db.Model):
     deleted_at             = db.Column(db.DateTime, nullable=True)
     sent_at                = db.Column(db.DateTime, nullable=True)
     activated_at           = db.Column(db.DateTime, nullable=True)
+    valid_from_at          = db.Column(db.DateTime, nullable=True, comment='Tanggal mulai akses aktif')
+    valid_until_at         = db.Column(db.DateTime, nullable=True, comment='Tanggal berakhir akses')
     created_at             = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
     updated_at             = db.Column(db.DateTime, nullable=True)
 
@@ -97,6 +99,8 @@ class TDtsenAkses(db.Model):
             'deleted_at':             self.deleted_at.isoformat() if self.deleted_at else None,
             'sent_at':                self.sent_at.isoformat() if self.sent_at else None,
             'activated_at':           self.activated_at.isoformat() if self.activated_at else None,
+            'valid_from_at':          self.valid_from_at.isoformat() if self.valid_from_at else None,
+            'valid_until_at':         self.valid_until_at.isoformat() if self.valid_until_at else None,
             'created_at':             self.created_at.isoformat() if self.created_at else None,
             'updated_at':             self.updated_at.isoformat() if self.updated_at else None,
         }
