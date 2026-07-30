@@ -57,7 +57,7 @@
               <Select
                 v-model="anggota.provinsi"
                 :options="provinsiOptions"
-                option-label="label" option-value="slug"
+                option-label="label" option-value="kode"
                 placeholder="Pilih Provinsi…"
                 class="w-full text-sm" :loading="wilayahLoading"
                 filter show-clear
@@ -124,7 +124,7 @@
               <Select
                 v-model="keluarga.provinsi"
                 :options="provinsiOptions"
-                option-label="label" option-value="slug"
+                option-label="label" option-value="kode"
                 placeholder="Pilih Provinsi…"
                 class="w-full text-sm" :loading="wilayahLoading"
                 filter show-clear
@@ -457,18 +457,15 @@ const currentProvinsi = computed(() =>
 const wilayahLoading  = ref(false)
 const provinsiOptions = ref([])
 
-function getProvinsiBps(slug) {
-  return provinsiOptions.value.find(p => p.slug === slug)?.kode ?? null
-}
-
 async function loadWilayah() {
   wilayahLoading.value = true
   try {
     const list = await fetchBaselineProvinsi()
     provinsiOptions.value = list
     if (list.length > 0) {
-      anggota.provinsi  = list[0].slug
-      keluarga.provinsi = list[0].slug
+      // Gunakan kode BPS langsung (bukan slug)
+      anggota.provinsi  = list[0].kode
+      keluarga.provinsi = list[0].kode
       loadAnggotaKabkota(list[0].kode)
       loadKeluargaKabkota(list[0].kode)
       loadAnggota()
@@ -498,7 +495,8 @@ async function loadAnggotaKabkota(bpsKode) {
 function handleAnggotaProvinsiChange() {
   anggota.kabkota = ''; anggota.kecamatan = ''
   anggotaKecamatanOptions.value = []
-  loadAnggotaKabkota(getProvinsiBps(anggota.provinsi))
+  // anggota.provinsi sudah berisi kode BPS langsung
+  loadAnggotaKabkota(anggota.provinsi)
   loadAnggota()
 }
 
@@ -530,7 +528,8 @@ async function loadKeluargaKabkota(bpsKode) {
 function handleKeluargaProvinsiChange() {
   keluarga.kabkota = ''; keluarga.kecamatan = ''
   keluargaKecamatanOptions.value = []
-  loadKeluargaKabkota(getProvinsiBps(keluarga.provinsi))
+  // keluarga.provinsi sudah berisi kode BPS langsung
+  loadKeluargaKabkota(keluarga.provinsi)
   loadKeluarga()
 }
 
@@ -731,6 +730,7 @@ async function loadAnggota(cursor = null) {
   if (!anggota.provinsi) return
   anggota.loading = true; anggota.error = ''
   try {
+    // anggota.provinsi sudah berisi kode BPS provinsi KTP
     const params = { provinsi: anggota.provinsi, cursor: cursor || undefined, search: anggota.search.trim() || undefined }
     if (anggota.kabkota)   params.kabkota_kode   = anggota.kabkota
     if (anggota.kecamatan) params.kecamatan_kode = anggota.kecamatan
@@ -748,7 +748,8 @@ function nextAnggota() { anggota.historyStack.push(anggota.currentCursor); loadA
 function prevAnggota() { if (anggota.historyStack.length) loadAnggota(anggota.historyStack.pop()) }
 function resetAnggota() {
   const first = provinsiOptions.value[0]
-  anggota.provinsi = first?.slug ?? ''; anggota.kabkota = ''; anggota.kecamatan = ''; anggota.search = ''
+  // Gunakan kode BPS (bukan slug)
+  anggota.provinsi = first?.kode ?? ''; anggota.kabkota = ''; anggota.kecamatan = ''; anggota.search = ''
   anggota.rows = []; anggota.columns = []; anggota.historyStack = []; anggota.currentCursor = null
   anggotaKabkotaOptions.value = []; anggotaKecamatanOptions.value = []
   for (const k of Object.keys(anggotaFilters)) anggotaFilters[k] = ''
@@ -761,6 +762,7 @@ async function loadKeluarga(cursor = null) {
   if (!keluarga.provinsi) return
   keluarga.loading = true; keluarga.error = ''
   try {
+    // keluarga.provinsi sudah berisi kode BPS provinsi
     const params = { provinsi: keluarga.provinsi, cursor: cursor || undefined, search: keluarga.search.trim() || undefined }
     if (keluarga.kabkota)   params.kabkota_kode   = keluarga.kabkota
     if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
@@ -779,7 +781,8 @@ function nextKeluarga() { keluarga.historyStack.push(keluarga.currentCursor); lo
 function prevKeluarga() { if (keluarga.historyStack.length) loadKeluarga(keluarga.historyStack.pop()) }
 function resetKeluarga() {
   const first = provinsiOptions.value[0]
-  keluarga.provinsi = first?.slug ?? ''; keluarga.kabkota = ''; keluarga.kecamatan = ''; keluarga.search = ''; keluarga.desil = ''
+  // Gunakan kode BPS (bukan slug)
+  keluarga.provinsi = first?.kode ?? ''; keluarga.kabkota = ''; keluarga.kecamatan = ''; keluarga.search = ''; keluarga.desil = ''
   keluarga.rows = []; keluarga.columns = []; keluarga.historyStack = []; keluarga.currentCursor = null
   keluargaKabkotaOptions.value = []; keluargaKecamatanOptions.value = []
   for (const k of Object.keys(keluargaFilters)) keluargaFilters[k] = ''
