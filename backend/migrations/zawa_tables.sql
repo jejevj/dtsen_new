@@ -67,12 +67,19 @@ CREATE TABLE IF NOT EXISTS `zawa_anggota` (
     `created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`    DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    INDEX `idx_anggota_nik`          (`nomor_induk_kependudukan`),
-    INDEX `idx_anggota_nkk`          (`nomor_kartu_keluarga`),
-    INDEX `idx_anggota_provinsi_slug`(`provinsi_slug`),
-    INDEX `idx_anggota_slug_nik`     (`provinsi_slug`, `nomor_induk_kependudukan`),
-    INDEX `idx_anggota_slug_nkk`     (`provinsi_slug`, `nomor_kartu_keluarga`),
-    FULLTEXT INDEX `ft_anggota_nama` (`nama`)
+    INDEX `idx_anggota_nik`              (`nomor_induk_kependudukan`),
+    INDEX `idx_anggota_nkk`              (`nomor_kartu_keluarga`),
+    INDEX `idx_anggota_provinsi_slug`    (`provinsi_slug`),
+    INDEX `idx_anggota_slug_nik`         (`provinsi_slug`, `nomor_induk_kependudukan`),
+    INDEX `idx_anggota_slug_nkk`         (`provinsi_slug`, `nomor_kartu_keluarga`),
+    -- Index wilayah KTP (individual) — untuk filter per level
+    INDEX `idx_anggota_kode_provinsi_ktp` (`kode_provinsi_ktp`),
+    INDEX `idx_anggota_kode_kabkota_ktp`  (`kode_kabupaten_kota_ktp`),
+    INDEX `idx_anggota_kode_kecamatan_ktp`(`kode_kecamatan_ktp`),
+    INDEX `idx_anggota_kode_kel_ktp`      (`kode_kelurahan_desa_ktp`),
+    -- Index composite wilayah KTP — untuk query bertingkat (paling efisien)
+    INDEX `idx_anggota_wilayah_ktp`       (`kode_provinsi_ktp`, `kode_kabupaten_kota_ktp`, `kode_kecamatan_ktp`, `kode_kelurahan_desa_ktp`),
+    FULLTEXT INDEX `ft_anggota_nama`     (`nama`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -141,10 +148,16 @@ CREATE TABLE IF NOT EXISTS `zawa_keluarga` (
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE INDEX `idx_keluarga_nkk_unik`     (`nomor_kartu_keluarga`),
-    INDEX        `idx_keluarga_provinsi`      (`provinsi`),
-    INDEX        `idx_keluarga_kode_provinsi` (`kode_provinsi`),
-    FULLTEXT INDEX `ft_keluarga_nama_alamat`  (`nama_anggota_keluarga`, `alamat`)
+    UNIQUE INDEX `idx_keluarga_nkk_unik`      (`nomor_kartu_keluarga`),
+    INDEX        `idx_keluarga_provinsi`       (`provinsi`),
+    INDEX        `idx_keluarga_kode_provinsi`  (`kode_provinsi`),
+    -- Index wilayah (individual) — untuk filter per level
+    INDEX        `idx_keluarga_kode_kabkota`   (`kode_kabupaten_kota`),
+    INDEX        `idx_keluarga_kode_kecamatan` (`kode_kecamatan`),
+    INDEX        `idx_keluarga_kode_kelurahan` (`kode_kelurahan_desa`),
+    -- Index composite wilayah — untuk query bertingkat (paling efisien)
+    INDEX        `idx_keluarga_wilayah`        (`kode_provinsi`, `kode_kabupaten_kota`, `kode_kecamatan`, `kode_kelurahan_desa`),
+    FULLTEXT INDEX `ft_keluarga_nama_alamat`   (`nama_anggota_keluarga`, `alamat`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
