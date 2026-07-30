@@ -2,10 +2,10 @@
   <AppLayout>
     <div style="display:flex;flex-direction:column;gap:20px;">
 
-      <!-- Back -->
-      <button @click="$router.back()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid #e2e8f0;border-radius:8px;background:white;font-size:13px;font-weight:600;cursor:pointer;color:#374151;width:fit-content;">
+      <!-- Back — dinonaktifkan karena tidak ada web route history -->
+      <!-- <button @click="$router.back()" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid #e2e8f0;border-radius:8px;background:white;font-size:13px;font-weight:600;cursor:pointer;color:#374151;width:fit-content;">
         <i class="pi pi-arrow-left" style="font-size:11px;"></i> Kembali
-      </button>
+      </button> -->
 
       <!-- Loading -->
       <div v-if="loading" style="text-align:center;padding:60px;">
