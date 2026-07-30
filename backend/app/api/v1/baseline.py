@@ -580,23 +580,6 @@ def _dedupe_by_nik(items: list) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Helper: subquery NKK yang desil_nasional-nya termasuk _DESIL_ALLOWED (1-4)
-# Dipakai untuk filter anggota via join ke zawa_keluarga.
-# FIX: Menggunakan select().scalar_subquery() agar kompatibel dengan
-# SQLAlchemy 2.x dan menghilangkan SAWarning "Coercing Subquery object".
-# ---------------------------------------------------------------------------
-def _valid_nkk_subquery():
-    """Kembalikan scalar subquery kolom nomor_kartu_keluarga dari ZawaKeluarga
-    yang desil_nasional IN _DESIL_ALLOWED.
-    """
-    return (
-        select(ZawaKeluarga.nomor_kartu_keluarga)
-        .where(ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED))
-        .scalar_subquery()
-    )
-
-
-# ---------------------------------------------------------------------------
 # Helper: parse nilai range ternak
 # "0"   → col == 0
 # "1-5" → col BETWEEN 1 AND 5
@@ -1022,16 +1005,20 @@ def _build_anggota_db_query(bps_kode: str,
                              kabkota_filter, kecamatan_filter, search: str,
                              extra_filters: dict = None,
                              usia_min=None, usia_max=None):
-    valid_nkk_sq = _valid_nkk_subquery()
-
-    # Filter berdasarkan zawa_anggota.kode_provinsi_ktp (kode BPS 2 digit)
-    q = ZawaAnggota.query.filter(
+    # PERF: Ganti IN (subquery) dengan JOIN langsung ke zawa_keluarga
+    # agar MySQL bisa menggunakan hash join dan memanfaatkan index dengan optimal.
+    # Filter provinsi menggunakan zawa_anggota.kode_provinsi_ktp (kode BPS 2 digit).
+    q = ZawaAnggota.query.join(
+        ZawaKeluarga,
+        db.and_(
+            ZawaAnggota.nomor_kartu_keluarga == ZawaKeluarga.nomor_kartu_keluarga,
+            ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED),
+        )
+    ).filter(
         db.or_(
             ZawaAnggota.kode_provinsi_ktp == bps_kode,
             ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),
         )
-    ).filter(
-        ZawaAnggota.nomor_kartu_keluarga.in_(valid_nkk_sq)
     )
 
     if kabkota_filter:
