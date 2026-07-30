@@ -11,15 +11,19 @@
 
         <!-- Tombol Filter -->
         <button
-          :disabled="!currentProvinsi"
-          v-tooltip="!currentProvinsi ? 'Pilih provinsi terlebih dahulu' : 'Buka filter pencarian'"
+          :disabled="!currentProvinsi || anggota.loading || keluarga.loading"
+          v-tooltip="!currentProvinsi
+            ? 'Pilih provinsi terlebih dahulu'
+            : (anggota.loading || keluarga.loading)
+              ? 'Tunggu data selesai dimuat'
+              : 'Buka filter pencarian'"
           @click="showFilter = true"
           :class="[
             'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border shadow-sm',
             activeFilterCount > 0
               ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700 shadow-primary-200'
               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300',
-            !currentProvinsi ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+            (!currentProvinsi || anggota.loading || keluarga.loading) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
           ]"
         >
           <i class="pi pi-filter text-base"></i>
@@ -37,11 +41,18 @@
           v-for="tab in tabs"
           :key="tab.key"
           @click="switchTab(tab.key)"
+          :disabled="(anggota.loading || keluarga.loading) && activeTab !== tab.key"
+          v-tooltip="(anggota.loading || keluarga.loading) && activeTab !== tab.key
+            ? 'Tunggu hingga data selesai dimuat'
+            : null"
           :class="[
             'px-5 py-2 rounded-lg text-sm font-semibold transition-all',
             activeTab === tab.key
               ? 'bg-white text-primary-700 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
+              : 'text-slate-500 hover:text-slate-700',
+            (anggota.loading || keluarga.loading) && activeTab !== tab.key
+              ? 'opacity-40 cursor-not-allowed'
+              : ''
           ]"
         >
           <i :class="tab.icon + ' mr-1.5'"></i>{{ tab.label }}
@@ -60,6 +71,7 @@
                 option-label="label" option-value="kode"
                 placeholder="Pilih Provinsi…"
                 class="w-full text-sm" :loading="wilayahLoading"
+                :disabled="anggota.loading"
                 filter show-clear
                 @change="handleAnggotaProvinsiChange"
               />
@@ -72,6 +84,7 @@
                 option-label="nama" option-value="kode"
                 placeholder="Semua Kab/Kota"
                 class="w-full text-sm" :loading="anggotaKabkotaLoading"
+                :disabled="anggota.loading"
                 filter show-clear
                 @change="handleAnggotaKabkotaChange"
               />
@@ -84,12 +97,13 @@
                 option-label="nama" option-value="kode"
                 placeholder="Semua Kecamatan"
                 class="w-full text-sm" :loading="anggotaKecamatanLoading"
+                :disabled="anggota.loading"
                 filter show-clear
               />
             </div>
             <div class="flex gap-2 pb-0.5">
-              <Button label="Tampilkan" icon="pi pi-search" size="small" :loading="anggota.loading" @click="loadAnggota()" />
-              <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined @click="resetAnggota" />
+              <Button label="Tampilkan" icon="pi pi-search" size="small" :loading="anggota.loading" :disabled="!anggota.provinsi || anggota.loading" @click="loadAnggota()" />
+              <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined :disabled="anggota.loading" @click="resetAnggota" />
             </div>
           </div>
           <div v-if="activeFilterCount > 0" class="mt-3 flex items-center gap-2 flex-wrap">
@@ -110,7 +124,7 @@
           :loading="anggota.loading" :error="anggota.error"
           :rows="anggota.rows" :columns="anggota.columns"
           :meta="anggota.meta" :history-stack="anggota.historyStack"
-          empty-hint="Tidak ada data yang sesuai." title="Data Anggota"
+          empty-hint="Pilih provinsi lalu klik Tampilkan untuk melihat data." title="Data Anggota"
           @next="nextAnggota" @prev="prevAnggota" @detail="goToAnggotaDetail"
         />
       </template>
@@ -127,6 +141,7 @@
                 option-label="label" option-value="kode"
                 placeholder="Pilih Provinsi…"
                 class="w-full text-sm" :loading="wilayahLoading"
+                :disabled="keluarga.loading"
                 filter show-clear
                 @change="handleKeluargaProvinsiChange"
               />
@@ -139,6 +154,7 @@
                 option-label="nama" option-value="kode"
                 placeholder="Semua Kab/Kota"
                 class="w-full text-sm" :loading="keluargaKabkotaLoading"
+                :disabled="keluarga.loading"
                 filter show-clear
                 @change="handleKeluargaKabkotaChange"
               />
@@ -151,6 +167,7 @@
                 option-label="nama" option-value="kode"
                 placeholder="Semua Kecamatan"
                 class="w-full text-sm" :loading="keluargaKecamatanLoading"
+                :disabled="keluarga.loading"
                 filter show-clear
               />
             </div>
@@ -162,11 +179,12 @@
                 option-label="label" option-value="value"
                 placeholder="Semua Desil"
                 class="w-full text-sm" show-clear
+                :disabled="keluarga.loading"
               />
             </div>
             <div class="flex gap-2 pb-0.5">
-              <Button label="Tampilkan" icon="pi pi-search" size="small" :loading="keluarga.loading" @click="loadKeluarga()" />
-              <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined @click="resetKeluarga" />
+              <Button label="Tampilkan" icon="pi pi-search" size="small" :loading="keluarga.loading" :disabled="!keluarga.provinsi || keluarga.loading" @click="loadKeluarga()" />
+              <Button label="Reset" icon="pi pi-times" size="small" severity="secondary" outlined :disabled="keluarga.loading" @click="resetKeluarga" />
             </div>
           </div>
           <div v-if="activeFilterCount > 0" class="mt-3 flex items-center gap-2 flex-wrap">
@@ -187,7 +205,7 @@
           :loading="keluarga.loading" :error="keluarga.error"
           :rows="keluarga.rows" :columns="keluarga.columns"
           :meta="keluarga.meta" :history-stack="keluarga.historyStack"
-          empty-hint="Tidak ada data yang sesuai." title="Data Keluarga"
+          empty-hint="Pilih provinsi lalu klik Tampilkan untuk melihat data." title="Data Keluarga"
           @next="nextKeluarga" @prev="prevKeluarga" @detail="goToKeluargaDetail"
         />
       </template>
@@ -447,8 +465,10 @@ const tabs = [
 ]
 const activeTab = ref('anggota')
 
+// Guard: tidak bisa pindah tab saat salah satu sedang loading
 function switchTab(key) {
   if (activeTab.value === key) return
+  if (anggota.loading || keluarga.loading) return
   activeTab.value = key
 }
 
@@ -459,20 +479,12 @@ const currentProvinsi = computed(() =>
 const wilayahLoading  = ref(false)
 const provinsiOptions = ref([])
 
+// Hanya load daftar provinsi — tidak auto-select, tidak auto-load data
 async function loadWilayah() {
   wilayahLoading.value = true
   try {
     const list = await fetchBaselineProvinsi()
     provinsiOptions.value = list
-    if (list.length > 0) {
-      // Gunakan kode BPS langsung (bukan slug)
-      anggota.provinsi  = list[0].kode
-      keluarga.provinsi = list[0].kode
-      loadAnggotaKabkota(list[0].kode)
-      loadKeluargaKabkota(list[0].kode)
-      loadAnggota()
-      loadKeluarga()
-    }
   } catch (e) {
     console.error('[Wilayah] gagal load provinsi:', e)
   } finally {
@@ -497,9 +509,8 @@ async function loadAnggotaKabkota(bpsKode) {
 function handleAnggotaProvinsiChange() {
   anggota.kabkota = ''; anggota.kecamatan = ''
   anggotaKecamatanOptions.value = []
-  // anggota.provinsi sudah berisi kode BPS langsung
   loadAnggotaKabkota(anggota.provinsi)
-  loadAnggota()
+  // Tidak auto-load data — user harus klik Tampilkan
 }
 
 function handleAnggotaKabkotaChange() {
@@ -530,9 +541,8 @@ async function loadKeluargaKabkota(bpsKode) {
 function handleKeluargaProvinsiChange() {
   keluarga.kabkota = ''; keluarga.kecamatan = ''
   keluargaKecamatanOptions.value = []
-  // keluarga.provinsi sudah berisi kode BPS langsung
   loadKeluargaKabkota(keluarga.provinsi)
-  loadKeluarga()
+  // Tidak auto-load data — user harus klik Tampilkan
 }
 
 function handleKeluargaKabkotaChange() {
@@ -732,7 +742,6 @@ async function loadAnggota(cursor = null) {
   if (!anggota.provinsi) return
   anggota.loading = true; anggota.error = ''
   try {
-    // anggota.provinsi sudah berisi kode BPS provinsi KTP
     const params = { provinsi: anggota.provinsi, cursor: cursor || undefined, search: anggota.search.trim() || undefined }
     if (anggota.kabkota)   params.kabkota_kode   = anggota.kabkota
     if (anggota.kecamatan) params.kecamatan_kode = anggota.kecamatan
@@ -749,22 +758,19 @@ async function loadAnggota(cursor = null) {
 function nextAnggota() { anggota.historyStack.push(anggota.currentCursor); loadAnggota(anggota.meta.nextCursor) }
 function prevAnggota() { if (anggota.historyStack.length) loadAnggota(anggota.historyStack.pop()) }
 function resetAnggota() {
-  const first = provinsiOptions.value[0]
-  // Gunakan kode BPS (bukan slug)
-  anggota.provinsi = first?.kode ?? ''; anggota.kabkota = ''; anggota.kecamatan = ''; anggota.search = ''
+  anggota.provinsi = ''; anggota.kabkota = ''; anggota.kecamatan = ''; anggota.search = ''
   anggota.rows = []; anggota.columns = []; anggota.historyStack = []; anggota.currentCursor = null
   anggotaKabkotaOptions.value = []; anggotaKecamatanOptions.value = []
   for (const k of Object.keys(anggotaFilters)) anggotaFilters[k] = ''
   usiaSlider.value = [0, 100]
   Object.assign(anggota.meta, { label:'', totalItems:0, totalPages:1, currentPage:1, hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10 })
-  if (first) { loadAnggotaKabkota(first.kode); loadAnggota() }
+  // Tidak auto-load — user pilih provinsi lagi lalu klik Tampilkan
 }
 
 async function loadKeluarga(cursor = null) {
   if (!keluarga.provinsi) return
   keluarga.loading = true; keluarga.error = ''
   try {
-    // keluarga.provinsi sudah berisi kode BPS provinsi
     const params = { provinsi: keluarga.provinsi, cursor: cursor || undefined, search: keluarga.search.trim() || undefined }
     if (keluarga.kabkota)   params.kabkota_kode   = keluarga.kabkota
     if (keluarga.kecamatan) params.kecamatan_kode = keluarga.kecamatan
@@ -782,15 +788,13 @@ async function loadKeluarga(cursor = null) {
 function nextKeluarga() { keluarga.historyStack.push(keluarga.currentCursor); loadKeluarga(keluarga.meta.nextCursor) }
 function prevKeluarga() { if (keluarga.historyStack.length) loadKeluarga(keluarga.historyStack.pop()) }
 function resetKeluarga() {
-  const first = provinsiOptions.value[0]
-  // Gunakan kode BPS (bukan slug)
-  keluarga.provinsi = first?.kode ?? ''; keluarga.kabkota = ''; keluarga.kecamatan = ''; keluarga.search = ''; keluarga.desil = ''
+  keluarga.provinsi = ''; keluarga.kabkota = ''; keluarga.kecamatan = ''; keluarga.search = ''; keluarga.desil = ''
   keluarga.rows = []; keluarga.columns = []; keluarga.historyStack = []; keluarga.currentCursor = null
   keluargaKabkotaOptions.value = []; keluargaKecamatanOptions.value = []
   for (const k of Object.keys(keluargaFilters)) keluargaFilters[k] = ''
   for (const tf of TERNAK_FIELDS) ternakSliders[tf.key] = [0, 100]
   Object.assign(keluarga.meta, { label:'', totalItems:0, totalPages:1, currentPage:1, hasNextPage:false, hasPreviousPage:false, nextCursor:null, limit:10 })
-  if (first) { loadKeluargaKabkota(first.kode); loadKeluarga() }
+  // Tidak auto-load — user pilih provinsi lagi lalu klik Tampilkan
 }
 
 onMounted(() => loadWilayah())
