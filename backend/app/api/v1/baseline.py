@@ -773,7 +773,6 @@ def baseline_anggota_by_nkk():
                     "totalItems": 0, "source": "filtered_desil", "nkk": nkk,
                     "errorMessage": "Data tidak tersedia (desil tidak termasuk 1-4)."
                 }}), 200
-            # Keluarga belum di-sync: lanjut cek ZAWA
         else:
             items = _dedupe_by_nik([_row_to_dict(r) for r in db_rows])
             return jsonify({
@@ -781,71 +780,10 @@ def baseline_anggota_by_nkk():
                 "meta": {"totalItems": len(items), "source": "local_db", "nkk": nkk}
             }), 200
 
-    bps_kode = nkk[:2]
-    prov_slug = _BPS_TO_SLUG.get(bps_kode)
-    if not prov_slug:
-        return jsonify({"data": [], "meta": {
-            "totalItems": 0, "source": "not_found", "nkk": nkk,
-            "errorMessage": "Provinsi tidak dapat dideteksi dari NKK ini."
-        }}), 200
-
-    prov_info = PROVINSI_MAP[prov_slug]
-
-    # Coba ambil data keluarga dari ZAWA untuk validasi desil
-    keluarga_payload, keluarga_err, keluarga_not_found = _fetch_by_id(
-        "zawa/keluarga-by-nik", "nomor_kartu_keluarga", nkk, "keluarga-by-nkk"
-    )
-    if not keluarga_not_found and not keluarga_err and keluarga_payload:
-        for kitem in keluarga_payload.get("items", []):
-            desil = kitem.get("desil_nasional")
-            try:
-                if int(desil) not in _DESIL_ALLOWED:
-                    return jsonify({"data": [], "meta": {
-                        "totalItems": 0, "source": "filtered_desil", "nkk": nkk,
-                        "errorMessage": "Data tidak tersedia (desil tidak termasuk 1-4)."
-                    }}), 200
-            except (TypeError, ValueError):
-                pass  # desil tidak ada / tidak bisa diparse → lanjut
-        try:
-            for kitem in keluarga_payload.get("items", []):
-                _upsert_keluarga_from_api_item(kitem)
-        except Exception as e:
-            logger.warning(f"[by-nkk] gagal cache keluarga NKK={nkk}: {e}")
-
-    found_items = []
-    cursor = None
-    MAX_PAGES = 20
-    for _ in range(MAX_PAGES):
-        params = {"cursor": cursor} if cursor else {}
-        payload, err = _fetch_zawa_page(f"zawa/{prov_info['slug']}", params)
-        if err or not payload:
-            break
-        for item in payload["items"]:
-            if str(item.get("nomor_kartu_keluarga") or "").strip() == nkk:
-                found_items.append(item)
-        if found_items and not payload.get("hasNextPage"):
-            break
-        if not payload.get("hasNextPage") or not payload.get("nextCursor"):
-            break
-        cursor = payload["nextCursor"]
-
-    found_items = _dedupe_by_nik(found_items)
-
-    if found_items:
-        try:
-            _cache_anggota_to_db(found_items, prov_slug)
-        except Exception as e:
-            logger.warning(f"[by-nkk] gagal cache NKK={nkk}: {e}")
-
-    return jsonify({
-        "data": found_items,
-        "meta": {
-            "totalItems": len(found_items),
-            "source": "zawa" if found_items else "not_found",
-            "nkk": nkk,
-            "provinsi": prov_slug,
-        }
-    }), 200
+    return jsonify({"data": [], "meta": {
+        "totalItems": 0, "source": "not_found", "nkk": nkk,
+        "errorMessage": "Data tidak ditemukan di database lokal."
+    }}), 200
 
 
 @api_v1_bp.post('/baseline/sync/anggota')
@@ -1080,23 +1018,17 @@ def baseline_provinsi_list():
     return jsonify({"data": items, "scope": _get_wilayah_scope(identity)}), 200
 
 
-def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
+def _build_anggota_db_query(bps_kode: str,
                              kabkota_filter, kecamatan_filter, search: str,
                              extra_filters: dict = None,
                              usia_min=None, usia_max=None):
     valid_nkk_sq = _valid_nkk_subquery()
 
+    # Filter berdasarkan zawa_anggota.kode_provinsi_ktp (kode BPS 2 digit)
     q = ZawaAnggota.query.filter(
         db.or_(
             ZawaAnggota.kode_provinsi_ktp == bps_kode,
             ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),
-            db.and_(
-                db.or_(
-                    ZawaAnggota.kode_provinsi_ktp.is_(None),
-                    ZawaAnggota.kode_provinsi_ktp == '',
-                ),
-                ZawaAnggota.provinsi_slug == provinsi_slug,
-            )
         )
     ).filter(
         ZawaAnggota.nomor_kartu_keluarga.in_(valid_nkk_sq)
@@ -1173,21 +1105,13 @@ def baseline_anggota():
             if kecamatan_dotted not in allowed_kec and kecamatan_plain not in allowed_kec:
                 return jsonify({"error": "Akses ditolak."}), 403
 
-    # --- NIK search path: enforce desil via join ---
+    # --- NIK search path: langsung dari DB lokal, filter desil via join ---
     if search and _is_numeric_id(search):
-        # FIX: Tambahkan filter provinsi agar NIK cross-province tidak muncul.
         db_row = ZawaAnggota.query.filter(
             ZawaAnggota.nomor_induk_kependudukan == search.strip(),
             db.or_(
                 ZawaAnggota.kode_provinsi_ktp == bps_kode,
                 ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),
-                db.and_(
-                    db.or_(
-                        ZawaAnggota.kode_provinsi_ktp.is_(None),
-                        ZawaAnggota.kode_provinsi_ktp == '',
-                    ),
-                    ZawaAnggota.provinsi_slug == provinsi,
-                )
             )
         ).first()
         if db_row:
@@ -1195,7 +1119,6 @@ def baseline_anggota():
                 ZawaKeluarga.nomor_kartu_keluarga == db_row.nomor_kartu_keluarga,
                 ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED),
             ).first()
-            # Jika keluarga sudah di-sync dan desil tidak valid → tolak
             keluarga_any = ZawaKeluarga.query.filter_by(
                 nomor_kartu_keluarga=db_row.nomor_kartu_keluarga
             ).first()
@@ -1207,109 +1130,52 @@ def baseline_anggota():
             if nkk_check:
                 return _ok_payload([_row_to_dict(db_row)], info["label"], provinsi_raw,
                                    {"searchMode": "db_cache", "source": "local_db"})
-        payload, err, not_found = _fetch_by_id(
-            "zawa/anggota-by-nik", "nomor_induk_kependudukan", search.strip(), "anggota-by-nik")
-        if not_found:
-            return _err_200(f"NIK {search} tidak ditemukan di data ZAWA.", info["label"], provinsi_raw)
-        if err:
-            return _err_200(err, info["label"], provinsi_raw)
-        if payload["items"]:
-            try:
-                _cache_anggota_to_db(payload["items"], provinsi)
-            except Exception as e:
-                logger.warning(f"[Baseline] gagal cache anggota NIK={search}: {e}")
-        # Post-filter hasil ZAWA berdasarkan desil via valid_nkk_subquery
-        valid_nkks = {row[0] for row in db.session.query(
-            ZawaKeluarga.nomor_kartu_keluarga
-        ).filter(ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED)).all()}
-        payload["items"] = [
-            item for item in payload["items"]
-            if str(item.get("nomor_kartu_keluarga") or "").strip() in valid_nkks
-            or not ZawaKeluarga.query.filter_by(
-                nomor_kartu_keluarga=str(item.get("nomor_kartu_keluarga") or "").strip()
-            ).first()  # keluarga belum di-sync: lolos dulu
-        ]
-        return _build_table_response(payload, info["label"], provinsi_raw)
-
-    db_page = None
-    if not cursor:
-        db_page = 1
-    else:
-        db_page = _parse_db_cursor(cursor)
-
-    if db_page is not None:
-        q = _build_anggota_db_query(
-            provinsi_slug=provinsi, bps_kode=bps_kode,
-            kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
-            search=search, extra_filters=extra_filters,
-            usia_min=usia_min_raw, usia_max=usia_max_raw,
+        return _err_200(
+            f"NIK {search} tidak ditemukan di database lokal.",
+            info["label"], provinsi_raw
         )
-        total_count = q.count()
-        if total_count > 0:
-            total_pages = max(1, -(-total_count // DB_PAGE_SIZE))
-            offset      = (db_page - 1) * DB_PAGE_SIZE
-            db_rows     = q.order_by(ZawaAnggota.id).offset(offset).limit(DB_PAGE_SIZE).all()
-            items       = [_row_to_dict(r) for r in db_rows]
-            has_next    = db_page < total_pages
-            next_cur    = _build_db_cursor(db_page + 1) if has_next else None
-            columns     = list(items[0].keys()) if items else []
-            return jsonify({
-                "data": items, "columns": columns,
-                "meta": {
-                    "provinsi": provinsi_raw, "label": info["label"],
-                    "totalItems": total_count, "totalPages": total_pages,
-                    "currentPage": db_page, "hasNextPage": has_next,
-                    "hasPreviousPage": db_page > 1, "nextCursor": next_cur,
-                    "limit": DB_PAGE_SIZE, "searchMode": "db_cache", "source": "local_db",
-                }
-            }), 200
-        if extra_filters or usia_min_raw or usia_max_raw:
-            return jsonify({
-                "data": [], "columns": [],
-                "meta": {
-                    "provinsi": provinsi_raw, "label": info["label"],
-                    "totalItems": 0, "totalPages": 1, "currentPage": 1,
-                    "hasNextPage": False, "hasPreviousPage": False,
-                    "nextCursor": None, "limit": DB_PAGE_SIZE,
-                    "searchMode": "db_cache", "source": "local_db",
-                    "errorMessage": "Tidak ada data yang sesuai dengan filter yang dipilih.",
-                }
-            }), 200
 
-    params: dict = {}
-    if cursor and not cursor.startswith("db:page_"):
-        params["cursor"] = cursor
-    if kabkota_dotted:
-        params["kode_kabupaten_kota"] = kabkota_dotted
-    if kecamatan_dotted:
-        params["kode_kecamatan"] = kecamatan_dotted
+    db_page = _parse_db_cursor(cursor) if cursor else 1
+    if db_page is None:
+        db_page = 1
 
-    payload, err = _fetch_zawa_page(f"zawa/{info['slug']}", params)
-    if err:
-        return _err_200(err, info["label"], provinsi_raw)
-    if search:
-        q_str = search.lower()
-        payload["items"] = [
-            r for r in payload["items"]
-            if q_str in " ".join(str(v).lower() for v in r.values() if v)
-        ]
-    # Filter live ZAWA: hanya NKK yang sudah di-sync dengan desil valid
-    valid_nkks_live = {row[0] for row in db.session.query(
-        ZawaKeluarga.nomor_kartu_keluarga
-    ).filter(ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED)).all()}
-    payload["items"] = [
-        item for item in payload["items"]
-        if str(item.get("nomor_kartu_keluarga") or "").strip() in valid_nkks_live
-        or not ZawaKeluarga.query.filter_by(
-            nomor_kartu_keluarga=str(item.get("nomor_kartu_keluarga") or "").strip()
-        ).first()  # keluarga belum di-sync: lolos dulu
-    ]
-    if payload["items"]:
-        try:
-            _cache_anggota_to_db(payload["items"], provinsi)
-        except Exception as e:
-            logger.warning(f"[Baseline] gagal cache anggota list provinsi={provinsi}: {e}")
-    return _build_table_response(payload, info["label"], provinsi_raw)
+    q = _build_anggota_db_query(
+        bps_kode=bps_kode,
+        kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+        search=search, extra_filters=extra_filters,
+        usia_min=usia_min_raw, usia_max=usia_max_raw,
+    )
+    total_count = q.count()
+    if total_count > 0:
+        total_pages = max(1, -(-total_count // DB_PAGE_SIZE))
+        offset      = (db_page - 1) * DB_PAGE_SIZE
+        db_rows     = q.order_by(ZawaAnggota.id).offset(offset).limit(DB_PAGE_SIZE).all()
+        items       = [_row_to_dict(r) for r in db_rows]
+        has_next    = db_page < total_pages
+        next_cur    = _build_db_cursor(db_page + 1) if has_next else None
+        columns     = list(items[0].keys()) if items else []
+        return jsonify({
+            "data": items, "columns": columns,
+            "meta": {
+                "provinsi": provinsi_raw, "label": info["label"],
+                "totalItems": total_count, "totalPages": total_pages,
+                "currentPage": db_page, "hasNextPage": has_next,
+                "hasPreviousPage": db_page > 1, "nextCursor": next_cur,
+                "limit": DB_PAGE_SIZE, "searchMode": "db_cache", "source": "local_db",
+            }
+        }), 200
+
+    return jsonify({
+        "data": [], "columns": [],
+        "meta": {
+            "provinsi": provinsi_raw, "label": info["label"],
+            "totalItems": 0, "totalPages": 1, "currentPage": 1,
+            "hasNextPage": False, "hasPreviousPage": False,
+            "nextCursor": None, "limit": DB_PAGE_SIZE,
+            "searchMode": "db_cache", "source": "local_db",
+            "errorMessage": "Tidak ada data yang sesuai. Pastikan sync sudah dilakukan.",
+        }
+    }), 200
 
 
 @api_v1_bp.get('/baseline/keluarga')
@@ -1359,6 +1225,7 @@ def baseline_keluarga():
             if kecamatan_dotted not in allowed_kec and kecamatan_plain not in allowed_kec:
                 return jsonify({"error": "Akses ditolak."}), 403
 
+    # --- NKK search path: langsung dari DB lokal ---
     if search and _is_nkk(search):
         db_row = ZawaKeluarga.query.filter(
             ZawaKeluarga.nomor_kartu_keluarga == search.strip(),
@@ -1374,45 +1241,21 @@ def baseline_keluarga():
                 "Data tidak tersedia (desil tidak termasuk 1-4).",
                 label, label_provinsi
             )
-        payload, err, not_found = _fetch_by_id(
-            "zawa/keluarga-by-nik", "nomor_kartu_keluarga", search.strip(), "keluarga-by-nkk")
-        if not_found:
-            return _err_200(f"Nomor KK {search} tidak ditemukan.", label, label_provinsi)
-        if err:
-            return _err_200(err, label, label_provinsi)
-        # Filter desil dari hasil ZAWA
-        if payload["items"]:
-            valid_items = []
-            for item in payload["items"]:
-                desil = item.get("desil_nasional")
-                try:
-                    if int(desil) in _DESIL_ALLOWED:
-                        valid_items.append(item)
-                except (TypeError, ValueError):
-                    valid_items.append(item)  # desil tidak tersedia: lolos
-            payload["items"] = valid_items
-            payload["totalItems"] = len(valid_items)
-            if not valid_items:
-                return _err_200(
-                    "Data tidak tersedia (desil tidak termasuk 1-4).",
-                    label, label_provinsi
-                )
-            try:
-                for item in payload["items"]:
-                    _upsert_keluarga_from_api_item(item)
-            except Exception as e:
-                logger.warning(f"[Baseline] gagal cache keluarga NKK={search}: {e}")
-        return _build_table_response(payload, label, label_provinsi)
+        return _err_200(
+            f"Nomor KK {search} tidak ditemukan di database lokal.",
+            label, label_provinsi
+        )
 
     db_page = _parse_db_cursor(cursor) if cursor else 1
     if db_page is None:
         db_page = 1
 
-    # DB path: selalu filter desil_nasional IN (1,2,3,4)
+    # DB path: filter berdasarkan zawa_keluarga.kode_provinsi dan desil_nasional IN (1,2,3,4)
     q = ZawaKeluarga.query.filter(
         ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED)
     )
     if prov_bps:
+        # Filter provinsi berdasarkan zawa_keluarga.kode_provinsi
         q = q.filter(db.or_(
             ZawaKeluarga.kode_provinsi == prov_bps,
             ZawaKeluarga.kode_provinsi == prov_bps.lstrip('0'),
@@ -1455,47 +1298,17 @@ def baseline_keluarga():
             }
         }), 200
 
-    if prov_bps or kabkota_dotted or kecamatan_dotted or extra_filters:
-        return jsonify({
-            "data": [], "columns": [],
-            "meta": {
-                "provinsi": label_provinsi, "label": label,
-                "totalItems": 0, "totalPages": 1, "currentPage": 1,
-                "hasNextPage": False, "hasPreviousPage": False,
-                "nextCursor": None, "limit": DB_PAGE_SIZE,
-                "searchMode": "db_local", "source": "local_db",
-                "errorMessage": "Data belum tersedia di cache lokal atau tidak ada yang sesuai filter. Lakukan sync terlebih dahulu.",
-            }
-        }), 200
-
-    payload, err = _fetch_zawa_page("zawa/keluarga",
-        {"cursor": cursor} if cursor and not cursor.startswith("db:page_") else {})
-    if err:
-        return _err_200(err, label, label_provinsi)
-    if search:
-        q_str = search.lower()
-        payload["items"] = [
-            r for r in payload["items"]
-            if q_str in " ".join(str(v).lower() for v in r.values() if v)
-        ]
-    # Filter live ZAWA fallback: hanya desil 1-4
-    filtered_live = []
-    for item in payload["items"]:
-        desil = item.get("desil_nasional")
-        try:
-            if int(desil) in _DESIL_ALLOWED:
-                filtered_live.append(item)
-        except (TypeError, ValueError):
-            filtered_live.append(item)  # desil tidak tersedia: lolos
-    payload["items"] = filtered_live
-    payload["totalItems"] = len(filtered_live)
-    if filtered_live:
-        try:
-            for item in filtered_live:
-                _upsert_keluarga_from_api_item(item)
-        except Exception as e:
-            logger.warning(f"[Baseline] gagal cache keluarga list: {e}")
-    return _build_table_response(payload, label, label_provinsi)
+    return jsonify({
+        "data": [], "columns": [],
+        "meta": {
+            "provinsi": label_provinsi, "label": label,
+            "totalItems": 0, "totalPages": 1, "currentPage": 1,
+            "hasNextPage": False, "hasPreviousPage": False,
+            "nextCursor": None, "limit": DB_PAGE_SIZE,
+            "searchMode": "db_local", "source": "local_db",
+            "errorMessage": "Data belum tersedia di cache lokal atau tidak ada yang sesuai filter. Lakukan sync terlebih dahulu.",
+        }
+    }), 200
 
 
 @api_v1_bp.get('/baseline')
