@@ -431,12 +431,14 @@ const desilOptions = [
 function goToAnggotaDetail(row) {
   const nik = row.nomor_induk_kependudukan || row.nik || row.id
   if (!nik) return
-  router.push({ name: 'baseline-anggota-detail', params: { nik: String(nik) } })
+  const url = router.resolve({ name: 'baseline-anggota-detail', params: { nik: String(nik) } }).href
+  window.open(url, '_blank')
 }
 function goToKeluargaDetail(row) {
   const nkk = row.nomor_kartu_keluarga || row.nkk || row.id
   if (!nkk) return
-  router.push({ name: 'baseline-keluarga-detail', params: { nkk: String(nkk) } })
+  const url = router.resolve({ name: 'baseline-keluarga-detail', params: { nkk: String(nkk) } }).href
+  window.open(url, '_blank')
 }
 
 const tabs = [
