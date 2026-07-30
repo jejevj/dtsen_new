@@ -63,7 +63,7 @@ _BPS_TO_SLUG: dict[str, str] = {v["bps"]: k for k, v in PROVINSI_MAP.items()}
 ZAWA_BASE    = "https://spl-satudata.kemenag.go.id/core/api"
 ZAWA_TIMEOUT = 60
 ZAWA_LIMIT   = 10   # page size untuk ZAWA API
-DB_PAGE_SIZE = 50   # page size untuk query DB lokal
+DB_PAGE_SIZE = 10   # page size untuk query DB lokal
 
 SYNC_MAX_ANGGOTA_PER_PROVINSI = 10_000
 SYNC_MAX_KELUARGA_PER_RUN     = 5_000
