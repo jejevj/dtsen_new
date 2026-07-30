@@ -12,6 +12,24 @@ class BaseConfig:
     MAX_PAGE_SIZE = int(os.environ.get('MAX_PAGE_SIZE', 100))
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
 
+    # ── Connection Pool ──────────────────────────────────────────────────────
+    # pool_recycle: kembalikan koneksi ke pool setiap 30 menit agar tidak stale
+    # pool_pre_ping: cek koneksi sebelum dipakai (deteksi koneksi mati)
+    # pool_size: max persistent connections per worker
+    # max_overflow: extra connections saat spike (di atas pool_size)
+    # pool_timeout: max detik tunggu dapat koneksi dari pool
+    # connect_timeout: max detik tunggu MySQL membuka koneksi baru
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_recycle': 1800,
+        'pool_pre_ping': True,
+        'pool_size': 10,
+        'max_overflow': 5,
+        'pool_timeout': 30,
+        'connect_args': {
+            'connect_timeout': 10,
+        },
+    }
+
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
