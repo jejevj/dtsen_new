@@ -36,6 +36,18 @@ def _s(val) -> str | None:
     return s if s else None
 
 
+def _kode(val) -> str | None:
+    """Normalisasi kode wilayah: hapus titik agar konsisten dengan format plain.
+    Contoh: '15.08.03' -> '150803', '1508' -> '1508'
+    Ini memastikan composite index idx_anggota_wilayah_ktp dapat dipakai
+    secara optimal oleh MySQL (exact match, bukan OR).
+    """
+    if val is None:
+        return None
+    s = str(val).strip().replace('.', '')
+    return s if s else None
+
+
 class ZawaAnggota(db.Model):
     __tablename__ = "zawa_anggota"
 
@@ -122,10 +134,12 @@ class ZawaAnggota(db.Model):
             kecamatan_ktp                                      = _s(item.get("kecamatan_ktp")),
             kabupaten_kota_ktp                                 = _s(item.get("kabupaten_kota_ktp")),
             provinsi_ktp                                       = _s(item.get("provinsi_ktp")),
-            kode_kelurahan_desa_ktp                            = _s(item.get("kode_kelurahan_desa_ktp")),
-            kode_kecamatan_ktp                                 = _s(item.get("kode_kecamatan_ktp")),
-            kode_kabupaten_kota_ktp                            = _s(item.get("kode_kabupaten_kota_ktp")),
-            kode_provinsi_ktp                                  = _s(item.get("kode_provinsi_ktp")),
+            # Kode wilayah selalu disimpan tanpa titik (plain) agar
+            # idx_anggota_wilayah_ktp dapat dipakai dengan exact match.
+            kode_kelurahan_desa_ktp                            = _kode(item.get("kode_kelurahan_desa_ktp")),
+            kode_kecamatan_ktp                                 = _kode(item.get("kode_kecamatan_ktp")),
+            kode_kabupaten_kota_ktp                            = _kode(item.get("kode_kabupaten_kota_ktp")),
+            kode_provinsi_ktp                                  = _kode(item.get("kode_provinsi_ktp")),
             partisipasi_sekolah                                = _s(item.get("partisipasi_sekolah")),
             jenjang_tertinggi_yang_diduduki                    = _i(item.get("jenjang_tertinggi_yang_diduduki")),
             kelas_tertinggi_yang_diduduki                      = _i(item.get("kelas_tertinggi_yang_diduduki")),
