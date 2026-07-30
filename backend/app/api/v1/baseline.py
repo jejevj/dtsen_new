@@ -264,7 +264,16 @@ def _get_dtsen_akses(identity: dict) -> TDtsenAkses | None:
 def _laz_skala(dtsen: TDtsenAkses | None) -> int | None:
     return dtsen.laz_skala if dtsen else None
 
-def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
+def _allowed_provinsi_kodes(identity: dict) -> list[str] | None:
+    """
+    Kembalikan list kode BPS provinsi yang diizinkan untuk identity ini.
+    - None  → superadmin / tuser, boleh akses semua provinsi
+    - []    → tidak ada akses (dtsen tidak ditemukan)
+    - ["32", "33", ...] → list kode BPS 2-digit yang diizinkan
+
+    Frontend mengirim kode BPS (misal "32") sebagai parameter 'provinsi',
+    sehingga validasi akses langsung dibandingkan dengan kode BPS.
+    """
     if _is_tuser(identity):
         return None
     dtsen = _get_dtsen_akses(identity)
@@ -274,9 +283,8 @@ def _allowed_provinsi_slugs(identity: dict) -> list[str] | None:
     allowed = []
     for row in rows:
         prov_kode = (row.provinsi_kode or '').strip().zfill(2)
-        slug = _BPS_TO_SLUG.get(prov_kode)
-        if slug and slug not in allowed:
-            allowed.append(slug)
+        if prov_kode and prov_kode not in allowed:
+            allowed.append(prov_kode)
     return allowed
 
 def _get_allowed_kabkota(identity: dict) -> list[str] | None:
@@ -1047,18 +1055,26 @@ def baseline_ping():
 @api_v1_bp.get('/baseline/provinsi')
 @jwt_required()
 def baseline_provinsi_list():
+    """
+    Kembalikan daftar provinsi yang dapat diakses oleh identity ini.
+    - value/kode: kode BPS 2-digit (dipakai frontend sebagai parameter 'provinsi')
+    - label: nama provinsi (ditampilkan di UI)
+    """
     identity = _current_identity()
-    allowed  = _allowed_provinsi_slugs(identity)
+    allowed  = _allowed_provinsi_kodes(identity)
     if allowed is None:
+        # superadmin / tuser: semua provinsi
         items = sorted(
-            [{"kode": v["bps"], "label": v["label"], "slug": k}
+            [{"kode": v["bps"], "label": v["label"]}
              for k, v in PROVINSI_MAP.items()],
             key=lambda x: x["label"]
         )
     else:
+        # filter berdasarkan kode BPS yang diizinkan
+        bps_to_info = {v["bps"]: v for v in PROVINSI_MAP.values()}
         items = sorted(
-            [{"kode": PROVINSI_MAP[k]["bps"], "label": PROVINSI_MAP[k]["label"], "slug": k}
-             for k in allowed if k in PROVINSI_MAP],
+            [{"kode": kode, "label": bps_to_info[kode]["label"]}
+             for kode in allowed if kode in bps_to_info],
             key=lambda x: x["label"]
         )
     return jsonify({"data": items, "scope": _get_wilayah_scope(identity)}), 200
@@ -1109,7 +1125,8 @@ def _build_anggota_db_query(provinsi_slug: str, bps_kode: str,
 @jwt_required()
 def baseline_anggota():
     identity = _current_identity()
-    allowed  = _allowed_provinsi_slugs(identity)
+    # allowed: list kode BPS yang diizinkan, atau None (akses semua)
+    allowed  = _allowed_provinsi_kodes(identity)
 
     provinsi_raw     = request.args.get('provinsi', '').strip()
     cursor           = request.args.get('cursor') or None
@@ -1129,14 +1146,16 @@ def baseline_anggota():
     if not provinsi_raw:
         return jsonify({"error": "Parameter 'provinsi' wajib diisi."}), 400
 
+    # _resolve_provinsi menerima kode BPS (misal "32") atau slug ("jabar")
     provinsi, info = _resolve_provinsi(provinsi_raw)
     if not info:
         return jsonify({"error": f"Kode provinsi '{provinsi_raw}' tidak dikenal."}), 400
 
-    if allowed is not None and provinsi not in allowed:
-        return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
-
     bps_kode = info["bps"]
+
+    # Validasi akses: bandingkan kode BPS (bukan slug)
+    if allowed is not None and bps_kode not in allowed:
+        return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
 
     kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
@@ -1183,17 +1202,17 @@ def baseline_anggota():
             if keluarga_any and not nkk_check:
                 return _err_200(
                     "Data tidak tersedia (desil tidak termasuk 1-4).",
-                    info["label"], provinsi
+                    info["label"], provinsi_raw
                 )
             if nkk_check:
-                return _ok_payload([_row_to_dict(db_row)], info["label"], provinsi,
+                return _ok_payload([_row_to_dict(db_row)], info["label"], provinsi_raw,
                                    {"searchMode": "db_cache", "source": "local_db"})
         payload, err, not_found = _fetch_by_id(
             "zawa/anggota-by-nik", "nomor_induk_kependudukan", search.strip(), "anggota-by-nik")
         if not_found:
-            return _err_200(f"NIK {search} tidak ditemukan di data ZAWA.", info["label"], provinsi)
+            return _err_200(f"NIK {search} tidak ditemukan di data ZAWA.", info["label"], provinsi_raw)
         if err:
-            return _err_200(err, info["label"], provinsi)
+            return _err_200(err, info["label"], provinsi_raw)
         if payload["items"]:
             try:
                 _cache_anggota_to_db(payload["items"], provinsi)
@@ -1210,7 +1229,7 @@ def baseline_anggota():
                 nomor_kartu_keluarga=str(item.get("nomor_kartu_keluarga") or "").strip()
             ).first()  # keluarga belum di-sync: lolos dulu
         ]
-        return _build_table_response(payload, info["label"], provinsi)
+        return _build_table_response(payload, info["label"], provinsi_raw)
 
     db_page = None
     if not cursor:
@@ -1237,7 +1256,7 @@ def baseline_anggota():
             return jsonify({
                 "data": items, "columns": columns,
                 "meta": {
-                    "provinsi": provinsi, "label": info["label"],
+                    "provinsi": provinsi_raw, "label": info["label"],
                     "totalItems": total_count, "totalPages": total_pages,
                     "currentPage": db_page, "hasNextPage": has_next,
                     "hasPreviousPage": db_page > 1, "nextCursor": next_cur,
@@ -1248,7 +1267,7 @@ def baseline_anggota():
             return jsonify({
                 "data": [], "columns": [],
                 "meta": {
-                    "provinsi": provinsi, "label": info["label"],
+                    "provinsi": provinsi_raw, "label": info["label"],
                     "totalItems": 0, "totalPages": 1, "currentPage": 1,
                     "hasNextPage": False, "hasPreviousPage": False,
                     "nextCursor": None, "limit": DB_PAGE_SIZE,
@@ -1267,7 +1286,7 @@ def baseline_anggota():
 
     payload, err = _fetch_zawa_page(f"zawa/{info['slug']}", params)
     if err:
-        return _err_200(err, info["label"], provinsi)
+        return _err_200(err, info["label"], provinsi_raw)
     if search:
         q_str = search.lower()
         payload["items"] = [
@@ -1290,14 +1309,15 @@ def baseline_anggota():
             _cache_anggota_to_db(payload["items"], provinsi)
         except Exception as e:
             logger.warning(f"[Baseline] gagal cache anggota list provinsi={provinsi}: {e}")
-    return _build_table_response(payload, info["label"], provinsi)
+    return _build_table_response(payload, info["label"], provinsi_raw)
 
 
 @api_v1_bp.get('/baseline/keluarga')
 @jwt_required()
 def baseline_keluarga():
     identity         = _current_identity()
-    allowed          = _allowed_provinsi_slugs(identity)
+    # allowed: list kode BPS yang diizinkan, atau None (akses semua)
+    allowed          = _allowed_provinsi_kodes(identity)
 
     cursor           = request.args.get('cursor') or None
     search           = request.args.get('search', '').strip()
@@ -1315,12 +1335,13 @@ def baseline_keluarga():
         prov_slug, prov_info = _resolve_provinsi(provinsi_raw)
         if not prov_info:
             return jsonify({"error": f"Kode provinsi '{provinsi_raw}' tidak dikenal."}), 400
-        if allowed is not None and prov_slug not in allowed:
-            return jsonify({"error": "Akses ditolak."}), 403
         prov_bps = prov_info["bps"]
+        # Validasi akses: bandingkan kode BPS (bukan slug)
+        if allowed is not None and prov_bps not in allowed:
+            return jsonify({"error": "Akses ditolak."}), 403
 
     label = prov_info["label"] if prov_info else "Keluarga"
-    label_provinsi = prov_slug or "nasional"
+    label_provinsi = provinsi_raw or "nasional"
 
     kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
