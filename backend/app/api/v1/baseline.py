@@ -6,7 +6,7 @@ import requests
 from datetime import date, datetime
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import distinct, select
+from sqlalchemy import distinct, select, func
 from . import api_v1_bp
 from ...extensions import db
 from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
@@ -196,9 +196,10 @@ _TERNAK_RANGE_FIELDS = {
 
 # Kumpulan param yang bukan bagian dari filter dinamis (sudah ditangani secara eksplisit)
 # usia_min dan usia_max ditangani khusus via _apply_usia_filter, bukan _apply_extra_filters
+# total_count dikirim frontend saat pagination page > 1 untuk menghindari re-count
 _RESERVED_PARAMS = {
     'provinsi', 'cursor', 'search', 'kabkota_kode', 'kecamatan_kode',
-    'usia_min', 'usia_max',
+    'usia_min', 'usia_max', 'total_count',
 }
 
 # Kolom internal yang tidak perlu dikembalikan ke client
@@ -1005,9 +1006,8 @@ def _build_anggota_db_query(bps_kode: str,
                              kabkota_filter, kecamatan_filter, search: str,
                              extra_filters: dict = None,
                              usia_min=None, usia_max=None):
-    # PERF: Ganti IN (subquery) dengan JOIN langsung ke zawa_keluarga
-    # agar MySQL bisa menggunakan hash join dan memanfaatkan index dengan optimal.
-    # Filter provinsi menggunakan zawa_anggota.kode_provinsi_ktp (kode BPS 2 digit).
+    # PERF: JOIN langsung ke zawa_keluarga, filter provinsi dengan satu kondisi
+    # (tidak OR ganda) agar optimizer dapat memakai idx_anggota_wilayah_ktp optimal.
     q = ZawaAnggota.query.join(
         ZawaKeluarga,
         db.and_(
@@ -1015,10 +1015,7 @@ def _build_anggota_db_query(bps_kode: str,
             ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED),
         )
     ).filter(
-        db.or_(
-            ZawaAnggota.kode_provinsi_ktp == bps_kode,
-            ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),
-        )
+        ZawaAnggota.kode_provinsi_ktp == bps_kode
     )
 
     if kabkota_filter:
@@ -1040,6 +1037,73 @@ def _build_anggota_db_query(bps_kode: str,
     return q
 
 
+def _count_anggota_db_query(bps_kode: str,
+                              kabkota_filter, kecamatan_filter, search: str,
+                              extra_filters: dict = None,
+                              usia_min=None, usia_max=None) -> int:
+    """
+    COUNT terpisah dari fetch data — menggunakan func.count() langsung
+    tanpa subquery wrapping agar MySQL bisa memanfaatkan index secara optimal.
+    Menghasilkan: SELECT COUNT(zawa_anggota.id) FROM ... JOIN ... WHERE ...
+    """
+    q = db.session.query(func.count(ZawaAnggota.id)).join(
+        ZawaKeluarga,
+        db.and_(
+            ZawaAnggota.nomor_kartu_keluarga == ZawaKeluarga.nomor_kartu_keluarga,
+            ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED),
+        )
+    ).filter(
+        ZawaAnggota.kode_provinsi_ktp == bps_kode
+    )
+
+    if kabkota_filter:
+        q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))
+    if kecamatan_filter:
+        q = q.filter(_kode_filter(ZawaAnggota.kode_kecamatan_ktp, kecamatan_filter))
+    if search:
+        q_lower = f"%{search.lower()}%"
+        q = q.filter(db.or_(
+            ZawaAnggota.nama.ilike(q_lower),
+            ZawaAnggota.nomor_induk_kependudukan.ilike(q_lower),
+        ))
+    if extra_filters:
+        q = _apply_extra_filters(q, ZawaAnggota, _ANGGOTA_COLUMN_MAP, extra_filters)
+
+    q = _apply_usia_filter(q, usia_min, usia_max)
+
+    return q.scalar() or 0
+
+
+def _count_keluarga_db_query(prov_bps, kabkota_filter, kecamatan_filter, search,
+                               extra_filters=None) -> int:
+    """
+    COUNT untuk zawa_keluarga — func.count() langsung tanpa subquery wrapping.
+    """
+    q = db.session.query(func.count(ZawaKeluarga.id)).filter(
+        ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED)
+    )
+    if prov_bps:
+        q = q.filter(ZawaKeluarga.kode_provinsi == prov_bps)
+    if kabkota_filter:
+        q = q.filter(_kode_filter(ZawaKeluarga.kode_kabupaten_kota, kabkota_filter))
+    if kecamatan_filter:
+        q = q.filter(_kode_filter(ZawaKeluarga.kode_kecamatan, kecamatan_filter))
+    if search:
+        q_lower = f"%{search.lower()}%"
+        q = q.filter(db.or_(
+            ZawaKeluarga.nomor_kartu_keluarga.ilike(q_lower),
+            ZawaKeluarga.nama_anggota_keluarga.ilike(q_lower),
+            ZawaKeluarga.alamat.ilike(q_lower),
+            ZawaKeluarga.kelurahan_desa.ilike(q_lower),
+            ZawaKeluarga.kecamatan.ilike(q_lower),
+            ZawaKeluarga.kabupaten_kota.ilike(q_lower),
+            ZawaKeluarga.provinsi.ilike(q_lower),
+        ))
+    if extra_filters:
+        q = _apply_extra_filters(q, ZawaKeluarga, _KELUARGA_COLUMN_MAP, extra_filters)
+    return q.scalar() or 0
+
+
 @api_v1_bp.get('/baseline/anggota')
 @jwt_required()
 def baseline_anggota():
@@ -1056,6 +1120,9 @@ def baseline_anggota():
     # Ambil param usia (ditangani khusus, bukan melalui _apply_extra_filters)
     usia_min_raw = request.args.get('usia_min', '').strip() or None
     usia_max_raw = request.args.get('usia_max', '').strip() or None
+
+    # total_count dari frontend (dipakai saat pagination page > 1 untuk skip re-count)
+    total_count_param = request.args.get('total_count', '').strip() or None
 
     extra_filters = {
         k: v for k, v in request.args.items()
@@ -1096,10 +1163,7 @@ def baseline_anggota():
     if search and _is_numeric_id(search):
         db_row = ZawaAnggota.query.filter(
             ZawaAnggota.nomor_induk_kependudukan == search.strip(),
-            db.or_(
-                ZawaAnggota.kode_provinsi_ktp == bps_kode,
-                ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),
-            )
+            ZawaAnggota.kode_provinsi_ktp == bps_kode,
         ).first()
         if db_row:
             nkk_check = ZawaKeluarga.query.filter(
@@ -1126,14 +1190,33 @@ def baseline_anggota():
     if db_page is None:
         db_page = 1
 
-    q = _build_anggota_db_query(
-        bps_kode=bps_kode,
-        kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
-        search=search, extra_filters=extra_filters,
-        usia_min=usia_min_raw, usia_max=usia_max_raw,
-    )
-    total_count = q.count()
+    # PERF: Hanya jalankan COUNT di halaman pertama.
+    # Halaman berikutnya mengambil total_count dari query param yang dikirim frontend.
+    if db_page == 1 or not total_count_param:
+        total_count = _count_anggota_db_query(
+            bps_kode=bps_kode,
+            kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+            search=search, extra_filters=extra_filters,
+            usia_min=usia_min_raw, usia_max=usia_max_raw,
+        )
+    else:
+        try:
+            total_count = int(total_count_param)
+        except (ValueError, TypeError):
+            total_count = _count_anggota_db_query(
+                bps_kode=bps_kode,
+                kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+                search=search, extra_filters=extra_filters,
+                usia_min=usia_min_raw, usia_max=usia_max_raw,
+            )
+
     if total_count > 0:
+        q = _build_anggota_db_query(
+            bps_kode=bps_kode,
+            kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+            search=search, extra_filters=extra_filters,
+            usia_min=usia_min_raw, usia_max=usia_max_raw,
+        )
         total_pages = max(1, -(-total_count // DB_PAGE_SIZE))
         offset      = (db_page - 1) * DB_PAGE_SIZE
         db_rows     = q.order_by(ZawaAnggota.id).offset(offset).limit(DB_PAGE_SIZE).all()
@@ -1177,6 +1260,9 @@ def baseline_keluarga():
     provinsi_raw     = request.args.get('provinsi', '').strip() or None
     kabkota_filter   = request.args.get('kabkota_kode', '').strip() or None
     kecamatan_filter = request.args.get('kecamatan_kode', '').strip() or None
+
+    # total_count dari frontend (dipakai saat pagination page > 1 untuk skip re-count)
+    total_count_param = request.args.get('total_count', '').strip() or None
 
     extra_filters = {
         k: v for k, v in request.args.items()
@@ -1237,36 +1323,48 @@ def baseline_keluarga():
     if db_page is None:
         db_page = 1
 
-    # DB path: filter berdasarkan zawa_keluarga.kode_provinsi dan desil_nasional IN (1,2,3,4)
-    q = ZawaKeluarga.query.filter(
-        ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED)
-    )
-    if prov_bps:
-        # Filter provinsi berdasarkan zawa_keluarga.kode_provinsi
-        q = q.filter(db.or_(
-            ZawaKeluarga.kode_provinsi == prov_bps,
-            ZawaKeluarga.kode_provinsi == prov_bps.lstrip('0'),
-        ))
-    if kabkota_dotted:
-        q = q.filter(_kode_filter(ZawaKeluarga.kode_kabupaten_kota, kabkota_filter))
-    if kecamatan_dotted:
-        q = q.filter(_kode_filter(ZawaKeluarga.kode_kecamatan, kecamatan_filter))
-    if search:
-        q_lower = f"%{search.lower()}%"
-        q = q.filter(db.or_(
-            ZawaKeluarga.nomor_kartu_keluarga.ilike(q_lower),
-            ZawaKeluarga.nama_anggota_keluarga.ilike(q_lower),
-            ZawaKeluarga.alamat.ilike(q_lower),
-            ZawaKeluarga.kelurahan_desa.ilike(q_lower),
-            ZawaKeluarga.kecamatan.ilike(q_lower),
-            ZawaKeluarga.kabupaten_kota.ilike(q_lower),
-            ZawaKeluarga.provinsi.ilike(q_lower),
-        ))
-    if extra_filters:
-        q = _apply_extra_filters(q, ZawaKeluarga, _KELUARGA_COLUMN_MAP, extra_filters)
+    # PERF: Hanya jalankan COUNT di halaman pertama.
+    if db_page == 1 or not total_count_param:
+        filtered_total = _count_keluarga_db_query(
+            prov_bps=prov_bps,
+            kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+            search=search, extra_filters=extra_filters,
+        )
+    else:
+        try:
+            filtered_total = int(total_count_param)
+        except (ValueError, TypeError):
+            filtered_total = _count_keluarga_db_query(
+                prov_bps=prov_bps,
+                kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+                search=search, extra_filters=extra_filters,
+            )
 
-    filtered_total = q.count()
     if filtered_total > 0:
+        # Build query untuk fetch data (terpisah dari count)
+        q = ZawaKeluarga.query.filter(
+            ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED)
+        )
+        if prov_bps:
+            q = q.filter(ZawaKeluarga.kode_provinsi == prov_bps)
+        if kabkota_dotted:
+            q = q.filter(_kode_filter(ZawaKeluarga.kode_kabupaten_kota, kabkota_filter))
+        if kecamatan_dotted:
+            q = q.filter(_kode_filter(ZawaKeluarga.kode_kecamatan, kecamatan_filter))
+        if search:
+            q_lower = f"%{search.lower()}%"
+            q = q.filter(db.or_(
+                ZawaKeluarga.nomor_kartu_keluarga.ilike(q_lower),
+                ZawaKeluarga.nama_anggota_keluarga.ilike(q_lower),
+                ZawaKeluarga.alamat.ilike(q_lower),
+                ZawaKeluarga.kelurahan_desa.ilike(q_lower),
+                ZawaKeluarga.kecamatan.ilike(q_lower),
+                ZawaKeluarga.kabupaten_kota.ilike(q_lower),
+                ZawaKeluarga.provinsi.ilike(q_lower),
+            ))
+        if extra_filters:
+            q = _apply_extra_filters(q, ZawaKeluarga, _KELUARGA_COLUMN_MAP, extra_filters)
+
         total_pages = max(1, -(-filtered_total // DB_PAGE_SIZE))
         offset      = (db_page - 1) * DB_PAGE_SIZE
         db_rows     = q.order_by(ZawaKeluarga.id).offset(offset).limit(DB_PAGE_SIZE).all()
