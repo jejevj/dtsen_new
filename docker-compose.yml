@@ -73,6 +73,9 @@ services:
   # Tidak ada "ports:" — ES hanya bisa diakses dari dalam dtsen_net
   # (oleh dtsen_api via http://elasticsearch:9200).
   # Tidak diekspos ke host maupun publik.
+  #
+  # Data disimpan di /mnt/simzat/dtsen_es_data (NFS 1TB) via bind mount.
+  # node.store.allow_mmap=false wajib untuk NFS agar tidak crash saat mmap.
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
     container_name: dtsen_elasticsearch
@@ -82,12 +85,13 @@ services:
       - xpack.security.enabled=false    # auth dimatikan (akses internal only)
       - ES_JAVA_OPTS=-Xms1g -Xmx1g     # alokasi heap: min 1GB, max 1GB
       - bootstrap.memory_lock=true
+      - node.store.allow_mmap=false     # wajib untuk NFS mount (tidak support mmap)
     ulimits:
       memlock:
         soft: -1
         hard: -1
     volumes:
-      - dtsen_es_data:/usr/share/elasticsearch/data
+      - /mnt/simzat/dtsen_es_data:/usr/share/elasticsearch/data
     networks:
       - dtsen_net
     healthcheck:
@@ -99,7 +103,7 @@ services:
 
 volumes:
   dtsen_uploads:
-  dtsen_es_data:        # volume persisten untuk data Elasticsearch
+  # dtsen_es_data sudah dipindah ke bind mount /mnt/simzat/dtsen_es_data
 
 networks:
   dtsen_net:
