@@ -21,4 +21,9 @@ export const authService = {
 
   me()     { return api.get('/auth/me') },
   logout() { return api.post('/auth/logout') },
+
+  /** Ubah password pengguna yang sedang login. */
+  changePassword(payload) {
+    return api.post('/auth/change-password', payload)
+  },
 }
