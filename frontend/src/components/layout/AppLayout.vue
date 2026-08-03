@@ -104,11 +104,26 @@
             class="absolute top-14 right-4 w-52 bg-white rounded-xl shadow-lg border border-slate-100 py-1 z-50"
             @mouseleave="showUserMenu = false"
           >
+            <!-- Info user -->
             <div class="px-4 py-2.5 border-b border-slate-100">
               <p class="text-sm font-semibold text-slate-800">{{ userDisplayName }}</p>
               <p class="text-xs text-slate-400 truncate">{{ userTypeLabel }}</p>
             </div>
-            <div class="border-t border-slate-100 mt-1"></div>
+
+            <!-- Ubah Password -->
+            <router-link
+              to="/profil"
+              class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+              style="text-decoration:none;"
+              @click="showUserMenu = false"
+            >
+              <i class="pi pi-lock text-xs text-orange-500"></i>
+              Ubah Password
+            </router-link>
+
+            <div class="border-t border-slate-100"></div>
+
+            <!-- Keluar -->
             <button
               class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
               @click="showUserMenu = false; confirmVisible = true"
@@ -162,6 +177,13 @@
       </main>
     </div>
   </div>
+
+  <!-- overlay tutup dropdown saat klik luar -->
+  <div
+    v-if="showUserMenu"
+    style="position:fixed;inset:0;z-index:49;"
+    @click="showUserMenu = false"
+  />
 
   <!-- ===== DIALOG KONFIRMASI LOGOUT ===== -->
   <Dialog
@@ -226,10 +248,10 @@ const userInitials = computed(() =>
 )
 
 const navItems = [
-  { to: '/dashboard',     label: 'Dashboard',              icon: 'pi pi-home'       },
-  { to: '/data-baseline', label: 'Data Baseline',             icon: 'pi pi-database'   },
-  { to: '/mustahik',      label: 'Data Penerima Manfaat',  icon: 'pi pi-users'      },
-  { to: '/laporan',       label: 'Pemeriksaan DTSEN',      icon: 'pi pi-chart-line' },
+  { to: '/dashboard',     label: 'Dashboard',             icon: 'pi pi-home'       },
+  { to: '/data-baseline', label: 'Data Baseline',          icon: 'pi pi-database'   },
+  { to: '/mustahik',      label: 'Data Penerima Manfaat', icon: 'pi pi-users'      },
+  { to: '/laporan',       label: 'Pemeriksaan DTSEN',     icon: 'pi pi-chart-line' },
 ]
 
 const pageLabels = {
@@ -237,6 +259,7 @@ const pageLabels = {
   '/data-baseline': 'Data Baseline',
   '/mustahik':      'Data Mustahik',
   '/laporan':       'Pemeriksaan DTSEN',
+  '/profil':        'Profil & Password',
 }
 const currentPageLabel = computed(() => pageLabels[route.path] || 'Halaman')
 
