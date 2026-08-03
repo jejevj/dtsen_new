@@ -44,7 +44,8 @@
           <div v-for="field in userFields" :key="field.label" class="flex flex-col gap-1">
             <label class="text-xs font-medium text-gray-400 uppercase tracking-wide">{{ field.label }}</label>
             <p class="text-sm text-gray-800 font-medium">
-              {{ field.value || <span class="text-gray-400 font-normal italic">Tidak tersedia</span> }}
+              <span v-if="field.value && field.value !== '-'">{{ field.value }}</span>
+              <span v-else class="text-gray-400 font-normal italic">Tidak tersedia</span>
             </p>
           </div>
         </div>
@@ -62,7 +63,31 @@
           <h2 class="text-sm font-semibold text-gray-800">Ubah Password</h2>
         </div>
 
-        <form @submit.prevent="handleChangePassword" class="px-6 py-5 space-y-5">
+        <!-- Success state setelah password berhasil diubah -->
+        <div v-if="changeSuccess" class="px-6 py-8 flex flex-col items-center text-center gap-4">
+          <div class="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center">
+            <i class="pi pi-check-circle text-green-600" style="font-size:32px;"></i>
+          </div>
+          <div>
+            <p class="text-base font-bold text-gray-800 mb-1">Password Berhasil Diubah!</p>
+            <p class="text-sm text-gray-500 leading-relaxed">
+              Email notifikasi telah dikirim ke akun Anda.<br>
+              Semua sesi login sebelumnya telah dihapus.<br>
+              Anda akan diarahkan ke halaman login dalam
+              <strong class="text-green-600">{{ countdown }}</strong> detik...
+            </p>
+          </div>
+          <button
+            @click="doLogout"
+            class="mt-2 flex items-center gap-2 px-6 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition cursor-pointer"
+          >
+            <i class="pi pi-sign-out" style="font-size:13px;"></i>
+            Logout Sekarang
+          </button>
+        </div>
+
+        <!-- Form -->
+        <form v-else @submit.prevent="handleChangePassword" class="px-6 py-5 space-y-5">
 
           <!-- Password Lama -->
           <div class="flex flex-col gap-1.5">
@@ -73,8 +98,8 @@
                 :type="showOld ? 'text' : 'password'"
                 placeholder="Masukkan password lama"
                 class="w-full px-3 py-2.5 pr-10 rounded-lg border text-sm transition"
-                :class="errors.old_password ? 'border-red-400 bg-red-50 focus:ring-red-300' : 'border-gray-300 bg-white focus:border-green-500 focus:ring-green-200'"
-                style="outline:none; box-shadow: none;"
+                :class="errors.old_password ? 'border-red-400 bg-red-50' : 'border-gray-300 bg-white'"
+                style="outline:none;"
                 @focus="e => e.target.style.boxShadow='0 0 0 3px rgba(22,163,74,0.15)'"
                 @blur="e => e.target.style.boxShadow='none'"
               />
@@ -175,7 +200,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 import { useAuthStore } from '@/stores/auth'
@@ -183,6 +209,7 @@ import { authService } from '@/services/auth'
 
 const auth    = useAuthStore()
 const toast   = useToast()
+const router  = useRouter()
 
 // ---- User fields ----
 const userInitials = computed(() => {
@@ -192,22 +219,30 @@ const userInitials = computed(() => {
 })
 
 const userFields = computed(() => [
-  { label: 'Nama Lengkap',  value: auth.user?.user_fullname || auth.user?.nama_lengkap || '-' },
-  { label: 'Username / ID', value: auth.user?.username || auth.user?.user_id || '-' },
-  { label: 'Email',         value: auth.user?.email || '-' },
-  { label: 'No. Telepon',   value: auth.user?.notelp || auth.user?.phone || '-' },
-  { label: 'Tipe Akun',     value: auth.user?.user_type === 'dtsen' ? 'LAZ / DTSEN' : (auth.user?.user_type === 'tuser' ? 'Internal' : auth.user?.user_type || '-') },
-  { label: 'LAZ / Instansi',value: auth.user?.nama_laz || auth.user?.instansi || '-' },
+  { label: 'Nama Lengkap',   value: auth.user?.nama_lengkap    || auth.user?.user_fullname || '-' },
+  { label: 'Username / ID',  value: auth.user?.username        || String(auth.user?.id || '-') },
+  { label: 'Email',          value: auth.user?.email           || '-' },
+  { label: 'No. Telepon',    value: auth.user?.notelp          || auth.user?.phone || '-' },
+  { label: 'Tipe Akun',      value: auth.user?.akun_types === 'laz' ? 'LAZ / DTSEN'
+                                   : auth.user?.akun_types === 'baznas' ? 'BAZNAS'
+                                   : auth.user?.akun_types === 'internal' ? 'Internal'
+                                   : (auth.user?.akun_types || '-') },
+  { label: 'LAZ / Instansi', value: auth.user?.laz_nama || auth.user?.instansi || '-' },
 ])
 
-// ---- Form ----
-const form = ref({ old_password: '', new_password: '', confirm_password: '' })
-const errors = ref({})
-const apiError   = ref('')
-const submitting = ref(false)
+// ---- Form state ----
+const form    = ref({ old_password: '', new_password: '', confirm_password: '' })
+const errors  = ref({})
+const apiError    = ref('')
+const submitting  = ref(false)
+const changeSuccess = ref(false)
+const countdown   = ref(5)
 const showOld     = ref(false)
 const showNew     = ref(false)
 const showConfirm = ref(false)
+let countdownTimer = null
+
+onBeforeUnmount(() => { if (countdownTimer) clearInterval(countdownTimer) })
 
 // ---- Password strength ----
 const passwordStrength = computed(() => {
@@ -230,8 +265,7 @@ const strengthColor = computed(() => {
 })
 
 const strengthLabel = computed(() => {
-  const labels = ['', 'Sangat Lemah', 'Lemah', 'Cukup', 'Kuat']
-  return labels[passwordStrength.value] || ''
+  return ['', 'Sangat Lemah', 'Lemah', 'Cukup', 'Kuat'][passwordStrength.value] || ''
 })
 
 const strengthTextColor = computed(() => {
@@ -243,23 +277,30 @@ const strengthTextColor = computed(() => {
 })
 
 const passwordRules = computed(() => [
-  { label: 'Minimal 8 karakter',          met: form.value.new_password.length >= 8 },
-  { label: 'Mengandung huruf kapital (A-Z)', met: /[A-Z]/.test(form.value.new_password) },
-  { label: 'Mengandung angka (0-9)',       met: /[0-9]/.test(form.value.new_password) },
-  { label: 'Mengandung karakter khusus',   met: /[^A-Za-z0-9]/.test(form.value.new_password) },
+  { label: 'Minimal 8 karakter',             met: form.value.new_password.length >= 8 },
+  { label: 'Mengandung huruf kapital (A-Z)',  met: /[A-Z]/.test(form.value.new_password) },
+  { label: 'Mengandung angka (0-9)',          met: /[0-9]/.test(form.value.new_password) },
+  { label: 'Mengandung karakter khusus',      met: /[^A-Za-z0-9]/.test(form.value.new_password) },
 ])
 
 // ---- Validasi ----
 function validate() {
   const e = {}
-  if (!form.value.old_password)        e.old_password     = 'Password lama wajib diisi.'
-  if (!form.value.new_password)        e.new_password     = 'Password baru wajib diisi.'
+  if (!form.value.old_password)       e.old_password     = 'Password lama wajib diisi.'
+  if (!form.value.new_password)       e.new_password     = 'Password baru wajib diisi.'
   else if (form.value.new_password.length < 8) e.new_password = 'Password minimal 8 karakter.'
-  if (!form.value.confirm_password)   e.confirm_password = 'Konfirmasi password wajib diisi.'
+  if (!form.value.confirm_password)  e.confirm_password = 'Konfirmasi password wajib diisi.'
   else if (form.value.confirm_password !== form.value.new_password)
     e.confirm_password = 'Konfirmasi password tidak cocok.'
   errors.value = e
   return Object.keys(e).length === 0
+}
+
+// ---- Logout helper ----
+async function doLogout() {
+  if (countdownTimer) clearInterval(countdownTimer)
+  await auth.logout()
+  router.push('/')
 }
 
 // ---- Submit ----
@@ -269,21 +310,41 @@ async function handleChangePassword() {
 
   submitting.value = true
   try {
-    await authService.changePassword({
+    const res = await authService.changePassword({
       old_password:     form.value.old_password,
       new_password:     form.value.new_password,
       confirm_password: form.value.confirm_password,
     })
-    toast.add({
-      severity: 'success',
-      summary:  'Berhasil',
-      detail:   'Password berhasil diubah. Silakan login kembali.',
-      life: 4000,
-    })
+
+    const data = res.data || {}
+
+    // Tampilkan state sukses
+    changeSuccess.value = true
     form.value = { old_password: '', new_password: '', confirm_password: '' }
     errors.value = {}
+
+    // Mulai countdown 5 detik lalu auto logout
+    countdown.value = 5
+    countdownTimer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) doLogout()
+    }, 1000)
+
+    // Kalau backend kirim sinyal require_relogin
+    if (data.require_relogin) {
+      toast.add({
+        severity: 'success',
+        summary:  'Password Diubah',
+        detail:   data.email_sent
+          ? 'Email notifikasi telah dikirim. Silakan login kembali.'
+          : 'Password berhasil diubah. Silakan login kembali.',
+        life: 5000,
+      })
+    }
   } catch (err) {
-    const msg = err.response?.data?.message || err.response?.data?.detail || 'Gagal mengubah password. Periksa password lama Anda.'
+    const msg = err.response?.data?.message
+              || err.response?.data?.detail
+              || 'Gagal mengubah password. Periksa password lama Anda.'
     apiError.value = msg
   } finally {
     submitting.value = false
