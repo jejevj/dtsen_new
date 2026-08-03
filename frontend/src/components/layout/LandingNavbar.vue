@@ -71,10 +71,13 @@
             v-if="profileOpen"
             style="position:absolute;right:0;top:calc(100% + 8px);background:white;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.10);min-width:200px;overflow:hidden;z-index:100;"
           >
+            <!-- Info user -->
             <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;">
               <p style="font-size:12px;font-weight:700;color:#1e293b;margin:0 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ authStore.userDisplayName }}</p>
               <p style="font-size:11px;color:#94a3b8;margin:0;">{{ authStore.user?.email || authStore.user?.notelp || '' }}</p>
             </div>
+
+            <!-- Dashboard -->
             <router-link
               to="/dashboard"
               style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;font-weight:500;color:#374151;text-decoration:none;transition:background 0.15s;"
@@ -83,6 +86,18 @@
               <i class="pi pi-th-large" style="font-size:13px;color:#16a34a;"></i>
               Dashboard
             </router-link>
+
+            <!-- Ubah Password -->
+            <router-link
+              to="/profil"
+              style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;font-weight:500;color:#374151;text-decoration:none;transition:background 0.15s;border-top:1px solid #f8fafc;"
+              @click="profileOpen = false"
+            >
+              <i class="pi pi-lock" style="font-size:13px;color:#f97316;"></i>
+              Ubah Password
+            </router-link>
+
+            <!-- Keluar -->
             <button
               @click="handleLogout"
               style="width:100%;display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;font-weight:500;color:#dc2626;background:transparent;border:none;cursor:pointer;border-top:1px solid #f1f5f9;transition:background 0.15s;"
@@ -148,6 +163,14 @@
         >
           <i class="pi pi-th-large" style="font-size:13px;"></i>
           Dashboard
+        </router-link>
+        <router-link
+          to="/profil"
+          style="margin-top:6px;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;background:#fff7ed;color:#ea580c;font-size:14px;font-weight:600;text-decoration:none;"
+          @click="mobileOpen = false"
+        >
+          <i class="pi pi-lock" style="font-size:13px;"></i>
+          Ubah Password
         </router-link>
         <button
           style="margin-top:6px;width:100%;padding:10px;border-radius:8px;background:#fef2f2;color:#dc2626;border:none;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;"
