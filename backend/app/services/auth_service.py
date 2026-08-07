@@ -89,7 +89,7 @@ class AuthService:
 
         if not dtsen:
             return {
-                'message': 'Akun dengan email/nomor HP tersebut tidak ditemukan.',
+                'message': 'Email/Nomor HP dan Password Tidak Valid.',
                 'status_code': 404,
                 'error_code': 'ACCOUNT_NOT_FOUND',
             }
@@ -153,7 +153,7 @@ class AuthService:
 
         # ── 7. Verifikasi password ───────────────────────────────────────────
         if dtsen.dtsen_akses_password != hashed:
-            return {'message': 'Email/No. HP atau password salah.', 'status_code': 401}
+            return {'message': 'Email/Nomor HP dan Password Tidak Valid.', 'status_code': 401}
 
         # ── 8. Semua lolos → buat token ──────────────────────────────────────
         identity_str  = build_identity_str(dtsen)
