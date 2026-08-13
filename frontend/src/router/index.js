@@ -53,7 +53,7 @@ const routes = [
     component: () => import('@/views/AnggotaDetailView.vue'),
     meta: { requiresAuth: true }
   },
-  {
+  { 
     path: '/data-baseline/keluarga/:nkk',
     name: 'baseline-keluarga-detail',
     component: () => import('@/views/KeluargaDetailView.vue'),

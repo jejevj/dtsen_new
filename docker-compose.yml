@@ -27,17 +27,17 @@ services:
       FLASK_APP: wsgi.py
       FLASK_ENV: production
       ZAWA_API_KEY: prod-53a81004-085d-426b-a5a0-c6ef6cdf18e1
-      ELASTICSEARCH_URL: http://elasticsearch:9200
+ #     ELASTICSEARCH_URL: http://elasticsearch:9200
     volumes:
-      - dtsen_uploads:/app/uploads
+#      - dtsen_uploads:/app/uploads
       - ./logs:/app/logs
     ports:
       - "8778:5000"
     networks:
       - dtsen_net
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+   # depends_on:
+  #    elasticsearch:
+    #    condition: service_healthy
     healthcheck:
       # wget tersedia di python:slim, curl tidak
       test: ["CMD", "wget", "-qO-", "http://localhost:5000/api/v1/health"]
@@ -58,7 +58,7 @@ services:
         VITE_APP_NAME: DTSEN
         VITE_APP_VERSION: 2.0.0
         VITE_USE_MOCK: "false"
-        VITE_VIEW_ONLY: "false"
+        VITE_VIEW_ONLY: "true"
     image: dtsen_frontend:latest
     container_name: dtsen_frontend
     restart: unless-stopped
@@ -76,30 +76,30 @@ services:
   #
   # Data disimpan di /mnt/simzat/dtsen_es_data (NFS 1TB) via bind mount.
   # node.store.allow_mmap=false wajib untuk NFS agar tidak crash saat mmap.
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-    container_name: dtsen_elasticsearch
-    restart: unless-stopped
-    environment:
-      - discovery.type=single-node      # single node, tidak butuh cluster
-      - xpack.security.enabled=false    # auth dimatikan (akses internal only)
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g     # alokasi heap: min 1GB, max 1GB
-      - bootstrap.memory_lock=true
-      - node.store.allow_mmap=false     # wajib untuk NFS mount (tidak support mmap)
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-    volumes:
-      - /mnt/simzat/dtsen_es_data:/usr/share/elasticsearch/data
-    networks:
-      - dtsen_net
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
-      interval: 20s
-      timeout: 10s
-      retries: 12
-      start_period: 60s
+  #elasticsearch:
+  #  image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+  #  container_name: dtsen_elasticsearch
+  #  restart: unless-stopped
+  #  environment:
+  #    - discovery.type=single-node      # single node, tidak butuh cluster
+  #    - xpack.security.enabled=false    # auth dimatikan (akses internal only)
+  #    - ES_JAVA_OPTS=-Xms1g -Xmx1g     # alokasi heap: min 1GB, max 1GB
+  #    - bootstrap.memory_lock=true
+  #    - node.store.allow_mmap=false     # wajib untuk NFS mount (tidak support mmap)
+  #  ulimits:
+  #    memlock:
+  #      soft: -1
+  #      hard: -1
+  #  volumes:
+  #    - /mnt/simzat/dtsen_es_data:/usr/share/elasticsearch/data
+  #  networks:
+  #    - dtsen_net
+   # healthcheck:
+    #  test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+     # interval: 20s
+      #timeout: 10s
+      #retries: 12
+      #start_period: 60s
 
 volumes:
   dtsen_uploads:

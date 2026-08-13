@@ -474,7 +474,7 @@ def change_password():
             {'uid': user_id}
         ).fetchone()
     else:
-        return jsonify({'message': 'Tipe user tidak dikenali.'}), 400
+        return jsonify({'message': 'User tidak ditemukan.'}), 400
 
     if not row:
         return jsonify({'message': 'User tidak ditemukan.'}), 404
