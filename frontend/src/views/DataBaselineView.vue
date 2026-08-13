@@ -116,11 +116,11 @@
                 option-value="kode" placeholder="Semua Kecamatan" class="w-full text-sm"
                 :loading="keluargaKecamatanLoading" :disabled="keluarga.loading" filter show-clear />
             </div>
-            <div class="flex flex-col gap-1 min-w-[200px]">
+            <!-- <div class="flex flex-col gap-1 min-w-[200px]">
               <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Desil</label>
               <Select v-model="keluarga.desil" :options="desilOptions" option-label="label" option-value="value"
                 placeholder="Semua Desil" class="w-full text-sm" show-clear :disabled="keluarga.loading" />
-            </div>
+            </div> -->
             <div class="flex gap-2 pb-0.5">
               <Button label="Tampilkan" icon="pi pi-search" size="small" :loading="keluarga.loading"
                 :disabled="!keluarga.provinsi || keluarga.loading" @click="loadKeluarga()" />
