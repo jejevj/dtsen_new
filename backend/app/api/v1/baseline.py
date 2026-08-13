@@ -204,7 +204,16 @@ _RESERVED_PARAMS = {
 
 # Kolom internal yang tidak perlu dikembalikan ke client
 _EXCLUDE_COLUMNS = {"id", "synced_at", "provinsi_slug"}
-
+_ENCRYPT_FIELDS = {
+    "nomor_induk_kependudukan",
+    "nomor_kartu_keluarga",
+    "tanggal_lahir",
+    "alamat_ktp",
+}
+_ENCRYPT_KELUARGA_FIELDS = {
+    "nomor_kartu_keluarga",
+    "alamat",
+}
 
 # ─── Kode wilayah normalizer ────────────────────────────────
 
@@ -370,11 +379,18 @@ def _is_nkk(s: str) -> bool:
 
 def _row_to_dict(row) -> dict:
     """
-    Serialize SQLAlchemy model row ke dict.
+    Serializer response DTSEN.
 
-    Phase 1:
-    Tambahkan token encrypted untuk navigasi detail.
-    Data asli masih dipertahankan sementara.
+    Field yang dienkripsi:
+    - NIK
+    - NKK
+    - tanggal lahir
+    - alamat KTP
+
+    Field yang tetap:
+    - nama
+    - wilayah kode
+    - data statistik
     """
 
     d = {
@@ -382,42 +398,21 @@ def _row_to_dict(row) -> dict:
         for c in row.__table__.columns
     }
 
+
     for col in _EXCLUDE_COLUMNS:
         d.pop(col, None)
 
 
-    # ==========================
-    # Token detail anggota
-    # ==========================
-    if hasattr(row, "nomor_induk_kependudukan"):
+    for field in _ENCRYPT_FIELDS:
 
-        nik = getattr(
-            row,
-            "nomor_induk_kependudukan",
-            None
-        )
+        if field in d:
 
-        if nik:
-            d["detail_token"] = encrypt_identifier(nik)
+            value = d.pop(field)
 
-
-    # ==========================
-    # Token detail keluarga
-    # ==========================
-    elif hasattr(row, "nomor_kartu_keluarga"):
-
-        nkk = getattr(
-            row,
-            "nomor_kartu_keluarga",
-            None
-        )
-
-        if nkk:
-            d["detail_token"] = encrypt_identifier(nkk)
+            d[f"{field}_encrypt"] = encrypt_identifier(value)
 
 
     return d
-
 def _ok_payload(items, label, provinsi, meta_override=None):
     columns = list(items[0].keys()) if items else []
     meta = {
