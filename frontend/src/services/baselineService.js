@@ -90,13 +90,49 @@ export async function fetchBaselineKeluargaByNkk(nkk) {
 }
 
 // Anggota detail by encrypted NIK
-export async function fetchBaselineAnggotaDetailByHash(nikHash) {
+import { decryptDtsen } from '@/utils/dtsenCrypto'
 
-  if (!nikHash) return null
+
+export async function fetchBaselineAnggotaDetailByHash(nikHash) {
 
   const res = await api.get(
     `/baseline/anggota/detail/${encodeURIComponent(nikHash)}`
   )
 
-  return res.data?.data ?? null
+
+  const data = res.data?.data ?? null
+
+
+  if (!data) return null
+
+
+  return {
+
+    ...data,
+
+
+    nomor_induk_kependudukan:
+      decryptDtsen(
+        data.nomor_induk_kependudukan_encrypt
+      ),
+
+
+    nomor_kartu_keluarga:
+      decryptDtsen(
+        data.nomor_kartu_keluarga_encrypt
+      ),
+
+
+    tanggal_lahir:
+      decryptDtsen(
+        data.tanggal_lahir_encrypt
+      ),
+
+
+    alamat_ktp:
+      decryptDtsen(
+        data.alamat_ktp_encrypt
+      ),
+
+  }
 }
