@@ -162,16 +162,19 @@
                         <p class="stat-label">{{ field.field_label }}</p>
                         <template v-if="field.field_key === 'id_pelanggan_pln'">
                           <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;"
-                            :style="{ color: data[field.field_key] ? '#15803d' : '#94a3b8' }">{{ data[field.field_key] ??
+                            :style="{ color: data[field.field_key] ? '#15803d' : '#94a3b8' }">{{ data[field.field_key]
+                              ??
                             'Tidak ada' }}</p>
                         </template>
                         <template v-else-if="field.field_key === 'pbi_nas'">
-                          <p class="stat-val" :style="{ color: data[field.field_key] === '1' ? '#b45309' : '#94a3b8' }">{{
-                            data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}</p>
+                          <p class="stat-val" :style="{ color: data[field.field_key] === '1' ? '#b45309' : '#94a3b8' }">
+                            {{
+                              data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}</p>
                         </template>
                         <template v-else-if="field.field_key === 'pbi_pemda'">
-                          <p class="stat-val" :style="{ color: data[field.field_key] === '1' ? '#6d28d9' : '#94a3b8' }">{{
-                            data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}</p>
+                          <p class="stat-val" :style="{ color: data[field.field_key] === '1' ? '#6d28d9' : '#94a3b8' }">
+                            {{
+                              data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}</p>
                         </template>
                         <template v-else>
                           <p class="stat-val" style="color:#374151;">{{ resolveValue(field.field_key,
@@ -426,14 +429,14 @@
             </p>
             <template v-if="kkMembers.length">
               <div style="overflow-x:auto;">
-                <DataTable :value="kkMembers" :rows="10" :rowsPerPageOptions="[10, 25, 50, 100]" sortField="tanggal_lahir"
-                  :sortOrder="1" stripedRows showGridlines paginator
+                <DataTable :value="kkMembers" :rows="10" :rowsPerPageOptions="[10, 25, 50, 100]"
+                  sortField="tanggal_lahir" :sortOrder="1" stripedRows showGridlines paginator
                   paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
                   currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll"
                   class="p-datatable-sm" sortMode="single">
                   <Column style="width:10%" field="nomor_induk_kependudukan" header="NIK" sortable><template
                       #body="{ data }"><span class="text-center">{{ maskNik(data.nomor_induk_kependudukan)
-                        }}</span></template>
+                      }}</span></template>
                   </Column>
                   <Column field="nama" header="Nama Anggota Keluarga" sortable />
                   <Column style="width:15%" field="jenis_kelamin" header="Jenis Kelamin" sortable><template
@@ -444,18 +447,19 @@
                   <Column style="width:15%" field="status_hubungan_keluarga" header="Hubungan keluarga" sortable>
                     <template #body="{ data }">
                       <div class="text-left">{{ resolveValue('status_hubungan_keluarga', data.status_hubungan_keluarga)
-                        }}</div>
+                      }}</div>
                     </template>
                   </Column>
                   <Column style="width:15%" field="tanggal_lahir" header="Usia" sortable><template #body="{ data }">
                       <div class="">{{ formatUsia_TB(data.tanggal_lahir) }}</div>
                     </template></Column>
-                  <Column style="width:1%" field="nomor_induk_kependudukan" header="Aksi" sortable><template
-                      #body="{ data }">
-                      <a :href="`/zis-dskl/data-baseline/anggota/${data.nomor_induk_kependudukan}`" target="_blank"
-                        class="flex items-center gap-1">
+                  <Column style="width:1%" field="nomor_induk_kependudukan" header="Aksi" sortable>
+                    <template #body="{ data }">
+                      <a :href="`/zis-dskl/data-baseline/anggota/${data.nomor_induk_kependudukan_encrypt}`"
+                        target="_blank" class="flex items-center gap-1">
                         <i class="pi pi-external-link"></i>Lihat
-                      </a></template>
+                      </a>
+                    </template>
                   </Column>
                 </DataTable>
               </div>
