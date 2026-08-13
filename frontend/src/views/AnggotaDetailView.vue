@@ -14,7 +14,8 @@
       </div>
 
       <!-- Not found -->
-      <div v-else-if="!data" style="text-align:center;padding:60px 20px;background:white;border-radius:14px;border:1px solid #f1f5f9;">
+      <div v-else-if="!data"
+        style="text-align:center;padding:60px 20px;background:white;border-radius:14px;border:1px solid #f1f5f9;">
         <i class="pi pi-user-minus" style="font-size:40px;color:#cbd5e1;"></i>
         <p style="color:#64748b;margin:12px 0 0;">Data anggota tidak ditemukan</p>
         <p style="color:#94a3b8;font-size:12px;margin-top:4px;">NIK: {{ maskNik(route.params.nik) }}</p>
@@ -23,34 +24,45 @@
       <template v-else>
 
         <!-- ===== HEADER IDENTITY ===== -->
-        <div style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+        <div
+          style="background:white;border-radius:16px;border:1px solid #f1f5f9;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,0.05);">
           <div style="display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;">
-            <div :style="{ width:'80px', height:'80px', borderRadius:'16px', background: isLaki?'#eff6ff':'#fdf2f8', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, border:'2px solid '+(isLaki?'#bfdbfe':'#fbcfe8') }">
-              <i class="pi pi-user" :style="{ fontSize:'32px', color: isLaki?'#2563eb':'#db2777' }"></i>
+            <div
+              :style="{ width: '80px', height: '80px', borderRadius: '16px', background: isLaki ? '#eff6ff' : '#fdf2f8', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '2px solid ' + (isLaki ? '#bfdbfe' : '#fbcfe8') }">
+              <i class="pi pi-user" :style="{ fontSize: '32px', color: isLaki ? '#2563eb' : '#db2777' }"></i>
             </div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
                 <h2 style="font-size:1.25rem;font-weight:800;color:#1e293b;margin:0;">{{ data.nama ?? '-' }}</h2>
-                <span v-if="data.jenis_kelamin" :style="{ padding:'3px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background:isLaki?'#eff6ff':'#fdf2f8', color:isLaki?'#2563eb':'#db2777' }">
+                <span v-if="data.jenis_kelamin"
+                  :style="{ padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700', background: isLaki ? '#eff6ff' : '#fdf2f8', color: isLaki ? '#2563eb' : '#db2777' }">
                   {{ isLaki ? 'Laki-laki' : 'Perempuan' }}
                 </span>
               </div>
               <table style="font-family:monospace;">
                 <tr>
                   <td style="font-family:monospace;" width="1%">Usia</td>
-                  <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ formatUsia_TB(data.tanggal_lahir) }}</td>
+                  <td style="color:#374151;font-family:monospace;font-weight:800;">: {{
+                    formatUsia_TB(data.tanggal_lahir) }}</td>
                 </tr>
                 <tr>
                   <td style="font-family:monospace;" width="1%">Desil</td>
-                  <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ (kkDetail.desil_nasional) }}</td>
+                  <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ (kkDetail.desil_nasional) }}
+                  </td>
                 </tr>
               </table>
-             
+
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
-              <span v-if="data.pbi_nas === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;"><i class="pi pi-shield" style="font-size:10px;"></i> PBI Nasional</span>
-              <span v-if="data.pbi_pemda === '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#ede9fe;color:#6d28d9;"><i class="pi pi-shield" style="font-size:10px;"></i> PBI Pemda</span>
-              <span v-if="data.pbi_nas !== '1' && data.pbi_pemda !== '1'" style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;background:#f1f5f9;color:#94a3b8;">Non PBI</span>
+              <span v-if="data.pbi_nas === '1'"
+                style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;"><i
+                  class="pi pi-shield" style="font-size:10px;"></i> PBI Nasional</span>
+              <span v-if="data.pbi_pemda === '1'"
+                style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:700;background:#ede9fe;color:#6d28d9;"><i
+                  class="pi pi-shield" style="font-size:10px;"></i> PBI Pemda</span>
+              <span v-if="data.pbi_nas !== '1' && data.pbi_pemda !== '1'"
+                style="padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;background:#f1f5f9;color:#94a3b8;">Non
+                PBI</span>
             </div>
           </div>
         </div>
@@ -72,16 +84,28 @@
             <template v-if="slot.type === 'disab'">
               <div :class="slot.groups.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern :id="'wm-' + slugGroup(group.group)" x="0" y="0" width="320" height="120"
+                          patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40"
+                            font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2"
+                            fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70"
+                            font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1"
+                            fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern>
+                      </defs>
+                      <rect width="100%" height="100%" :fill="'url(#wm-' + slugGroup(group.group) + ')'" />
+                    </svg></div>
                   <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <template v-if="isDisabGroup(group)">
                       <div class="">
                         <div style="position:relative;z-index:0;">
                           <div class="grid-stat">
-                            <div v-for="field in group.fields" :key="field.field_key" class="stat-box" :style="disabBgStyle(data[field.field_key])">
+                            <div v-for="field in group.fields" :key="field.field_key" class="stat-box"
+                              :style="disabBgStyle(data[field.field_key])">
                               <p class="stat-label">{{ stripDisabPrefix(field.field_label) }}</p>
-                              <p class="stat-val" :style="disabBadgeStyle(data[field.field_key])">{{ resolveValue(field.field_key, data[field.field_key]) }}</p>
+                              <p class="stat-val" :style="disabBadgeStyle(data[field.field_key])">{{
+                                resolveValue(field.field_key, data[field.field_key]) }}</p>
                             </div>
                           </div>
                         </div>
@@ -90,20 +114,23 @@
                     <template v-else>
                       <table class="info-table">
                         <tbody>
-                          <tr v-for="field in group.fields.filter(g => g.field_label !== 'Kode Provinsi KTP' && g.field_label !== 'Kode Kabupaten / Kota KTP' && g.field_label !== 'Kode Kecamatan KTP' && g.field_label !== 'Kode Kelurahan / Desa KTP')" :key="field.field_key">
+                          <tr
+                            v-for="field in group.fields.filter(g => g.field_label !== 'Kode Provinsi KTP' && g.field_label !== 'Kode Kabupaten / Kota KTP' && g.field_label !== 'Kode Kecamatan KTP' && g.field_label !== 'Kode Kelurahan / Desa KTP')"
+                            :key="field.field_key">
                             <td class="td-label">{{ field.field_label }}</td>
                             <td class="td-value">
-                              <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
+                              <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{
+                                maskNik(data[field.field_key]) }}</span>
                               <span v-else>{{ renderFieldValue(field.field_key, data[field.field_key]) }}</span>
                             </td>
                           </tr>
                           <tr v-if="group.group === 'Wilayah KTP'">
                             <td class="td-label">Dusun KTP</td>
-                            <td class="td-value">{{ data.dusun_ktp || '-'}}</td>
+                            <td class="td-value">{{ data.dusun_ktp || '-' }}</td>
                           </tr>
                           <tr v-if="group.group === 'Wilayah KTP'">
                             <td class="td-label">Alamat KTP</td>
-                            <td class="td-value">{{ data.alamat_ktp || '-'}}</td>
+                            <td class="td-value">{{ data.alamat_ktp || '-' }}</td>
                           </tr>
                         </tbody>
                       </table>
@@ -116,23 +143,39 @@
             <template v-else-if="slot.type === 'stat'">
               <div style="display:flex;flex-direction:column;gap:16px;">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern :id="'wm-' + slugGroup(group.group)" x="0" y="0" width="320" height="120"
+                          patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40"
+                            font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2"
+                            fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70"
+                            font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1"
+                            fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern>
+                      </defs>
+                      <rect width="100%" height="100%" :fill="'url(#wm-' + slugGroup(group.group) + ')'" />
+                    </svg></div>
                   <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <div class="grid-stat">
-                      <div v-for="field in visibleFields(group.fields)" :key="field.field_key" class="stat-box" :style="statBoxBg(field.field_key, data[field.field_key])">
+                      <div v-for="field in visibleFields(group.fields)" :key="field.field_key" class="stat-box"
+                        :style="statBoxBg(field.field_key, data[field.field_key])">
                         <p class="stat-label">{{ field.field_label }}</p>
                         <template v-if="field.field_key === 'id_pelanggan_pln'">
-                          <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;" :style="{ color: data[field.field_key]?'#15803d':'#94a3b8' }">{{ data[field.field_key] ?? 'Tidak ada' }}</p>
+                          <p style="font-size:1rem;font-family:monospace;font-weight:900;margin:0;"
+                            :style="{ color: data[field.field_key] ? '#15803d' : '#94a3b8' }">{{ data[field.field_key] ??
+                            'Tidak ada' }}</p>
                         </template>
                         <template v-else-if="field.field_key === 'pbi_nas'">
-                          <p class="stat-val" :style="{ color: data[field.field_key]==='1'?'#b45309':'#94a3b8' }">{{ data[field.field_key]==='1' ? 'Terdaftar' : 'Tidak' }}</p>
+                          <p class="stat-val" :style="{ color: data[field.field_key] === '1' ? '#b45309' : '#94a3b8' }">{{
+                            data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}</p>
                         </template>
                         <template v-else-if="field.field_key === 'pbi_pemda'">
-                          <p class="stat-val" :style="{ color: data[field.field_key]==='1'?'#6d28d9':'#94a3b8' }">{{ data[field.field_key]==='1' ? 'Terdaftar' : 'Tidak' }}</p>
+                          <p class="stat-val" :style="{ color: data[field.field_key] === '1' ? '#6d28d9' : '#94a3b8' }">{{
+                            data[field.field_key] === '1' ? 'Terdaftar' : 'Tidak' }}</p>
                         </template>
                         <template v-else>
-                          <p class="stat-val" style="color:#374151;">{{ resolveValue(field.field_key, data[field.field_key]) }}</p>
+                          <p class="stat-val" style="color:#374151;">{{ resolveValue(field.field_key,
+                            data[field.field_key]) }}</p>
                         </template>
                       </div>
                     </div>
@@ -144,7 +187,17 @@
             <template v-else>
               <div :class="slot.groups.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in slot.groups" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern :id="'wm-' + slugGroup(group.group)" x="0" y="0" width="320" height="120"
+                          patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40"
+                            font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2"
+                            fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70"
+                            font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1"
+                            fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern>
+                      </defs>
+                      <rect width="100%" height="100%" :fill="'url(#wm-' + slugGroup(group.group) + ')'" />
+                    </svg></div>
                   <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <table class="info-table">
@@ -152,7 +205,8 @@
                         <tr v-for="field in visibleFields(group.fields)" :key="field.field_key">
                           <td class="td-label">{{ field.field_label }}</td>
                           <td class="td-value">
-                            <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{ maskNik(data[field.field_key]) }}</span>
+                            <span v-if="isNikField(field.field_key)" style="font-family:monospace;">{{
+                              maskNik(data[field.field_key]) }}</span>
                             <span v-else>{{ renderFieldValue(field.field_key, data[field.field_key]) }}</span>
                           </td>
                         </tr>
@@ -186,8 +240,10 @@
         </div>
 
         <!-- Belum pernah menerima bantuan -->
-        <div v-else-if="mustahikRiwayat.length === 0" class="detail-card" style="display:flex;align-items:center;gap:16px;">
-          <div style="width:44px;height:44px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <div v-else-if="mustahikRiwayat.length === 0" class="detail-card"
+          style="display:flex;align-items:center;gap:16px;">
+          <div
+            style="width:44px;height:44px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <i class="pi pi-inbox" style="font-size:20px;color:#94a3b8;"></i>
           </div>
           <div>
@@ -224,11 +280,29 @@
           <div class="detail-card">
             <p class="section-title"><i class="pi pi-history"></i> Ringkasan per Tahun</p>
             <div style="overflow-x:auto;">
-              <DataTable :value="mustahikRekapTahun" :rows="10" :rowsPerPageOptions="[10,25,50,100]" stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single">
-                <Column style="width:10%" field="tahun" sortable header="Tahun"><template #body="{ data }"><div class="text-center">{{ data.tahun ?? '-' }}</div></template></Column>
-                <Column style="width:30%" field="langsung" header="Penerimaan Langsung" sortable><template #body="{ data }"><div class="text-center">{{ formatRupiah(data.langsung ?? 0) }}</div></template></Column>
-                <Column style="width:30%" field="tidakLangsung" header="Penerimaan Tidak Langsung" sortable><template #body="{ data }"><div class="text-center">{{ formatRupiah(data.tidakLangsung ?? 0) }}</div></template></Column>
-                <Column style="width:30%" field="total" header="Total Penerimaan" sortable><template #body="{ data }"><div class="text-center"><span style="padding:2px 10px;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700;">{{ formatRupiah(data.total ?? 0) }}</span></div></template></Column>
+              <DataTable :value="mustahikRekapTahun" :rows="10" :rowsPerPageOptions="[10, 25, 50, 100]" stripedRows
+                showGridlines paginator
+                paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+                currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll"
+                class="p-datatable-sm" sortMode="single">
+                <Column style="width:10%" field="tahun" sortable header="Tahun"><template #body="{ data }">
+                    <div class="text-center">{{ data.tahun ?? '-' }}</div>
+                  </template>
+                </Column>
+                <Column style="width:30%" field="langsung" header="Penerimaan Langsung" sortable><template
+                    #body="{ data }">
+                    <div class="text-center">{{ formatRupiah(data.langsung ?? 0) }}</div>
+                  </template></Column>
+                <Column style="width:30%" field="tidakLangsung" header="Penerimaan Tidak Langsung" sortable><template
+                    #body="{ data }">
+                    <div class="text-center">{{ formatRupiah(data.tidakLangsung ?? 0) }}</div>
+                  </template></Column>
+                <Column style="width:30%" field="total" header="Total Penerimaan" sortable><template #body="{ data }">
+                    <div class="text-center"><span
+                        style="padding:2px 10px;border-radius:99px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:700;">{{
+                          formatRupiah(data.total ?? 0) }}</span></div>
+                  </template>
+                </Column>
               </DataTable>
             </div>
           </div>
@@ -237,13 +311,30 @@
           <div class="detail-card">
             <p class="section-title"><i class="pi pi-list"></i> Riwayat Penerimaan Bantuan</p>
             <div style="overflow-x:auto;">
-              <DataTable :value="mustahikRiwayat" :rows="10" :rowsPerPageOptions="[10,25,50,100]" stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single">
-                <Column field="tanggal" header="Tanggal Terima" sortable><template #body="{ data }"><div class="text-center">{{ data.tanggal ?? '-' }}</div></template></Column>
-                <Column field="laz" header="Lembaga Zakat" sortable/>
-                <Column field="program" header="Program" sortable><template #body="{ data }"><div class="text-center">{{ data.program ?? '-' }}</div></template></Column>
-                <Column field="bidang" header="Bidang" sortable><template #body="{ data }"><div class="text-center">{{ data.bidang ?? '-' }}</div></template></Column>
-                <Column field="metode" header="Tipe Penerimaan" sortable><template #body="{ data }"><div class="text-center">{{ data.metode ?? '-' }}</div></template></Column>
-                <Column field="total" header="Total Penerimaan" sortable><template #body="{ data }"><div class="text-center"><span style="padding:2px 10px;border-radius:99px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;">{{ formatRupiah(data.nominal ?? 0) }}</span></div></template></Column>
+              <DataTable :value="mustahikRiwayat" :rows="10" :rowsPerPageOptions="[10, 25, 50, 100]" stripedRows
+                showGridlines paginator
+                paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+                currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll"
+                class="p-datatable-sm" sortMode="single">
+                <Column field="tanggal" header="Tanggal Terima" sortable><template #body="{ data }">
+                    <div class="text-center">{{ data.tanggal ?? '-' }}</div>
+                  </template></Column>
+                <Column field="laz" header="Lembaga Zakat" sortable />
+                <Column field="program" header="Program" sortable><template #body="{ data }">
+                    <div class="text-center">{{ data.program ?? '-' }}</div>
+                  </template></Column>
+                <Column field="bidang" header="Bidang" sortable><template #body="{ data }">
+                    <div class="text-center">{{ data.bidang ?? '-' }}</div>
+                  </template></Column>
+                <Column field="metode" header="Tipe Penerimaan" sortable><template #body="{ data }">
+                    <div class="text-center">{{ data.metode ?? '-' }}</div>
+                  </template></Column>
+                <Column field="total" header="Total Penerimaan" sortable><template #body="{ data }">
+                    <div class="text-center"><span
+                        style="padding:2px 10px;border-radius:99px;background:#f0fdf4;color:#15803d;font-size:11px;font-weight:700;">{{
+                          formatRupiah(data.nominal ?? 0) }}</span></div>
+                  </template>
+                </Column>
               </DataTable>
             </div>
           </div>
@@ -255,7 +346,8 @@
           <div class="section-divider-label section-divider-label--kk">
             <i class="pi pi-home" style="font-size:12px;"></i>
             <span>Data Kartu Keluarga</span>
-            <span v-if="data.nomor_kartu_keluarga" style="font-family:monospace;font-size:10px;font-weight:500;opacity:.75;margin-left:4px;">
+            <span v-if="data.nomor_kartu_keluarga"
+              style="font-family:monospace;font-size:10px;font-weight:500;opacity:.75;margin-left:4px;">
               · {{ maskNik(data.nomor_kartu_keluarga) }}
             </span>
           </div>
@@ -274,7 +366,9 @@
                 <i class="pi pi-chart-bar" style="font-size:18px;"></i>
               </div>
               <div>
-                <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:0 0 2px;opacity:.75;">Desil Kesejahteraan Nasional</p>
+                <p
+                  style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:0 0 2px;opacity:.75;">
+                  Desil Kesejahteraan Nasional</p>
                 <p style="font-size:1.35rem;font-weight:900;margin:0;">
                   Desil {{ kkDetail.desil_nasional ?? '-' }}
                   <span style="font-size:13px;font-weight:500;margin-left:6px;opacity:.7;"></span>
@@ -282,16 +376,27 @@
               </div>
               <div style="margin-left:auto;text-align:right;">
                 <p style="font-size:11px;margin:0;opacity:.65;">No. KK</p>
-                <p style="font-size:12px;font-family:monospace;font-weight:700;margin:0;">{{ maskNik(kkDetail.nomor_kartu_keluarga) }}</p>
+                <p style="font-size:12px;font-family:monospace;font-weight:700;margin:0;">{{
+                  maskNik(kkDetail.nomor_kartu_keluarga) }}</p>
               </div>
             </div>
           </div>
 
           <template v-if="kkDetail && keluargaGroups.length">
-            <template v-for="(rowPair, ri) in pairedKeluargaGroups" :key="'kk-'+ri">
+            <template v-for="(rowPair, ri) in pairedKeluargaGroups" :key="'kk-' + ri">
               <div :class="rowPair.length === 2 ? 'grid-2' : ''">
                 <div v-for="group in rowPair" :key="group.group" class="detail-card wm-card">
-                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><pattern :id="'wm-kk-'+slugGroup(group.group)" x="0" y="0" width="320" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40" font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70" font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1" fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern></defs><rect width="100%" height="100%" :fill="'url(#wm-kk-'+slugGroup(group.group)+')'" /></svg></div>
+                  <div class="wm-overlay" aria-hidden="true"><svg class="wm-svg" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern :id="'wm-kk-' + slugGroup(group.group)" x="0" y="0" width="320" height="120"
+                          patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><text x="10" y="40"
+                            font-family="Inter,sans-serif" font-size="14" font-weight="700" letter-spacing="2"
+                            fill="rgba(15,23,42,0.11)">DO NOT COPY</text><text x="10" y="70"
+                            font-family="Inter,sans-serif" font-size="13" font-weight="600" letter-spacing="1"
+                            fill="rgba(15,23,42,0.09)">{{ userIdentifier }}</text></pattern>
+                      </defs>
+                      <rect width="100%" height="100%" :fill="'url(#wm-kk-' + slugGroup(group.group) + ')'" />
+                    </svg></div>
                   <div style="position:relative;z-index:0;">
                     <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                     <table class="info-table">
@@ -316,20 +421,41 @@
           <div class="detail-card" style="display:flex;flex-direction:column;">
             <p class="section-title">
               <i class="pi pi-users"></i> Anggota dalam KK
-              <span style="margin-left:auto;font-size:11px;font-weight:500;color:#94a3b8;font-family:monospace;">{{ maskNik(data.nomor_kartu_keluarga) }}</span>
+              <span style="margin-left:auto;font-size:11px;font-weight:500;color:#94a3b8;font-family:monospace;">{{
+                maskNik(data.nomor_kartu_keluarga) }}</span>
             </p>
             <template v-if="kkMembers.length">
               <div style="overflow-x:auto;">
-                <DataTable :value="kkMembers" :rows="10" :rowsPerPageOptions="[10,25,50,100]" sortField="tanggal_lahir" :sortOrder="1" stripedRows showGridlines paginator paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink" currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll" class="p-datatable-sm" sortMode="single">
-                  <Column style="width:10%" field="nomor_induk_kependudukan" header="NIK" sortable><template #body="{ data }"><span class="text-center">{{ maskNik(data.nomor_induk_kependudukan) }}</span></template></Column>
-                  <Column field="nama" header="Nama Anggota Keluarga" sortable/>
-                  <Column style="width:15%" field="jenis_kelamin" header="Jenis Kelamin" sortable><template #body="{ data }"><div class="text-center">{{ isLakiVal(data.jenis_kelamin)?'Laki-laki':'Perempuan' }}</div></template></Column>
-                  <Column style="width:15%" field="status_hubungan_keluarga" header="Hubungan keluarga" sortable><template #body="{ data }"><div class="text-left">{{ resolveValue('status_hubungan_keluarga', data.status_hubungan_keluarga) }}</div></template></Column>
-                  <Column style="width:15%" field="tanggal_lahir" header="Usia" sortable><template #body="{ data }"><div class="">{{ formatUsia_TB(data.tanggal_lahir) }}</div></template></Column>
-                  <Column style="width:1%" field="nomor_induk_kependudukan" header="Aksi" sortable><template #body="{ data }">
-                    <a :href="`/zis-dskl/data-baseline/anggota/${data.nomor_induk_kependudukan}`"target="_blank" class="flex items-center gap-1">
-                      <i class="pi pi-external-link"></i>Lihat
-                    </a></template>
+                <DataTable :value="kkMembers" :rows="10" :rowsPerPageOptions="[10, 25, 50, 100]" sortField="tanggal_lahir"
+                  :sortOrder="1" stripedRows showGridlines paginator
+                  paginatorTemplate="FirstPageLink PrevPageLink CurrentPageReport NextPageLink LastPageLink"
+                  currentPageReportTemplate="{first} - {last} dari {totalRecords}" responsiveLayout="scroll"
+                  class="p-datatable-sm" sortMode="single">
+                  <Column style="width:10%" field="nomor_induk_kependudukan" header="NIK" sortable><template
+                      #body="{ data }"><span class="text-center">{{ maskNik(data.nomor_induk_kependudukan)
+                        }}</span></template>
+                  </Column>
+                  <Column field="nama" header="Nama Anggota Keluarga" sortable />
+                  <Column style="width:15%" field="jenis_kelamin" header="Jenis Kelamin" sortable><template
+                      #body="{ data }">
+                      <div class="text-center">{{ isLakiVal(data.jenis_kelamin) ? 'Laki-laki' : 'Perempuan' }}</div>
+                    </template>
+                  </Column>
+                  <Column style="width:15%" field="status_hubungan_keluarga" header="Hubungan keluarga" sortable>
+                    <template #body="{ data }">
+                      <div class="text-left">{{ resolveValue('status_hubungan_keluarga', data.status_hubungan_keluarga)
+                        }}</div>
+                    </template>
+                  </Column>
+                  <Column style="width:15%" field="tanggal_lahir" header="Usia" sortable><template #body="{ data }">
+                      <div class="">{{ formatUsia_TB(data.tanggal_lahir) }}</div>
+                    </template></Column>
+                  <Column style="width:1%" field="nomor_induk_kependudukan" header="Aksi" sortable><template
+                      #body="{ data }">
+                      <a :href="`/zis-dskl/data-baseline/anggota/${data.nomor_induk_kependudukan}`" target="_blank"
+                        class="flex items-center gap-1">
+                        <i class="pi pi-external-link"></i>Lihat
+                      </a></template>
                   </Column>
                 </DataTable>
               </div>
@@ -361,19 +487,20 @@ import {
   JENIS_KELAMIN, STATUS_KAWIN, HUBUNGAN_KELUARGA,
   PENDIDIKAN, STATUS_BEKERJA, DESIL_LABEL, DESIL_COLOR, resolveRef,
 } from '@/data/dtsenRef'
-import DataTable  from 'primevue/datatable'
-import Column     from 'primevue/column'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import { decryptDtsen } from '@/utils/dtsenCrypto'
 
-const route  = useRoute()
+const route = useRoute()
 const router = useRouter()
 
-const loading        = ref(true)
-const data           = ref(null)
-const detailGroups   = ref([])
+const loading = ref(true)
+const data = ref(null)
+const detailGroups = ref([])
 const keluargaGroups = ref([])
-const loadingKK      = ref(false)
-const kkMembers      = ref([])
-const kkDetail       = ref(null)
+const loadingKK = ref(false)
+const kkMembers = ref([])
+const kkDetail = ref(null)
 
 // ── Mustahik / Penerimaan Bantuan ──
 const loadingMustahik = ref(false)
@@ -456,7 +583,7 @@ const mustahikRekapTahun = computed(() => {
     const n = Number(r.nominal || 0)
     if (!map[t]) map[t] = { tahun: t, total: 0, langsung: 0, tidakLangsung: 0 }
     map[t].total += n
-    if (r.metode === 'Penerima Manfaat Langsung')      map[t].langsung      += n
+    if (r.metode === 'Penerima Manfaat Langsung') map[t].langsung += n
     if (r.metode === 'Penerima Manfaat Tidak Langsung') map[t].tidakLangsung += n
   })
   return Object.values(map).sort((a, b) => b.tahun - a.tahun)
@@ -481,10 +608,10 @@ const mustahikRiwayatGrouped = computed(() => {
     if (!map.has(key)) {
       map.set(key, {
         key,
-        tahun:    item.tahun,
-        laz:      item.laz,
+        tahun: item.tahun,
+        laz: item.laz,
         laz_kode: item.laz_kode,
-        items:    [],
+        items: [],
       })
     }
     map.get(key).items.push(item)
@@ -503,10 +630,10 @@ function isNikField(key) { return NIK_FIELDS.has(key) }
 const PINNED_AFTER_KONDISI_RUMAH = ['Aset Bergerak', 'Aset Tidak Bergerak', 'Fasilitas Rumah']
 function reorderKeluargaGroups(groups) {
   const pinnedNames = new Set(PINNED_AFTER_KONDISI_RUMAH)
-  const rest   = groups.filter(g => !pinnedNames.has(g.group))
+  const rest = groups.filter(g => !pinnedNames.has(g.group))
   const pinned = PINNED_AFTER_KONDISI_RUMAH.map(name => groups.find(g => g.group === name)).filter(Boolean)
   const anchorIdx = rest.findIndex(g => g.group === 'Kondisi Rumah')
-  const insertAt  = anchorIdx >= 0 ? anchorIdx + 1 : rest.length
+  const insertAt = anchorIdx >= 0 ? anchorIdx + 1 : rest.length
   return [...rest.slice(0, insertAt), ...pinned, ...rest.slice(insertAt)]
 }
 
@@ -578,17 +705,17 @@ function slugGroup(g) {
   return String(g).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 function statBoxBg(key, val) {
-  if (key === 'pbi_nas')          return { background: val==='1' ? '#fefce8' : '#f8fafc' }
-  if (key === 'pbi_pemda')        return { background: val==='1' ? '#ede9fe' : '#f8fafc' }
+  if (key === 'pbi_nas') return { background: val === '1' ? '#fefce8' : '#f8fafc' }
+  if (key === 'pbi_pemda') return { background: val === '1' ? '#ede9fe' : '#f8fafc' }
   if (key === 'id_pelanggan_pln') return { background: val ? '#f0fdf4' : '#f8fafc' }
   return { background: '#f8fafc' }
 }
 
 const DISAB_LEVELS = {
   '0': { label: 'Tidak mengalami kesulitan', bg: '#f0fdf4', color: '#15803d' },
-  '1': { label: 'Ya, sedikit kesulitan',     bg: '#fefce8', color: '#a16207' },
-  '2': { label: 'Ya, banyak kesulitan',      bg: '#fff7ed', color: '#c2410c' },
-  '3': { label: 'Tidak bisa sama sekali',    bg: '#fef2f2', color: '#b91c1c' },
+  '1': { label: 'Ya, sedikit kesulitan', bg: '#fefce8', color: '#a16207' },
+  '2': { label: 'Ya, banyak kesulitan', bg: '#fff7ed', color: '#c2410c' },
+  '3': { label: 'Tidak bisa sama sekali', bg: '#fef2f2', color: '#b91c1c' },
 }
 function disabBadgeLabel(v) { return (DISAB_LEVELS[String(v ?? '').trim()] ?? DISAB_LEVELS['0']).label }
 function disabBadgeStyle(v) {
@@ -602,31 +729,31 @@ function disabBgStyle(v) {
 
 const DESIL_COLORS = [
   null,
-  { bg:'#fef2f2', border:'#fecaca', text:'#991b1b', icon:'#fca5a5', label:'' },
-  { bg:'#fff7ed', border:'#fed7aa', text:'#9a3412', icon:'#fb923c', label:'' },
-  { bg:'#fefce8', border:'#fde68a', text:'#92400e', icon:'#fbbf24', label:'' },
-  { bg:'#fefce8', border:'#fde68a', text:'#a16207', icon:'#fbbf24', label:'' },
-  { bg:'#f0fdf4', border:'#bbf7d0', text:'#166534', icon:'#4ade80', label:'' },
-  { bg:'#f0fdf4', border:'#bbf7d0', text:'#15803d', icon:'#22c55e', label:'' },
-  { bg:'#ecfdf5', border:'#a7f3d0', text:'#065f46', icon:'#10b981', label:'' },
-  { bg:'#eff6ff', border:'#bfdbfe', text:'#1e40af', icon:'#60a5fa', label:'' },
-  { bg:'#eff6ff', border:'#bfdbfe', text:'#1d4ed8', icon:'#3b82f6', label:'' },
-  { bg:'#f5f3ff', border:'#ddd6fe', text:'#4c1d95', icon:'#a78bfa', label:'' },
+  { bg: '#fef2f2', border: '#fecaca', text: '#991b1b', icon: '#fca5a5', label: '' },
+  { bg: '#fff7ed', border: '#fed7aa', text: '#9a3412', icon: '#fb923c', label: '' },
+  { bg: '#fefce8', border: '#fde68a', text: '#92400e', icon: '#fbbf24', label: '' },
+  { bg: '#fefce8', border: '#fde68a', text: '#a16207', icon: '#fbbf24', label: '' },
+  { bg: '#f0fdf4', border: '#bbf7d0', text: '#166534', icon: '#4ade80', label: '' },
+  { bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d', icon: '#22c55e', label: '' },
+  { bg: '#ecfdf5', border: '#a7f3d0', text: '#065f46', icon: '#10b981', label: '' },
+  { bg: '#eff6ff', border: '#bfdbfe', text: '#1e40af', icon: '#60a5fa', label: '' },
+  { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', icon: '#3b82f6', label: '' },
+  { bg: '#f5f3ff', border: '#ddd6fe', text: '#4c1d95', icon: '#a78bfa', label: '' },
 ]
 function _desilIdx(v) {
   const n = parseInt(String(v ?? '').trim())
   return (Number.isInteger(n) && n >= 1 && n <= 10) ? n : 0
 }
-function desilLabel(v)        { return DESIL_COLORS[_desilIdx(v)]?.label ?? '' }
+function desilLabel(v) { return DESIL_COLORS[_desilIdx(v)]?.label ?? '' }
 function desilBannerStyle(v) {
   const c = DESIL_COLORS[_desilIdx(v)]
-  if (!c) return { background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'14px', padding:'18px 22px', color:'#64748b' }
-  return { background:c.bg, border:`1px solid ${c.border}`, borderRadius:'14px', padding:'18px 22px', color:c.text }
+  if (!c) return { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px 22px', color: '#64748b' }
+  return { background: c.bg, border: `1px solid ${c.border}`, borderRadius: '14px', padding: '18px 22px', color: c.text }
 }
 function desilIconStyle(v) {
   const c = DESIL_COLORS[_desilIdx(v)]
-  if (!c) return { width:'44px', height:'44px', borderRadius:'12px', background:'#e2e8f0', display:'flex', alignItems:'center', justifyContent:'center', color:'#94a3b8', flexShrink:0 }
-  return { width:'44px', height:'44px', borderRadius:'12px', background:c.icon+'33', display:'flex', alignItems:'center', justifyContent:'center', color:c.icon, flexShrink:0 }
+  if (!c) return { width: '44px', height: '44px', borderRadius: '12px', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', flexShrink: 0 }
+  return { width: '44px', height: '44px', borderRadius: '12px', background: c.icon + '33', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.icon, flexShrink: 0 }
 }
 
 const isLaki = computed(() => isLakiVal(data.value?.jenis_kelamin))
@@ -706,9 +833,9 @@ async function loadMustahikData(nikHash) {
       riwayatRes?.data ?? []
 
 
-  } catch(e){
+  } catch (e) {
 
-    if(e?.response?.status !== 404){
+    if (e?.response?.status !== 404) {
       console.error(
         '[AnggotaDetail] gagal load mustahik:',
         e
@@ -717,12 +844,12 @@ async function loadMustahikData(nikHash) {
 
   } finally {
 
-    loadingMustahik.value=false
+    loadingMustahik.value = false
 
   }
 }
 
-async function loadKKData(nkkHash){
+async function loadKKData(nkkHash) {
 
   if (!nkkHash) return
 
@@ -746,7 +873,31 @@ async function loadKKData(nkkHash){
 
 
     kkMembers.value =
-      anggotaRes.data?.data ?? []
+      (anggotaRes.data?.data ?? []).map(item => ({
+
+        ...item,
+
+        nomor_induk_kependudukan:
+          decryptDtsen(
+            item.nomor_induk_kependudukan_encrypt
+          ),
+
+        nomor_kartu_keluarga:
+          decryptDtsen(
+            item.nomor_kartu_keluarga_encrypt
+          ),
+
+        tanggal_lahir:
+          decryptDtsen(
+            item.tanggal_lahir_encrypt
+          ),
+
+        alamat_ktp:
+          decryptDtsen(
+            item.alamat_ktp_encrypt
+          ),
+
+      }))
 
 
     const kkRows =
@@ -774,10 +925,10 @@ async function loadKKData(nkkHash){
 }
 
 async function init(nik) {
-  loading.value         = true
-  data.value            = null
-  kkMembers.value       = []
-  kkDetail.value        = null
+  loading.value = true
+  data.value = null
+  kkMembers.value = []
+  kkDetail.value = null
   mustahikRiwayat.value = []
 
   const [indGroups, kkGroups] = await Promise.all([
@@ -785,27 +936,27 @@ async function init(nik) {
     getDetailFields('keluarga'),
     loadData(nik),
   ])
-  detailGroups.value   = indGroups
+  detailGroups.value = indGroups
   keluargaGroups.value = kkGroups
   loading.value = false
 
   const tasks = []
-  
+
   if (data.value?.nomor_kartu_keluarga_encrypt) {
 
     tasks.push(
-        loadKKData(
-            data.value.nomor_kartu_keluarga_encrypt
-        )
+      loadKKData(
+        data.value.nomor_kartu_keluarga_encrypt
+      )
     )
 
-}
+  }
   // tasks.push(loadMustahikData(nik))
-tasks.push(
-  loadMustahikData(
-    String(route.params.nik)
+  tasks.push(
+    loadMustahikData(
+      String(route.params.nik)
+    )
   )
-)
   await Promise.allSettled(tasks)
 }
 
@@ -815,11 +966,11 @@ watch(
 )
 
 function renderFieldValue(key, val) {
-  if (key === 'tanggal_lahir')                                    return formatUsia(val)
-  if (key === 'kelas_tertinggi_yang_diduduki')                    return val != null ? 'Kelas ' + val : '-'
-  if (key === 'omzet_usaha_utama')                                return val ? formatRupiah(val) : '-'
-  if (key === 'jumlah_usaha')                                     return val != null ? val + ' usaha' : '-'
-  if (key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama')     return (val ?? '-') + ' orang'
+  if (key === 'tanggal_lahir') return formatUsia(val)
+  if (key === 'kelas_tertinggi_yang_diduduki') return val != null ? 'Kelas ' + val : '-'
+  if (key === 'omzet_usaha_utama') return val ? formatRupiah(val) : '-'
+  if (key === 'jumlah_usaha') return val != null ? val + ' usaha' : '-'
+  if (key === 'jumlah_pekerja_yang_dibayar_dari_usaha_utama') return (val ?? '-') + ' orang'
   return resolveValue(key, val)
 }
 
@@ -875,64 +1026,330 @@ onMounted(() => init(String(route.params.nik)))
 </script>
 
 <style scoped>
-:deep(.text-right) { text-align: right !important; }
-:deep(.p-datatable) { font-size: 12px; }
+:deep(.text-right) {
+  text-align: right !important;
+}
+
+:deep(.p-datatable) {
+  font-size: 12px;
+}
+
 :deep(.p-datatable-column-header-content),
-:deep(.p-datatable .p-datatable-thead > tr > th) { justify-content: center !important; background:#f8fafc;}
-:deep(.p-datatable .p-datatable-tbody > tr > td) { padding-top:10px;padding-bottom:10px;}
+:deep(.p-datatable .p-datatable-thead > tr > th) {
+  justify-content: center !important;
+  background: #f8fafc;
+}
+
+:deep(.p-datatable .p-datatable-tbody > tr > td) {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 :deep(.p-datatable .p-datatable-thead > tr > th),
 :deep(.p-datatable .p-datatable-tbody > tr > td),
-:deep(.p-datatable .p-paginator) { font-size: 12px; }
-:deep(.p-paginator) { padding: 0px; font-size: 12px; justify-content: right !important; display: flex; align-items: center; }
-:deep(.p-paginator-current) { margin-right: auto; }
-:deep(.p-paginator-prev), :deep(.p-paginator-next) { margin-left: 0rem; }
-.grid-2    { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-.grid-5    { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:5px; }
-.grid-stat { display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:12px; }
-@media(max-width:768px) { 
-.grid-2 { grid-template-columns:1fr; } 
-.grid-5 { grid-template-columns:1fr; } 
-.grid-stat { grid-template-columns:1fr 1fr; } }
-.detail-card { background:white; border-radius:14px; border:1px solid #f1f5f9; padding:22px; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
-.wm-card { position:relative; overflow:hidden; }
-.wm-overlay { position:absolute; inset:0; z-index:2; pointer-events:none; user-select:none; }
-.wm-svg { display:block; width:100%; height:100%; }
-.section-title { font-size:13px; font-weight:700; color:#374151; margin:0 0 14px; display:flex; align-items:center; gap:6px; }
-.info-table { width:100%; border-collapse:collapse; }
-.info-table tr { border-bottom:1px solid #f8fafc; }
-.info-table tr:last-child { border-bottom:none; }
-.td-label { font-size:12px; color:#94a3b8; font-weight:500; padding:9px 4px; width:45%; vertical-align:top; }
-.td-value  { font-size:13px; color:#374151; font-weight:600; padding:9px 4px; text-align:right; }
-.stat-9    { border-radius:10px; padding:16px; }
-.stat-box  { border-radius:10px; padding:16px; }
-.stat-label { font-size:11px; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin:0 0 4px; }
-.stat-val   { font-size:1.25rem; font-weight:900; margin:0; }
-.disab-table { width:100%; border-collapse:collapse; }
-.disab-th { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.4px; padding:6px 8px 8px; border-bottom:2px solid #f1f5f9; }
-.disab-tr { border-bottom:1px solid #f8fafc; transition:background .15s; }
-.disab-tr:last-child { border-bottom:none; }
-.disab-tr:hover { background:#f8fafc; }
-.disab-td-aspek  { font-size:12px; color:#374151; font-weight:500; padding:9px 8px; width:55%; }
-.disab-td-status { font-size:12px; padding:9px 8px; text-align:right; }
-.desil-banner { border-radius:14px; padding:18px 22px; }
-.kk-table { width:100%; border-collapse:collapse; font-size:12px; }
-.kk-table thead tr { background:#f8fafc; }
-.kk-table th { padding:8px 10px; text-align:left; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid #f1f5f9; }
-.kk-table td { padding:9px 10px; border-bottom:1px solid #f8fafc; color:#374151; font-weight:500; vertical-align:middle; }
-.kk-table tr:last-child td { border-bottom:none; }
-.kk-table tbody tr:hover td { background:#f8fafc; }
-.kk-active-row td { background:#eff6ff !important; }
-.kk-you-badge { display:inline-block; padding:1px 6px; border-radius:99px; font-size:10px; font-weight:700; background:#2563eb; color:white; margin-right:5px; vertical-align:middle; }
-.nik-link { color:#2563eb; text-decoration:underline; cursor:pointer; }
-.kk-table tbody tr:not(.kk-active-row):hover .nik-link { color:#1d4ed8; }
+:deep(.p-datatable .p-paginator) {
+  font-size: 12px;
+}
+
+:deep(.p-paginator) {
+  padding: 0px;
+  font-size: 12px;
+  justify-content: right !important;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.p-paginator-current) {
+  margin-right: auto;
+}
+
+:deep(.p-paginator-prev),
+:deep(.p-paginator-next) {
+  margin-left: 0rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.grid-5 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  gap: 5px;
+}
+
+.grid-stat {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+@media(max-width:768px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-5 {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-stat {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.detail-card {
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #f1f5f9;
+  padding: 22px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.wm-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.wm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  user-select: none;
+}
+
+.wm-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.info-table tr {
+  border-bottom: 1px solid #f8fafc;
+}
+
+.info-table tr:last-child {
+  border-bottom: none;
+}
+
+.td-label {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+  padding: 9px 4px;
+  width: 45%;
+  vertical-align: top;
+}
+
+.td-value {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 600;
+  padding: 9px 4px;
+  text-align: right;
+}
+
+.stat-9 {
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.stat-box {
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin: 0 0 4px;
+}
+
+.stat-val {
+  font-size: 1.25rem;
+  font-weight: 900;
+  margin: 0;
+}
+
+.disab-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.disab-th {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 6px 8px 8px;
+  border-bottom: 2px solid #f1f5f9;
+}
+
+.disab-tr {
+  border-bottom: 1px solid #f8fafc;
+  transition: background .15s;
+}
+
+.disab-tr:last-child {
+  border-bottom: none;
+}
+
+.disab-tr:hover {
+  background: #f8fafc;
+}
+
+.disab-td-aspek {
+  font-size: 12px;
+  color: #374151;
+  font-weight: 500;
+  padding: 9px 8px;
+  width: 55%;
+}
+
+.disab-td-status {
+  font-size: 12px;
+  padding: 9px 8px;
+  text-align: right;
+}
+
+.desil-banner {
+  border-radius: 14px;
+  padding: 18px 22px;
+}
+
+.kk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.kk-table thead tr {
+  background: #f8fafc;
+}
+
+.kk-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.kk-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #f8fafc;
+  color: #374151;
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.kk-table tr:last-child td {
+  border-bottom: none;
+}
+
+.kk-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.kk-active-row td {
+  background: #eff6ff !important;
+}
+
+.kk-you-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #2563eb;
+  color: white;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.nik-link {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.kk-table tbody tr:not(.kk-active-row):hover .nik-link {
+  color: #1d4ed8;
+}
+
 /* Dividers */
-.section-divider { display:flex; align-items:center; gap:12px; margin:4px 0; }
-.section-divider-line { flex:1; height:1px; background:#e2e8f0; }
-.section-divider-label { display:flex; align-items:center; gap:6px; padding:5px 14px; border-radius:99px; background:#f1f5f9; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; white-space:nowrap; }
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+}
+
+.section-divider-line {
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.section-divider-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 99px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  white-space: nowrap;
+}
+
 /* Divider mustahik (hijau) */
-.section-divider--mustahik .section-divider-line { background:#bbf7d0; }
-.section-divider-label--mustahik { background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; }
+.section-divider--mustahik .section-divider-line {
+  background: #bbf7d0;
+}
+
+.section-divider-label--mustahik {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
 /* Divider KK (biru) */
-.section-divider--kk .section-divider-line { background:#bfdbfe; }
-.section-divider-label--kk { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+.section-divider--kk .section-divider-line {
+  background: #bfdbfe;
+}
+
+.section-divider-label--kk {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
 </style>
