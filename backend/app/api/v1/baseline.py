@@ -17,6 +17,9 @@ from ...utils.crypto import (
     encrypt_identifier,
     decrypt_identifier,
 )
+from ...services.mustahik_service import MustahikService
+
+
 logger = logging.getLogger('app')
 
 PROVINSI_MAP = {
@@ -1535,3 +1538,32 @@ def baseline_repair_provinsi_slug():
         "message": f"Selesai. {updated} baris provinsi_slug diperbaiki.",
         "updated": updated,
     }), 200
+
+
+@api_v1_bp.get('/baseline/anggota/detail/<string:nik_hash>/mustahik')
+@jwt_required()
+def baseline_anggota_mustahik_hash(nik_hash):
+
+    try:
+        nik = decrypt_identifier(nik_hash)
+
+    except Exception:
+        return jsonify({
+            "error": "Token NIK tidak valid."
+        }), 400
+
+
+    if not nik:
+        return jsonify({
+            "error": "NIK kosong."
+        }), 400
+
+
+    result = MustahikService.get_detail_by_nik(nik)
+
+
+    if result.get('status_code') == 404:
+        return jsonify(result), 404
+
+
+    return jsonify(result), 200

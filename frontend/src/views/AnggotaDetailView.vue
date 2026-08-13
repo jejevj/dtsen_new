@@ -675,29 +675,52 @@ async function loadData(nikHash) {
 
   }
 }
-async function loadMustahikData(nik) {
+
+async function loadMustahikData(nikHash) {
+
   loadingMustahik.value = true
   mustahikRiwayat.value = []
+
   try {
-    const detailRes = await MustahikService.getDetailByNik(nik)
-    const rows = detailRes?.data ?? []
-    if (rows.length === 0) return
+
+    const detailRes = await api.get(
+      `/baseline/anggota/detail/${encodeURIComponent(nikHash)}/mustahik`
+    )
+
+
+    const rows = detailRes.data?.data ?? []
+
+    if (!rows.length) return
+
 
     const nikHashed = rows[0]?.nik_hashed
-    if (!nikHashed) {
-      console.warn('[AnggotaDetail] nik_hashed tidak ada di response mustahik')
-      return
+
+    if (!nikHashed) return
+
+
+    const riwayatRes =
+      await MustahikService.getRiwayatByNikHashed(nikHashed)
+
+
+    mustahikRiwayat.value =
+      riwayatRes?.data ?? []
+
+
+  } catch(e){
+
+    if(e?.response?.status !== 404){
+      console.error(
+        '[AnggotaDetail] gagal load mustahik:',
+        e
+      )
     }
 
-    const riwayatRes = await MustahikService.getRiwayatByNikHashed(nikHashed)
-    mustahikRiwayat.value = riwayatRes?.data ?? []
-  } catch (e) {
-    if (e?.response?.status !== 404) console.error('[AnggotaDetail] gagal load mustahik:', e)
   } finally {
-    loadingMustahik.value = false
+
+    loadingMustahik.value=false
+
   }
 }
-
 async function loadKKData(nkk) {
   if (!nkk) return
   loadingKK.value = true
@@ -736,7 +759,12 @@ async function init(nik) {
 
   const tasks = []
   if (data.value?.nomor_kartu_keluarga) tasks.push(loadKKData(data.value.nomor_kartu_keluarga))
-  tasks.push(loadMustahikData(nik))
+  // tasks.push(loadMustahikData(nik))
+tasks.push(
+  loadMustahikData(
+    String(route.params.nik)
+  )
+)
   await Promise.allSettled(tasks)
 }
 
