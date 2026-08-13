@@ -58,7 +58,7 @@ services:
         VITE_APP_NAME: DTSEN
         VITE_APP_VERSION: 2.0.0
         VITE_USE_MOCK: "false"
-        VITE_VIEW_ONLY: "true"
+        VITE_VIEW_ONLY: "false"
     image: dtsen_frontend:latest
     container_name: dtsen_frontend
     restart: unless-stopped
