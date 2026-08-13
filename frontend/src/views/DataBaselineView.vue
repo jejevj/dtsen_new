@@ -357,7 +357,7 @@ const desilOptions = [
 
 function goToAnggotaDetail(row) {
 
-  const token = row.detail_token
+  const token = row.nomor_induk_kependudukan_encrypt
 
   if (!token) return
 
@@ -372,7 +372,7 @@ function goToAnggotaDetail(row) {
 }
 function goToKeluargaDetail(row) {
 
- const token = row.detail_token
+ const token = row.nomor_kartu_keluarga_encrypt
 
  if (!token) return
 
