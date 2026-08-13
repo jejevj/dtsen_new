@@ -441,9 +441,6 @@ def _row_to_detail_dict(row) -> dict:
 
 
 def _row_to_secure_detail_dict(row):
-    """
-    Detail anggota dengan field sensitif dienkripsi.
-    """
 
     d = {
         c.name: getattr(row, c.name)
@@ -464,7 +461,6 @@ def _row_to_secure_detail_dict(row):
 
 
     return d
-
 def _ok_payload(items, label, provinsi, meta_override=None):
     columns = list(items[0].keys()) if items else []
     meta = {
@@ -847,10 +843,10 @@ def baseline_anggota_by_nkk_hash(nkk_hash):
 
     return jsonify({
         "data": [
-            _row_to_detail_dict(row)
+            _row_to_secure_detail_dict(row)
             for row in rows
         ]
-    }), 200
+    }),200
 
 @api_v1_bp.get('/baseline/keluarga/detail/<string:nkk_hash>')
 @jwt_required()
