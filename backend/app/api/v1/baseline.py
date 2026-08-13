@@ -13,7 +13,7 @@ from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 from ...models.t_dtsen_wilayah import TDtsenWilayah
 from ...models.t_dtsen_akses import TDtsenAkses
 from ...services.auth_service import parse_identity_str
-
+from ...utils.crypto import encrypt_identifier
 logger = logging.getLogger('app')
 
 PROVINSI_MAP = {
@@ -369,10 +369,53 @@ def _is_nkk(s: str) -> bool:
     return bool(re.fullmatch(r'\d{16}', s.strip()))
 
 def _row_to_dict(row) -> dict:
-    """Serialize SQLAlchemy model row ke dict, tanpa kolom internal."""
-    d = {c.name: getattr(row, c.name) for c in row.__table__.columns}
+    """
+    Serialize SQLAlchemy model row ke dict.
+
+    Phase 1:
+    Tambahkan token encrypted untuk navigasi detail.
+    Data asli masih dipertahankan sementara.
+    """
+
+    d = {
+        c.name: getattr(row, c.name)
+        for c in row.__table__.columns
+    }
+
     for col in _EXCLUDE_COLUMNS:
         d.pop(col, None)
+
+
+    # ==========================
+    # Token detail anggota
+    # ==========================
+    if hasattr(row, "nomor_induk_kependudukan"):
+
+        nik = getattr(
+            row,
+            "nomor_induk_kependudukan",
+            None
+        )
+
+        if nik:
+            d["detail_token"] = encrypt_identifier(nik)
+
+
+    # ==========================
+    # Token detail keluarga
+    # ==========================
+    elif hasattr(row, "nomor_kartu_keluarga"):
+
+        nkk = getattr(
+            row,
+            "nomor_kartu_keluarga",
+            None
+        )
+
+        if nkk:
+            d["detail_token"] = encrypt_identifier(nkk)
+
+
     return d
 
 def _ok_payload(items, label, provinsi, meta_override=None):
