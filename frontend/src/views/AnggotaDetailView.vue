@@ -721,23 +721,49 @@ async function loadMustahikData(nikHash) {
 
   }
 }
-async function loadKKData(nkk) {
-  if (!nkk) return
+
+async function loadKKData(nkkHash){
+
+  if (!nkkHash) return
+
   loadingKK.value = true
   kkMembers.value = []
   kkDetail.value  = null
+
   try {
+
     const [anggotaRes, keluargaRes] = await Promise.all([
-      api.get('/baseline/anggota/by-nkk', { params: { nkk } }),
-      api.get('/baseline/keluarga', { params: { search: nkk } }),
+
+      api.get(
+        `/baseline/anggota/by-nkk/${encodeURIComponent(nkkHash)}`
+      ),
+
+      api.get(
+        `/baseline/keluarga/detail/${encodeURIComponent(nkkHash)}`
+      ),
+
     ])
-    kkMembers.value = anggotaRes.data?.data ?? []
-    const kkRows    = keluargaRes.data?.data ?? []
-    kkDetail.value  = kkRows.find(r => String(r.nomor_kartu_keluarga ?? '').trim() === nkk) ?? kkRows[0] ?? null
+
+
+    kkMembers.value =
+      anggotaRes.data?.data ?? []
+
+
+    kkDetail.value =
+      keluargaRes.data?.data ?? null
+
+
   } catch (e) {
-    console.error('[AnggotaDetail] gagal load KK:', e)
+
+    console.error(
+      '[AnggotaDetail] gagal load KK:',
+      e
+    )
+
   } finally {
+
     loadingKK.value = false
+
   }
 }
 
@@ -758,7 +784,16 @@ async function init(nik) {
   loading.value = false
 
   const tasks = []
-  if (data.value?.nomor_kartu_keluarga) tasks.push(loadKKData(data.value.nomor_kartu_keluarga))
+  
+  if (data.value?.nomor_kartu_keluarga_encrypt) {
+
+    tasks.push(
+        loadKKData(
+            data.value.nomor_kartu_keluarga_encrypt
+        )
+    )
+
+}
   // tasks.push(loadMustahikData(nik))
 tasks.push(
   loadMustahikData(

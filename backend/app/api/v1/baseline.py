@@ -796,44 +796,43 @@ def _apply_usia_filter(q, usia_min_raw, usia_max_raw):
 
 # ─── SYNC ENDPOINTS ────────────────────────────────────
 
-@api_v1_bp.get('/baseline/anggota/by-nkk')
+@api_v1_bp.get('/baseline/anggota/by-nkk/<string:nkk_hash>')
 @jwt_required()
-def baseline_anggota_by_nkk():
-    nkk = request.args.get('nkk', '').strip()
-    if not nkk:
-        return jsonify({"error": "Parameter 'nkk' wajib diisi."}), 400
-    if not _is_nkk(nkk):
-        return jsonify({"error": "Format NKK tidak valid (harus 16 digit angka)."}), 400
+def baseline_anggota_by_nkk_hash(nkk_hash):
 
-    # Cek apakah NKK ini memiliki desil valid di local DB
-    keluarga_db = ZawaKeluarga.query.filter(
-        ZawaKeluarga.nomor_kartu_keluarga == nkk,
-        ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED),
+    try:
+        nkk = decrypt_identifier(nkk_hash)
+
+    except Exception:
+        return jsonify({
+            "error":"Token NKK tidak valid."
+        }),400
+
+
+    if not nkk:
+        return jsonify({
+            "error":"NKK kosong."
+        }),400
+
+@api_v1_bp.get('/baseline/keluarga/detail/<string:nkk_hash>')
+@jwt_required()
+def baseline_keluarga_detail_hash(nkk_hash):
+
+    nkk = decrypt_identifier(nkk_hash)
+
+    row = ZawaKeluarga.query.filter_by(
+        nomor_kartu_keluarga=nkk
     ).first()
 
-    db_rows = ZawaAnggota.query.filter_by(nomor_kartu_keluarga=nkk).all()
-    if db_rows:
-        # Jika keluarga ada di DB: filter ketat berdasarkan desil
-        if keluarga_db is None:
-            # NKK ada di DB keluarga tapi desil tidak valid
-            keluarga_any = ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=nkk).first()
-            if keluarga_any is not None:
-                return jsonify({"data": [], "meta": {
-                    "totalItems": 0, "source": "filtered_desil", "nkk": nkk,
-                    "errorMessage": "Data tidak tersedia (desil tidak termasuk 1-4)."
-                }}), 200
-        else:
-            items = _dedupe_by_nik([_row_to_dict(r) for r in db_rows])
-            return jsonify({
-                "data": items,
-                "meta": {"totalItems": len(items), "source": "local_db", "nkk": nkk}
-            }), 200
+    if not row:
+        return jsonify({
+            "error":"Data keluarga tidak ditemukan"
+        }),404
 
-    return jsonify({"data": [], "meta": {
-        "totalItems": 0, "source": "not_found", "nkk": nkk,
-        "errorMessage": "Data tidak ditemukan di database lokal."
-    }}), 200
 
+    return jsonify({
+        "data": _row_to_detail_dict(row)
+    }),200
 
 @api_v1_bp.post('/baseline/sync/anggota')
 @jwt_required()
