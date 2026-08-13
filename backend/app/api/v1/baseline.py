@@ -461,6 +461,29 @@ def _row_to_secure_detail_dict(row):
 
 
     return d
+
+
+def _row_to_secure_keluarga_dict(row):
+
+    d = {
+        c.name: getattr(row, c.name)
+        for c in row.__table__.columns
+    }
+
+    for col in _EXCLUDE_COLUMNS:
+        d.pop(col, None)
+
+
+    for field in _ENCRYPT_KELUARGA_FIELDS:
+
+        if field in d:
+
+            value = d.pop(field)
+
+            d[f"{field}_encrypt"] = encrypt_identifier(value)
+
+
+    return d
 def _ok_payload(items, label, provinsi, meta_override=None):
     columns = list(items[0].keys()) if items else []
     meta = {
@@ -865,7 +888,7 @@ def baseline_keluarga_detail_hash(nkk_hash):
 
 
     return jsonify({
-        "data": _row_to_detail_dict(row)
+        "data": _row_to_secure_keluarga_dict(row)
     }),200
 
 @api_v1_bp.post('/baseline/sync/anggota')
