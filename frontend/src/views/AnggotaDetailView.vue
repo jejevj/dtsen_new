@@ -728,7 +728,7 @@ async function loadKKData(nkkHash){
 
   loadingKK.value = true
   kkMembers.value = []
-  kkDetail.value  = null
+  kkDetail.value = null
 
   try {
 
@@ -740,7 +740,7 @@ async function loadKKData(nkkHash){
 
       api.get(
         `/baseline/keluarga/detail/${encodeURIComponent(nkkHash)}`
-      ),
+      )
 
     ])
 
@@ -749,8 +749,14 @@ async function loadKKData(nkkHash){
       anggotaRes.data?.data ?? []
 
 
+    const kkRows =
+      keluargaRes.data?.data ?? []
+
+
     kkDetail.value =
-      keluargaRes.data?.data ?? null
+      Array.isArray(kkRows)
+        ? (kkRows[0] ?? null)
+        : kkRows
 
 
   } catch (e) {

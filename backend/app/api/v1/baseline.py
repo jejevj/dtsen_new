@@ -830,14 +830,27 @@ def baseline_anggota_by_nkk_hash(nkk_hash):
 
     except Exception:
         return jsonify({
-            "error":"Token NKK tidak valid."
-        }),400
+            "error": "Token NKK tidak valid."
+        }), 400
 
 
     if not nkk:
         return jsonify({
-            "error":"NKK kosong."
-        }),400
+            "error": "NKK kosong."
+        }), 400
+
+
+    rows = ZawaAnggota.query.filter_by(
+        nomor_kartu_keluarga=nkk
+    ).all()
+
+
+    return jsonify({
+        "data": [
+            _row_to_detail_dict(row)
+            for row in rows
+        ]
+    }), 200
 
 @api_v1_bp.get('/baseline/keluarga/detail/<string:nkk_hash>')
 @jwt_required()
