@@ -88,3 +88,15 @@ export async function fetchBaselineKeluargaByNkk(nkk) {
   const items = res.data?.data ?? []
   return items.find(r => r.nomor_kartu_keluarga === nkk) ?? items[0] ?? null
 }
+
+// Anggota detail by encrypted NIK
+export async function fetchBaselineAnggotaDetailByHash(nikHash) {
+
+  if (!nikHash) return null
+
+  const res = await api.get(
+    `/baseline/anggota/detail/${encodeURIComponent(nikHash)}`
+  )
+
+  return res.data?.data ?? null
+}

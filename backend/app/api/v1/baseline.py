@@ -13,7 +13,10 @@ from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 from ...models.t_dtsen_wilayah import TDtsenWilayah
 from ...models.t_dtsen_akses import TDtsenAkses
 from ...services.auth_service import parse_identity_str
-from ...utils.crypto import encrypt_identifier
+from ...utils.crypto import (
+    encrypt_identifier,
+    decrypt_identifier,
+)
 logger = logging.getLogger('app')
 
 PROVINSI_MAP = {
@@ -413,6 +416,27 @@ def _row_to_dict(row) -> dict:
 
 
     return d
+
+def _row_to_detail_dict(row) -> dict:
+    """
+    Serializer detail anggota.
+
+    Berbeda dengan list:
+    - tidak melakukan encrypt field
+    - dipakai setelah akses melalui hash berhasil
+    """
+
+    d = {
+        c.name: getattr(row, c.name)
+        for c in row.__table__.columns
+    }
+
+    for col in _EXCLUDE_COLUMNS:
+        d.pop(col, None)
+
+    return d
+
+
 def _ok_payload(items, label, provinsi, meta_override=None):
     columns = list(items[0].keys()) if items else []
     meta = {
@@ -1285,6 +1309,40 @@ def baseline_anggota():
         }
     }), 200
 
+
+@api_v1_bp.get('/baseline/anggota/detail/<string:nik_hash>')
+@jwt_required()
+def baseline_anggota_detail_hash(nik_hash):
+
+    try:
+        nik = decrypt_identifier(nik_hash)
+
+    except Exception:
+        return jsonify({
+            "error": "Token NIK tidak valid."
+        }), 400
+
+
+    if not nik:
+        return jsonify({
+            "error": "NIK kosong."
+        }), 400
+
+
+    row = ZawaAnggota.query.filter_by(
+        nomor_induk_kependudukan=nik
+    ).first()
+
+
+    if not row:
+        return jsonify({
+            "error": "Data anggota tidak ditemukan."
+        }), 404
+
+
+    return jsonify({
+        "data": _row_to_detail_dict(row)
+    }), 200
 
 @api_v1_bp.get('/baseline/keluarga')
 @jwt_required()

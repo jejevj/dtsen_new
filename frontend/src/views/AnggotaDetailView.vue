@@ -353,7 +353,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import api from '@/services/api'
 import MustahikService from '@/services/mustahik'
-import { fetchBaselineAnggotaByNik } from '@/services/baselineService'
+import { fetchBaselineAnggotaDetailByHash } from '@/services/baselineService'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
@@ -657,15 +657,24 @@ function goToMember(nik) {
   router.push({ name: 'baseline-anggota-detail', params: { nik } })
 }
 
-async function loadData(nik) {
+async function loadData(nikHash) {
+
   data.value = null
+
   try {
-    data.value = await fetchBaselineAnggotaByNik(nik)
+
+    data.value =
+      await fetchBaselineAnggotaDetailByHash(nikHash)
+
   } catch (e) {
-    console.error('[AnggotaDetail] gagal load:', e)
+
+    console.error(
+      '[AnggotaDetail] gagal load hash:',
+      e
+    )
+
   }
 }
-
 async function loadMustahikData(nik) {
   loadingMustahik.value = true
   mustahikRiwayat.value = []
