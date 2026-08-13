@@ -93,12 +93,13 @@
                       </div>
                     </td>
                   </tr>
-                  <tr><td class="td-label">NIK</td><td class="td-value">{{ maskNIK(mustahik.nik) }}</td></tr>
+                  <tr><td class="td-label">NIK</td><td class="td-value">{{ nikMasked }}</td></tr>
+                  <tr><td class="td-label">Desil</td><td class="td-value">{{ mustahik.desil }}</td></tr>
                   <tr><td class="td-label">Jenis Kelamin</td><td class="td-value">{{ mustahik.jenis_kelamin==='m'?'Laki-laki':'Perempuan' }}</td></tr>
                   <tr><td class="td-label">Usia</td><td class="td-value">{{ mustahik.usia }} tahun</td></tr>
                   <tr><td class="td-label">Agama</td><td class="td-value">{{ mustahik.agama }}</td></tr>
-                  <tr><td class="td-label">Jumlah Tanggungan</td><td class="td-value">{{ mustahik.tanggungan }} jiwa</td></tr>
-                  <tr><td class="td-label">Usia</td><td class="td-value">{{ mustahik.usia }} Tahun</td></tr>
+                  <!-- <tr><td class="td-label">Jumlah Tanggungan</td><td class="td-value">{{ mustahik.tanggungan }} jiwa</td></tr> -->
+                  <!-- <tr><td class="td-label">Usia</td><td class="td-value">{{ mustahik.usia }} Tahun</td></tr> -->
                   <tr><td class="td-label">Status Pernikahan</td><td class="td-value">{{ mustahik.status_pernikahan }}</td></tr>
                 </tbody>
               </table>
@@ -361,6 +362,16 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 import Select from 'primevue/select'
 import { useWatermark } from '@/composables/useWatermark'
+import { decrypt } from '@/utils/crypto'
+
+const nikAsli = computed(() => {
+    if (!route.params.nikHashed) return ''
+    return decrypt(route.params.nikHashed)
+})
+
+const nikMasked = computed(() => {
+    return maskNIK(nikAsli.value)
+})
 
 const authStore = useAuthStore()
 const { userIdentifier } = useWatermark()

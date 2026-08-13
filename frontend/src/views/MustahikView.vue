@@ -131,7 +131,7 @@
                 class="hover:bg-slate-50 transition-colors">
                 <td class="px-5 py-3 text-slate-400">{{ (pagination.page - 1) * pagination.perPage + i + 1 }}</td>
                 <td class="px-5 py-3 font-medium text-slate-800">{{ row.nama_lengkap ?? '-' }}</td>
-                <td class="px-5 py-3 text-slate-600 font-mono text-xs">{{ maskNik(row.nik) }}</td>
+                <td class="px-5 py-3 text-slate-600 font-mono text-xs">{{ maskNik(row.nik_asli) }}</td>
                 <td class="px-5 py-3">
                   <span :class="row.jenis_kelamin === 'm' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'"
                     class="px-2 py-0.5 rounded-full text-xs font-semibold" >
@@ -156,7 +156,7 @@
                     rounded
                     size="small"
                     class="text-primary-600"
-                    @click="$router.push('/mustahik/' + row.nik_hashed)"
+                    @click="$router.push('/mustahik/' + row.nik_encrypt)"
                   />
                 </td>
               </tr>
@@ -349,6 +349,9 @@ import { watch } from 'vue'
 import Slider from 'primevue/slider'
 import { maskNik } from '@/utils/formatter'
 import { useWatermark } from '@/composables/useWatermark'
+import { decrypt } from "@/utils/crypto";
+
+
 
 // ── Watermark ─────────────────────────────────────────────────────────────────
 const { userIdentifier } = useWatermark()
@@ -462,12 +465,20 @@ async function fetchMustahik(page = 1) {
     const res = await api.get('/mustahik', { params })
     const d = res.data
 
-    rows.value            = d.data ?? d.items ?? []
-    pagination.page       = d.meta?.page  ?? page
+    const data = d.data ?? d.items ?? [];
+
+    rows.value = await Promise.all(
+        data.map(async item => ({
+            ...item,
+            nik_asli: await decrypt(item.nik_encrypt)
+        }))
+    );
+
+    pagination.page       = d.meta?.page ?? page
     pagination.total      = d.meta?.total ?? rows.value.length
     pagination.totalPages = d.meta?.pages ?? 1
 
-    filterInfo.value = res.data.filter || {}
+    filterInfo.value = d.filter || {}
 
     
 
@@ -730,7 +741,6 @@ async function loadLaz() {
         params.skala = activeFilters.skala_laz
     }
     const res = await api.get('/lembaga', { params })
-    console.log(res.data)
     lazOptions.value = [
         {
             label: 'Semua',

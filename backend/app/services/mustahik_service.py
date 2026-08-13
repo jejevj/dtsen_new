@@ -45,6 +45,41 @@ KAWIN_MAP = {
     'ch': 'Cerai Hidup',
 }
 
+SECRET_KEY = "21SDSKL#Must4h1k@2026"
+
+def _get_key():
+    return hashlib.sha256(SECRET_KEY.encode()).digest()
+
+
+def encrypt(text: str) -> str:
+    if text is None:
+        return None
+    result = bytearray()
+    key = SECRET_KEY.encode("utf-8")
+    data = text.encode("utf-8")
+    for i, b in enumerate(data):
+        k = key[i % len(key)]
+        x = b ^ k
+        x = (x + ((i * 17) % 256)) % 256
+        x ^= 0x5A
+        result.append(x)
+    return base64.urlsafe_b64encode(result).decode()
+
+
+def decrypt(cipher: str):
+    if cipher is None:
+        return None
+    data = base64.urlsafe_b64decode(cipher)
+    key = SECRET_KEY.encode("utf-8")
+    result = bytearray()
+    for i, b in enumerate(data):
+        x = b ^ 0x5A
+        x = (x - ((i * 17) % 256)) % 256
+        k = key[i % len(key)]
+        x ^= k
+        result.append(x)
+    return result.decode("utf-8")
+
 def _mask_nik(nik):
     if not nik:
         return None
@@ -124,12 +159,13 @@ def _rows_to_detail_items(rows) -> list:
     for row in rows:
         nik_plain = str(row["nik"]) if row["nik"] else None
         items.append({
-            "nik": nik_plain,
-            "nik_hashed": base64.urlsafe_b64encode(nik_plain.encode()).decode() if nik_plain else None,
-            "kk": row["kk"],
+            # "nik": nik_plain,
+            # "nik_hashed": base64.urlsafe_b64encode(nik_plain.encode()).decode() if nik_plain else None,
+            "nik_hashed" : encrypt(str(row["nik"])),
+            # "kk": row["kk"],
             "nama_lengkap": row["nama_lengkap"],
             "jenis_kelamin": GENDER_MAP.get(row["jenis_kelamin"], row["jenis_kelamin"]),
-            "lahir_tanggal": _format_tanggal(row["lahir_tanggal"]),
+            # "lahir_tanggal": _format_tanggal(row["lahir_tanggal"]),
             "agama": row["agama"],
             "rupiah": str(row["rupiah"]),
             "tipe_penerimaan": row["tipe_penerimaan"],
@@ -370,8 +406,10 @@ class MustahikService:
         items = []
         for row in rows:
             items.append({
-                "nik": _mask_nik(row["nik"]),
-                "nik_hashed":base64.urlsafe_b64encode(str(row["nik"]).encode()).decode(),
+                # "nik": _mask_nik(row["nik"]),
+                "nik_encrypt": encrypt(str(row["nik"])),
+                # "nik_hashed":base64.urlsafe_b64encode(str(row["nik"]).encode()).decode(),
+                # "nik_dec": decrypt(encrypt(str(row["nik"]))),
                 "nama_lengkap":row["nama_lengkap"],
                 "jenis_kelamin":row["jenis_kelamin"],
                 "usia":_hitung_usia(row["tanggal_lahir"]),
@@ -425,7 +463,8 @@ class MustahikService:
     @staticmethod
     def get_detail(nik_hashed: str) -> dict:
         """Ambil detail mustahik berdasarkan NIK yang sudah di-encode base64."""
-        nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
+        # nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
+        nik_dec = decrypt(nik_hashed)
         rows = db.session.execute(
             text(_DETAIL_SQL),
             {"nik": nik_dec}
@@ -455,7 +494,8 @@ class MustahikService:
 
     @staticmethod
     def get_riwayat(nik_hashed: str):
-        nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
+        # nik_dec = base64.urlsafe_b64decode(nik_hashed.encode()).decode()
+        nik_dec = decrypt(nik_hashed)
         logger.info(f"nik_hashed : {nik_hashed}")
         logger.info(f"nik_decode : {nik_dec}")
         # FIX: Hapus filter laz_status dari WHERE agar riwayat tetap muncul
