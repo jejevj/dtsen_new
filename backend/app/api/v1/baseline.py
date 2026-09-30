@@ -1307,46 +1307,65 @@ def baseline_anggota():
             info["label"], provinsi_raw
         )
 
-    # Keyset pagination: never count the complete province before returning rows.
-    last_id = 0
-    db_page = 1
-    if cursor:
-        try:
-            prefix, id_part, page_part = cursor.split(':')
-            if prefix != 'anggota' or not id_part.isdigit() or not page_part.isdigit():
-                raise ValueError('Invalid cursor')
-            last_id, db_page = int(id_part), int(page_part)
-            if last_id <= 0 or db_page < 2:
-                raise ValueError('Invalid cursor')
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Cursor tidak valid. Klik Tampilkan untuk memulai ulang.'}), 400
+    db_page = _parse_db_cursor(cursor) if cursor else 1
+    if db_page is None:
+        db_page = 1
 
-    q = _build_anggota_db_query(
-        bps_kode=bps_kode,
-        kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
-        search=search, extra_filters=extra_filters,
-        usia_min=usia_min_raw, usia_max=usia_max_raw,
-    )
-    if last_id:
-        q = q.filter(ZawaAnggota.id > last_id)
-    fetched = q.order_by(ZawaAnggota.id).limit(DB_PAGE_SIZE + 1).all()
-    has_next = len(fetched) > DB_PAGE_SIZE
-    rows = fetched[:DB_PAGE_SIZE]
-    items = [_row_to_dict(row) for row in rows]
-    next_cursor = f'anggota:{rows[-1].id}:{db_page + 1}' if has_next else None
+    # PERF: Hanya jalankan COUNT di halaman pertama.
+    # Halaman berikutnya mengambil total_count dari query param yang dikirim frontend.
+    if db_page == 1 or not total_count_param:
+        total_count = _count_anggota_db_query(
+            bps_kode=bps_kode,
+            kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+            search=search, extra_filters=extra_filters,
+            usia_min=usia_min_raw, usia_max=usia_max_raw,
+        )
+    else:
+        try:
+            total_count = int(total_count_param)
+        except (ValueError, TypeError):
+            total_count = _count_anggota_db_query(
+                bps_kode=bps_kode,
+                kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+                search=search, extra_filters=extra_filters,
+                usia_min=usia_min_raw, usia_max=usia_max_raw,
+            )
+
+    if total_count > 0:
+        q = _build_anggota_db_query(
+            bps_kode=bps_kode,
+            kabkota_filter=kabkota_filter, kecamatan_filter=kecamatan_filter,
+            search=search, extra_filters=extra_filters,
+            usia_min=usia_min_raw, usia_max=usia_max_raw,
+        )
+        total_pages = max(1, -(-total_count // DB_PAGE_SIZE))
+        offset      = (db_page - 1) * DB_PAGE_SIZE
+        db_rows     = q.order_by(ZawaAnggota.id).offset(offset).limit(DB_PAGE_SIZE).all()
+        items       = [_row_to_dict(r) for r in db_rows]
+        has_next    = db_page < total_pages
+        next_cur    = _build_db_cursor(db_page + 1) if has_next else None
+        columns     = list(items[0].keys()) if items else []
+        return jsonify({
+            "data": items, "columns": columns,
+            "meta": {
+                "provinsi": provinsi_raw, "label": info["label"],
+                "totalItems": total_count, "totalPages": total_pages,
+                "currentPage": db_page, "hasNextPage": has_next,
+                "hasPreviousPage": db_page > 1, "nextCursor": next_cur,
+                "limit": DB_PAGE_SIZE, "searchMode": "db_cache", "source": "local_db",
+            }
+        }), 200
+
     return jsonify({
-        'data': items,
-        'columns': list(items[0].keys()) if items else [],
-        'meta': {
-            'provinsi': provinsi_raw, 'label': info['label'],
-            'totalItems': None, 'totalPages': None,
-            'currentPage': db_page,
-            'hasNextPage': has_next, 'hasPreviousPage': db_page > 1,
-            'nextCursor': next_cursor, 'limit': DB_PAGE_SIZE,
-            'paginationMode': 'keyset',
-            'searchMode': 'db_cache', 'source': 'local_db',
-            'errorMessage': 'Tidak ada data yang sesuai.' if not items else None,
-        },
+        "data": [], "columns": [],
+        "meta": {
+            "provinsi": provinsi_raw, "label": info["label"],
+            "totalItems": 0, "totalPages": 1, "currentPage": 1,
+            "hasNextPage": False, "hasPreviousPage": False,
+            "nextCursor": None, "limit": DB_PAGE_SIZE,
+            "searchMode": "db_cache", "source": "local_db",
+            "errorMessage": "Tidak ada data yang sesuai. Pastikan sync sudah dilakukan.",
+        }
     }), 200
 
 

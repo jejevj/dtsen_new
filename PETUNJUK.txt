@@ -1,29 +1,17 @@
-PATCH DATA BASELINE ANGGOTA — 30 September 2026
+ROLLBACK PATCH PERCEPATAN + TIMEOUT 5 MENIT
+Tiga file baseline dikembalikan persis dari source-code.zip awal.
+api.js tetap timeout 300000 ms.
+Gunicorn timeout diubah dari 120 menjadi 300 detik.
+Proxy Nginx container read/send timeout 300 detik.
 
-Isi: 3 file pengganti; salin sesuai struktur folder ke /var/opt/dtsen_new.
-Backup ketiga file lama terlebih dahulu. Patch tidak menyertakan kredensial.
+Pemasangan:
+1. Backup enam file dengan path yang sama dalam ZIP ini.
+2. Ekstrak ZIP ke /var/opt/dtsen_new sehingga menimpa enam file tersebut.
+3. Jalankan: docker compose up -d --build api frontend
+4. Hard refresh browser (Ctrl+Shift+R).
+5. Periksa filter, navigasi halaman, dan kedua tab.
 
-Perubahan:
-- Endpoint anggota mengambil maksimal 11 baris tanpa COUNT total dan OFFSET.
-- Cursor anggota memakai ID terakhir dan nomor halaman.
-- Tabel mendukung total tidak diketahui; halaman keluarga tetap memakai total lama.
-- Riwayat halaman anggota hanya berubah setelah permintaan berhasil.
-
-Deploy setelah menyalin:
-cd /var/opt/dtsen_new
-docker compose up -d --build api frontend
-Lalu hard refresh browser (Ctrl+Shift+R), buka ulang Data Baseline dan klik Tampilkan.
-Cursor halaman lama tidak kompatibel; mulai ulang dari halaman pertama.
-
-Validasi server:
-Uji provinsi 13, filter kabupaten/kecamatan, filter desil terkait JOIN,
-pencarian nama/NIK, Berikutnya/Sebelumnya, hasil kosong, dan halaman Keluarga.
-Periksa log API untuk WORKER TIMEOUT.
-
-Batas validasi:
-Sintaks Python dan struktur alur pagination diperiksa lokal.
-Belum diuji terhadap database produksi atau build frontend lengkap.
-Query 11 baris tetap perlu diuji; jika masih lambat, ukur EXPLAIN query SELECT
-serta indeks anggota (kode_provinsi_ktp, id). Tidak ada perubahan indeks otomatis.
-Timeout Nginx, healthcheck Docker dan COUNT keluarga belum diubah.
-Untuk rollback, kembalikan 3 file backup lalu rebuild api dan frontend.
+Rollback ini mengembalikan COUNT dan OFFSET lama; query bisa kembali lambat.
+Masalah dropdown akun external 55 pada kode awal tidak diperbaiki paket ini.
+Jika reverse proxy luar/CDN punya timeout lebih pendek, sesuaikan konfigurasinya juga; paket ini hanya mengatur proxy container.
+Tidak ada perubahan database atau aturan akses wilayah.

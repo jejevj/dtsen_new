@@ -697,22 +697,12 @@ async function loadAnggota(cursor = null) {
     anggota.rows = res.data ?? []; anggota.columns = res.columns ?? []
     Object.assign(anggota.meta, res.meta ?? {})
     anggota.currentCursor = cursor
-    return true
   } catch (e) {
     anggota.error = 'Gagal memuat: ' + (e?.response?.data?.error ?? e.message)
-    return false
   } finally { anggota.loading = false }
 }
-async function nextAnggota() {
-  if (anggota.loading || !anggota.meta.hasNextPage) return
-  const previousCursor = anggota.currentCursor
-  if (await loadAnggota(anggota.meta.nextCursor)) anggota.historyStack.push(previousCursor)
-}
-async function prevAnggota() {
-  if (anggota.loading || !anggota.historyStack.length) return
-  const previousCursor = anggota.historyStack[anggota.historyStack.length - 1]
-  if (await loadAnggota(previousCursor)) anggota.historyStack.pop()
-}
+function nextAnggota() { anggota.historyStack.push(anggota.currentCursor); loadAnggota(anggota.meta.nextCursor) }
+function prevAnggota() { if (anggota.historyStack.length) loadAnggota(anggota.historyStack.pop()) }
 function resetAnggota() {
   anggota.provinsi = ''; anggota.kabkota = ''; anggota.kecamatan = ''; anggota.search = ''
   anggota.rows = []; anggota.columns = []; anggota.historyStack = []; anggota.currentCursor = null
