@@ -105,18 +105,22 @@
       <!-- Pagination -->
       <div v-if="rows.length > 0" class="flex items-center justify-between px-5 py-3 border-t border-slate-100">
         <span class="text-xs text-slate-400">
-          Halaman {{ meta.currentPage }} dari {{ meta.totalPages.toLocaleString('id-ID') }}
-          &middot; {{ meta.totalItems.toLocaleString('id-ID') }} data
+          Halaman {{ meta.currentPage }}
+          <template v-if="meta.totalPages != null && meta.totalItems != null">
+            dari {{ meta.totalPages.toLocaleString('id-ID') }}
+            &middot; {{ meta.totalItems.toLocaleString('id-ID') }} data
+          </template>
+          <template v-else>&middot; {{ rows.length }} data ditampilkan</template>
         </span>
         <div class="flex gap-1">
           <Button
             icon="pi pi-angle-left" text rounded size="small"
-            :disabled="!meta.hasPreviousPage || historyStack.length === 0"
+            :disabled="loading || !meta.hasPreviousPage || historyStack.length === 0"
             @click="$emit('prev')"
           />
           <Button
             icon="pi pi-angle-right" text rounded size="small"
-            :disabled="!meta.hasNextPage"
+            :disabled="loading || !meta.hasNextPage"
             @click="$emit('next')"
           />
         </div>

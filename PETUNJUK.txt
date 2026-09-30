@@ -1,0 +1,29 @@
+PATCH DATA BASELINE ANGGOTA — 30 September 2026
+
+Isi: 3 file pengganti; salin sesuai struktur folder ke /var/opt/dtsen_new.
+Backup ketiga file lama terlebih dahulu. Patch tidak menyertakan kredensial.
+
+Perubahan:
+- Endpoint anggota mengambil maksimal 11 baris tanpa COUNT total dan OFFSET.
+- Cursor anggota memakai ID terakhir dan nomor halaman.
+- Tabel mendukung total tidak diketahui; halaman keluarga tetap memakai total lama.
+- Riwayat halaman anggota hanya berubah setelah permintaan berhasil.
+
+Deploy setelah menyalin:
+cd /var/opt/dtsen_new
+docker compose up -d --build api frontend
+Lalu hard refresh browser (Ctrl+Shift+R), buka ulang Data Baseline dan klik Tampilkan.
+Cursor halaman lama tidak kompatibel; mulai ulang dari halaman pertama.
+
+Validasi server:
+Uji provinsi 13, filter kabupaten/kecamatan, filter desil terkait JOIN,
+pencarian nama/NIK, Berikutnya/Sebelumnya, hasil kosong, dan halaman Keluarga.
+Periksa log API untuk WORKER TIMEOUT.
+
+Batas validasi:
+Sintaks Python dan struktur alur pagination diperiksa lokal.
+Belum diuji terhadap database produksi atau build frontend lengkap.
+Query 11 baris tetap perlu diuji; jika masih lambat, ukur EXPLAIN query SELECT
+serta indeks anggota (kode_provinsi_ktp, id). Tidak ada perubahan indeks otomatis.
+Timeout Nginx, healthcheck Docker dan COUNT keluarga belum diubah.
+Untuk rollback, kembalikan 3 file backup lalu rebuild api dan frontend.
