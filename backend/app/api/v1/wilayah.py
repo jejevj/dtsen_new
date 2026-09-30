@@ -37,6 +37,88 @@ def _wilayah_rows(dtsen_akses_id) -> list[TDtsenWilayah]:
     return TDtsenWilayah.query.filter_by(dtsen_akses_id=dtsen_akses_id).all()
 
 
+
+# External: use the most specific assignment on each row; never infer national access.
+def _external_queries(dtsen):
+    from sqlalchemy import and_, or_, false
+
+    kab_terms, kec_terms = [], []
+    for row in _wilayah_rows(dtsen.dtsen_akses_id):
+        prov = (row.provinsi_kode or '').strip()
+        kab = (row.kabkota_kode or '').strip()
+        kec = (row.kecamatan_kode or '').strip()
+        parents = []
+        if prov:
+            parents.append(KabKota.provinsi_kode == prov)
+        if kab:
+            parents.append(KabKota.kabkota_kode == kab)
+        if kec:
+            kec_terms.append(and_(Kecamatan.kecamatan_kode == kec, *parents))
+            parent_kab = db.session.query(Kecamatan.kabkota_kode).filter(
+                Kecamatan.kecamatan_kode == kec
+            )
+            kab_terms.append(and_(KabKota.kabkota_kode.in_(parent_kab), *parents))
+        elif kab or prov:
+            kab_terms.append(and_(*parents))
+            kec_terms.append(and_(*parents))
+
+    kab_q = KabKota.query.filter(or_(*kab_terms) if kab_terms else false())
+    kec_q = Kecamatan.query.join(
+        KabKota, Kecamatan.kabkota_kode == KabKota.kabkota_kode
+    ).filter(or_(*kec_terms) if kec_terms else false())
+    prov_q = Provinsi.query.filter(Provinsi.provinsi_kode.in_(
+        kab_q.with_entities(KabKota.provinsi_kode)
+    ))
+    return prov_q, kab_q, kec_q
+
+
+def _external_response(dtsen, level, prov=None, kab=None, kec=None):
+    prov_q, kab_q, kec_q = _external_queries(dtsen)
+    if prov:
+        kab_q = kab_q.filter(KabKota.provinsi_kode == prov)
+        kec_q = kec_q.filter(KabKota.provinsi_kode == prov)
+    if kab:
+        kab_q = kab_q.filter(KabKota.kabkota_kode == kab)
+        kec_q = kec_q.filter(Kecamatan.kabkota_kode == kab)
+    if kec:
+        kec_q = kec_q.filter(Kecamatan.kecamatan_kode == kec)
+
+    if level == 'kelurahan':
+        rows = Kelurahan.query.filter(Kelurahan.kecamatan_kode.in_(
+            kec_q.with_entities(Kecamatan.kecamatan_kode)
+        )).order_by(Kelurahan.kelurahan_nama).all()
+        return jsonify({'data': [
+            {'kode': r.kelurahan_kode, 'nama': r.kelurahan_nama,
+             'kecamatan_kode': r.kecamatan_kode} for r in rows
+        ]}), 200
+
+    data = {}
+    if level in ('provinsi', 'dropdown'):
+        data['provinsi'] = [
+            {'kode': r.provinsi_kode, 'nama': r.provinsi_nama}
+            for r in prov_q.filter(Provinsi.provinsi_aktif == 'y').order_by(
+                Provinsi.provinsi_nama).all()
+        ]
+    if level in ('kabkota', 'dropdown'):
+        data['kabkota'] = [
+            {'kode': r.kabkota_kode, 'nama': r.kabkota_nama,
+             'provinsi_kode': r.provinsi_kode}
+            for r in kab_q.filter(KabKota.kabkota_aktif == 'y').order_by(
+                KabKota.kabkota_nama).all()
+        ]
+    if level in ('kecamatan', 'dropdown'):
+        data['kecamatan'] = [
+            {'kode': r.kecamatan_kode, 'nama': r.kecamatan_nama,
+             'kabkota_kode': r.kabkota_kode}
+            for r in kec_q.filter(Kecamatan.kecamatan_aktif == 'y').order_by(
+                Kecamatan.kecamatan_nama).all()
+        ]
+    if level == 'dropdown':
+        data.update(skala=dtsen.laz_skala or 0, skala_label='external')
+        return jsonify(data), 200
+    return jsonify({'data': data[level]}), 200
+
+
 # ─── Endpoints ────────────────────────────────────────────────
 
 @api_v1_bp.get('/wilayah/dropdown')
@@ -70,6 +152,9 @@ def wilayah_dropdown():
     dtsen = _get_dtsen_akses(identity)
     if dtsen is None:
         return jsonify({"error": "Data akses tidak ditemukan."}), 403
+
+    if dtsen.akun_types == 'external':
+        return _external_response(dtsen, 'dropdown', prov=provinsi_filter, kab=kabkota_filter)
 
     skala = dtsen.laz_skala or 0
     rows  = _wilayah_rows(dtsen.dtsen_akses_id)
@@ -237,6 +322,9 @@ def wilayah_provinsi():
         dtsen = _get_dtsen_akses(identity)
         if dtsen is None:
             return jsonify({"error": "Data akses tidak ditemukan."}), 403
+        if dtsen.akun_types == 'external':
+            return _external_response(dtsen, 'provinsi')
+
         rows_wilayah = _wilayah_rows(dtsen.dtsen_akses_id)
         allowed_prov = list({r.provinsi_kode for r in rows_wilayah if r.provinsi_kode})
         if dtsen.laz_skala == 1:  # Nasional
@@ -270,6 +358,9 @@ def wilayah_kabkota():
         dtsen = _get_dtsen_akses(identity)
         if dtsen is None:
             return jsonify({"error": "Data akses tidak ditemukan."}), 403
+        if dtsen.akun_types == 'external':
+            return _external_response(dtsen, 'kabkota', prov=provinsi_kode)
+
         rows_wilayah = _wilayah_rows(dtsen.dtsen_akses_id)
         skala = dtsen.laz_skala or 0
 
@@ -311,6 +402,9 @@ def wilayah_kecamatan():
         dtsen = _get_dtsen_akses(identity)
         if dtsen is None:
             return jsonify({"error": "Data akses tidak ditemukan."}), 403
+        if dtsen.akun_types == 'external':
+            return _external_response(dtsen, 'kecamatan', kab=kabkota_kode)
+
         rows_wilayah = _wilayah_rows(dtsen.dtsen_akses_id)
         skala = dtsen.laz_skala or 0
 
@@ -339,6 +433,12 @@ def wilayah_kelurahan():
 
     if not kecamatan_kode:
         return jsonify({"error": "kecamatan_kode wajib diisi."}), 400
+
+    identity = _identity()
+    if not _is_tuser(identity):
+        dtsen = _get_dtsen_akses(identity)
+        if dtsen is not None and dtsen.akun_types == 'external':
+            return _external_response(dtsen, 'kelurahan', kec=kecamatan_kode)
 
     rows = (
         Kelurahan.query
