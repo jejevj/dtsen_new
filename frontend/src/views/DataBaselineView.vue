@@ -15,17 +15,17 @@
           : (anggota.loading || keluarga.loading)
             ? 'Tunggu data selesai dimuat'
             : 'Buka filter pencarian'" @click="showFilter = true" :class="[
-                'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border shadow-sm',
-                activeFilterCount > 0
-                  ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700 shadow-primary-200'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300',
-                (!currentProvinsi || anggota.loading || keluarga.loading) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
-              ]">
+              'inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all border shadow-sm',
+              activeFilterCount > 0
+                ? 'bg-primary-600 text-white border-primary-600 hover:bg-primary-700 shadow-primary-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300',
+              (!currentProvinsi || anggota.loading || keluarga.loading) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+            ]">
           <i class="pi pi-filter text-base"></i>
           <span>Filter</span>
           <span v-if="activeFilterCount > 0"
             class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-white text-primary-700 text-[11px] font-bold">{{
-            activeFilterCount }}</span>
+              activeFilterCount }}</span>
         </button>
       </div>
 
@@ -87,6 +87,16 @@
             </span>
           </div>
         </div>
+        <!-- Informasi waktu pencarian — selalu tampil -->
+        <div
+          class="mt-3 flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm text-blue-700"
+          role="note">
+          <i class="pi pi-info-circle mt-0.5 shrink-0"></i>
+          <span>
+            Proses pencarian data memerlukan waktu kurang lebih 5 menit.
+            Mohon tunggu hingga proses selesai.
+          </span>
+        </div>
         <BaselineTable type="anggota" :loading="anggota.loading" :error="anggota.error" :rows="anggota.rows"
           :columns="anggota.columns" :meta="anggota.meta" :history-stack="anggota.historyStack"
           empty-hint="Pilih provinsi lalu klik Tampilkan untuk melihat data." title="Data Anggota" @next="nextAnggota"
@@ -138,6 +148,16 @@
               </button>
             </span>
           </div>
+        </div>
+        <!-- Informasi waktu pencarian — selalu tampil -->
+        <div
+          class="mt-3 flex items-start gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-sm text-blue-700"
+          role="note">
+          <i class="pi pi-info-circle mt-0.5 shrink-0"></i>
+          <span>
+            Proses pencarian data memerlukan waktu kurang lebih 5 menit.
+            Mohon tunggu hingga proses selesai.
+          </span>
         </div>
         <BaselineTable type="keluarga" :loading="keluarga.loading" :error="keluarga.error" :rows="keluarga.rows"
           :columns="keluarga.columns" :meta="keluarga.meta" :history-stack="keluarga.historyStack"
@@ -372,18 +392,18 @@ function goToAnggotaDetail(row) {
 }
 function goToKeluargaDetail(row) {
 
- const token = row.nomor_kartu_keluarga_encrypt
+  const token = row.nomor_kartu_keluarga_encrypt
 
- if (!token) return
+  if (!token) return
 
- const url = router.resolve({
-   name:'baseline-keluarga-detail',
-   params:{
-     nkk:String(token)
-   }
- }).href
+  const url = router.resolve({
+    name: 'baseline-keluarga-detail',
+    params: {
+      nkk: String(token)
+    }
+  }).href
 
- window.open(url,'_blank')
+  window.open(url, '_blank')
 }
 const tabs = [
   { key: 'anggota', label: 'Anggota', icon: 'pi pi-users' },
