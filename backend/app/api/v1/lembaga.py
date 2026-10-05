@@ -11,6 +11,7 @@ def list_lembaga():
 
     laz_where = """
         WHERE laz_status IN ('aktif','daftar_ulang')
+        AND laz_tipe IN ('pusat')
         AND laz_nama IS NOT NULL
         AND TRIM(laz_nama) <> ''
     """
