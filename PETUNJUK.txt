@@ -1,0 +1,30 @@
+PATCH DROPDOWN WILAYAH EXTERNAL
+Hanya mengganti backend/app/api/v1/wilayah.py, berdasarkan source-code.zip awal.
+Cabang baru berlaku khusus akun_types external. Tidak khusus ID 55.
+Penugasan provinsi mengizinkan kabkota turunannya; penugasan lebih spesifik membatasi hasil.
+Baris kosong tidak memberi akses. Hasil di luar penugasan kosong.
+URL dan bentuk respons endpoint individual tetap sama.
+Cabang asli admin, LAZ, baznas, internal dipertahankan.
+Tidak mengubah baseline.py, frontend, database, atau timeout rollback 5 menit.
+
+PASANG
+cd /var/opt/dtsen_new
+cp backend/app/api/v1/wilayah.py backend/app/api/v1/wilayah.py.bak-external
+Ekstrak ZIP ini ke direktori proyek tersebut, menimpa wilayah.py.
+docker compose up -d --build api
+Refresh browser dan login akun 55.
+Uji provinsi 13: daftar kabkota aktif harus muncul (master sebelumnya menunjukkan 19).
+Pilih kabkota: kecamatan di bawahnya harus muncul.
+Uji admin dan LAZ skala 1/2/3 sesuai penugasan sebelum patch.
+
+KEMBALIKAN PATCH INI
+cp backend/app/api/v1/wilayah.py.bak-external backend/app/api/v1/wilayah.py
+docker compose up -d --build api
+
+VALIDASI LOKAL
+Sintaks Python valid. Pengujian query dengan SQLite lulus untuk penugasan provinsi,
+kabkota, kecamatan, duplikasi, kabkota nonaktif, hierarki tidak cocok,
+penugasan kosong dan wilayah di luar izin.
+Perbandingan AST memastikan cabang fungsi lama tetap sama setelah tambahan external dihapus.
+Belum diuji pada database MySQL server. Paket hanya membatasi dropdown wilayah;
+tidak mengubah/mengaudit otorisasi endpoint data baseline atau laporan.

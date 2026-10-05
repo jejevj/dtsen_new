@@ -13,6 +13,12 @@ from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
 from ...models.t_dtsen_wilayah import TDtsenWilayah
 from ...models.t_dtsen_akses import TDtsenAkses
 from ...services.auth_service import parse_identity_str
+from ...utils.crypto import (
+    encrypt_identifier,
+    decrypt_identifier,
+)
+from ...services.mustahik_service import MustahikService
+
 
 logger = logging.getLogger('app')
 
@@ -204,7 +210,16 @@ _RESERVED_PARAMS = {
 
 # Kolom internal yang tidak perlu dikembalikan ke client
 _EXCLUDE_COLUMNS = {"id", "synced_at", "provinsi_slug"}
-
+_ENCRYPT_FIELDS = {
+    "nomor_induk_kependudukan",
+    "nomor_kartu_keluarga",
+    "tanggal_lahir",
+    "alamat_ktp",
+}
+_ENCRYPT_KELUARGA_FIELDS = {
+    "nomor_kartu_keluarga",
+    "alamat",
+}
 
 # ─── Kode wilayah normalizer ────────────────────────────────
 
@@ -369,12 +384,106 @@ def _is_nkk(s: str) -> bool:
     return bool(re.fullmatch(r'\d{16}', s.strip()))
 
 def _row_to_dict(row) -> dict:
-    """Serialize SQLAlchemy model row ke dict, tanpa kolom internal."""
-    d = {c.name: getattr(row, c.name) for c in row.__table__.columns}
+    """
+    Serializer response DTSEN.
+
+    Field yang dienkripsi:
+    - NIK
+    - NKK
+    - tanggal lahir
+    - alamat KTP
+
+    Field yang tetap:
+    - nama
+    - wilayah kode
+    - data statistik
+    """
+
+    d = {
+        c.name: getattr(row, c.name)
+        for c in row.__table__.columns
+    }
+
+
     for col in _EXCLUDE_COLUMNS:
         d.pop(col, None)
+
+
+    for field in _ENCRYPT_FIELDS:
+
+        if field in d:
+
+            value = d.pop(field)
+
+            d[f"{field}_encrypt"] = encrypt_identifier(value)
+
+
     return d
 
+def _row_to_detail_dict(row) -> dict:
+    """
+    Serializer detail anggota.
+
+    Berbeda dengan list:
+    - tidak melakukan encrypt field
+    - dipakai setelah akses melalui hash berhasil
+    """
+
+    d = {
+        c.name: getattr(row, c.name)
+        for c in row.__table__.columns
+    }
+
+    for col in _EXCLUDE_COLUMNS:
+        d.pop(col, None)
+
+    return d
+
+
+def _row_to_secure_detail_dict(row):
+
+    d = {
+        c.name: getattr(row, c.name)
+        for c in row.__table__.columns
+    }
+
+    for col in _EXCLUDE_COLUMNS:
+        d.pop(col, None)
+
+
+    for field in _ENCRYPT_FIELDS:
+
+        if field in d:
+
+            value = d.pop(field)
+
+            d[f"{field}_encrypt"] = encrypt_identifier(value)
+
+
+    return d
+
+
+def _row_to_secure_keluarga_dict(row):
+
+    d = {
+        c.name: getattr(row, c.name)
+        for c in row.__table__.columns
+    }
+
+    for col in _EXCLUDE_COLUMNS:
+        d.pop(col, None)
+
+
+    for field in _ENCRYPT_KELUARGA_FIELDS:
+
+        if field in d:
+
+            value = d.pop(field)
+
+            d[f"{field}_encrypt"] = encrypt_identifier(value)
+
+
+    return d
 def _ok_payload(items, label, provinsi, meta_override=None):
     columns = list(items[0].keys()) if items else []
     meta = {
@@ -731,44 +840,56 @@ def _apply_usia_filter(q, usia_min_raw, usia_max_raw):
 
 # ─── SYNC ENDPOINTS ────────────────────────────────────
 
-@api_v1_bp.get('/baseline/anggota/by-nkk')
+@api_v1_bp.get('/baseline/anggota/by-nkk/<string:nkk_hash>')
 @jwt_required()
-def baseline_anggota_by_nkk():
-    nkk = request.args.get('nkk', '').strip()
-    if not nkk:
-        return jsonify({"error": "Parameter 'nkk' wajib diisi."}), 400
-    if not _is_nkk(nkk):
-        return jsonify({"error": "Format NKK tidak valid (harus 16 digit angka)."}), 400
+def baseline_anggota_by_nkk_hash(nkk_hash):
 
-    # Cek apakah NKK ini memiliki desil valid di local DB
-    keluarga_db = ZawaKeluarga.query.filter(
-        ZawaKeluarga.nomor_kartu_keluarga == nkk,
-        ZawaKeluarga.desil_nasional.in_(_DESIL_ALLOWED),
+    try:
+        nkk = decrypt_identifier(nkk_hash)
+
+    except Exception:
+        return jsonify({
+            "error": "Token NKK tidak valid."
+        }), 400
+
+
+    if not nkk:
+        return jsonify({
+            "error": "NKK kosong."
+        }), 400
+
+
+    rows = ZawaAnggota.query.filter_by(
+        nomor_kartu_keluarga=nkk
+    ).all()
+
+
+    return jsonify({
+        "data": [
+            _row_to_secure_detail_dict(row)
+            for row in rows
+        ]
+    }),200
+
+@api_v1_bp.get('/baseline/keluarga/detail/<string:nkk_hash>')
+@jwt_required()
+def baseline_keluarga_detail_hash(nkk_hash):
+
+    nkk = decrypt_identifier(nkk_hash)
+
+    row = ZawaKeluarga.query.filter_by(
+        nomor_kartu_keluarga=nkk
     ).first()
 
-    db_rows = ZawaAnggota.query.filter_by(nomor_kartu_keluarga=nkk).all()
-    if db_rows:
-        # Jika keluarga ada di DB: filter ketat berdasarkan desil
-        if keluarga_db is None:
-            # NKK ada di DB keluarga tapi desil tidak valid
-            keluarga_any = ZawaKeluarga.query.filter_by(nomor_kartu_keluarga=nkk).first()
-            if keluarga_any is not None:
-                return jsonify({"data": [], "meta": {
-                    "totalItems": 0, "source": "filtered_desil", "nkk": nkk,
-                    "errorMessage": "Data tidak tersedia (desil tidak termasuk 1-4)."
-                }}), 200
-        else:
-            items = _dedupe_by_nik([_row_to_dict(r) for r in db_rows])
-            return jsonify({
-                "data": items,
-                "meta": {"totalItems": len(items), "source": "local_db", "nkk": nkk}
-            }), 200
+    if not row:
+        return jsonify({
+            "error":"Data keluarga tidak ditemukan"
+        }),404
 
-    return jsonify({"data": [], "meta": {
-        "totalItems": 0, "source": "not_found", "nkk": nkk,
-        "errorMessage": "Data tidak ditemukan di database lokal."
-    }}), 200
 
+    return jsonify({
+        "data": _row_to_secure_keluarga_dict(row)
+    }),200
 
 @api_v1_bp.post('/baseline/sync/anggota')
 @jwt_required()
@@ -1248,6 +1369,40 @@ def baseline_anggota():
     }), 200
 
 
+@api_v1_bp.get('/baseline/anggota/detail/<string:nik_hash>')
+@jwt_required()
+def baseline_anggota_detail_hash(nik_hash):
+
+    try:
+        nik = decrypt_identifier(nik_hash)
+
+    except Exception:
+        return jsonify({
+            "error": "Token NIK tidak valid."
+        }), 400
+
+
+    if not nik:
+        return jsonify({
+            "error": "NIK kosong."
+        }), 400
+
+
+    row = ZawaAnggota.query.filter_by(
+        nomor_induk_kependudukan=nik
+    ).first()
+
+
+    if not row:
+        return jsonify({
+            "error": "Data anggota tidak ditemukan."
+        }), 404
+
+
+    return jsonify({
+        "data": _row_to_secure_detail_dict(row)
+    }), 200
+
 @api_v1_bp.get('/baseline/keluarga')
 @jwt_required()
 def baseline_keluarga():
@@ -1439,3 +1594,32 @@ def baseline_repair_provinsi_slug():
         "message": f"Selesai. {updated} baris provinsi_slug diperbaiki.",
         "updated": updated,
     }), 200
+
+
+@api_v1_bp.get('/baseline/anggota/detail/<string:nik_hash>/mustahik')
+@jwt_required()
+def baseline_anggota_mustahik_hash(nik_hash):
+
+    try:
+        nik = decrypt_identifier(nik_hash)
+
+    except Exception:
+        return jsonify({
+            "error": "Token NIK tidak valid."
+        }), 400
+
+
+    if not nik:
+        return jsonify({
+            "error": "NIK kosong."
+        }), 400
+
+
+    result = MustahikService.get_detail_by_nik(nik)
+
+
+    if result.get('status_code') == 404:
+        return jsonify(result), 404
+
+
+    return jsonify(result), 200

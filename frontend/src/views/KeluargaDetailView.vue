@@ -111,7 +111,7 @@
                   <tr
                     v-for="m in kkMembers" :key="m.nomor_induk_kependudukan"
                     style="cursor:pointer;"
-                    @click="goToAnggota(m.nomor_induk_kependudukan)"
+                    @click="goToAnggota(m)"
                   >
                     <td>{{ m.nama ?? '-' }}</td>
                     <td style="font-family:monospace;font-size:11px;">
@@ -147,6 +147,7 @@ import api from '@/services/api'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
+import { decryptDtsen } from '@/utils/dtsenCrypto'
 
 const route     = useRoute()
 const router    = useRouter()
@@ -261,31 +262,113 @@ function desilBadgeStyle(v) {
   return { padding:'2px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background:c.bg, color:c.text, border:`1px solid ${c.border}`, display:'inline-block' }
 }
 
-function goToAnggota(nik) {
-  if (!nik) return
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-  router.push({ name: 'baseline-anggota-detail', params: { nik } })
+function goToAnggota(row) {
+
+  router.push({
+    name:'baseline-anggota-detail',
+    params:{
+      nik: row.nomor_induk_kependudukan_encrypt
+    }
+  })
+
 }
 
-async function loadKKDetail(nkk) {
+async function loadKKDetail(nkkHash) {
+
   try {
-    const res = await api.get('/baseline/keluarga', { params: { search: nkk } })
-    const rows = res.data?.data ?? []
-    kkDetail.value = rows.find(r => String(r.nomor_kartu_keluarga ?? '').trim() === nkk) ?? rows[0] ?? null
-  } catch (e) {
-    console.error('[KeluargaDetail] gagal load KK:', e)
+
+    const res = await api.get(
+      `/baseline/keluarga/detail/${encodeURIComponent(nkkHash)}`
+    )
+
+
+    const data = res.data?.data ?? null
+
+
+    if (!data) {
+      kkDetail.value = null
+      return
+    }
+
+
+    kkDetail.value = {
+
+      ...data,
+
+
+      nomor_kartu_keluarga:
+        decryptDtsen(
+          data.nomor_kartu_keluarga_encrypt
+        ),
+
+
+      alamat:
+        decryptDtsen(
+          data.alamat_encrypt
+        ),
+
+    }
+
+
+  } catch(e) {
+
+    console.error(
+      '[KeluargaDetail] gagal load KK:',
+      e
+    )
+
   }
 }
 
-async function loadKKMembers(nkk) {
+async function loadKKMembers(nkkHash) {
+
   loadingMembers.value = true
+
   try {
-    const res = await api.get('/baseline/anggota/by-nkk', { params: { nkk } })
-    kkMembers.value = res.data?.data ?? []
-  } catch (e) {
-    console.error('[KeluargaDetail] gagal load anggota:', e)
+
+    const res = await api.get(
+      `/baseline/anggota/by-nkk/${encodeURIComponent(nkkHash)}`
+    )
+
+
+    kkMembers.value =
+      (res.data?.data ?? []).map(item => ({
+
+        ...item,
+
+
+        nomor_induk_kependudukan:
+          decryptDtsen(
+            item.nomor_induk_kependudukan_encrypt
+          ),
+
+
+        nomor_kartu_keluarga:
+          decryptDtsen(
+            item.nomor_kartu_keluarga_encrypt
+          ),
+
+
+        tanggal_lahir:
+          decryptDtsen(
+            item.tanggal_lahir_encrypt
+          ),
+
+
+      }))
+
+
+  } catch(e) {
+
+    console.error(
+      '[KeluargaDetail] gagal load anggota:',
+      e
+    )
+
   } finally {
+
     loadingMembers.value = false
+
   }
 }
 
