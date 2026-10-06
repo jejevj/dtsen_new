@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <AppLayout>
     <div style="display:flex;flex-direction:column;gap:20px;">
 
@@ -56,7 +56,7 @@
             </div>
             <div style="margin-left:auto;text-align:right;">
               <p style="font-size:11px;margin:0;opacity:.65;">Jumlah Anggota</p>
-              <p style="font-size:1.1rem;font-family:monospace;font-weight:700;margin:0;">{{ kkMembers.length }} orang</p>
+              <p style="font-size:1.1rem;font-family:monospace;font-weight:700;margin:0;">{{ jumlahAnggota === null ? (loadingMembers ? 'Memuat...' : 'Belum tersedia') : jumlahAnggota + ' orang' }}</p>
             </div>
           </div>
         </div>
@@ -71,7 +71,7 @@
                   <p class="section-title"><i :class="groupIcon(group.group)"></i> {{ group.group }}</p>
                   <table class="info-table">
                     <tbody>
-                      <tr v-for="field in group.fields" :key="field.field_key">
+                      <tr v-for="field in group.fields" :key="field.field_key" v-show="!isKodeField(field.field_key)">
                         <td class="td-label">{{ field.field_label }}</td>
                         <td class="td-value">
                           <template v-if="isNikField(field.field_key)">
@@ -103,6 +103,9 @@
             <i class="pi pi-spin pi-spinner" style="font-size:20px;display:block;margin-bottom:8px;"></i>
             Memuat anggota KK…
           </div>
+          <div v-else-if="membersError" role="alert" style="padding:20px;color:#dc2626;font-size:12px;">
+            {{ membersError }}
+          </div>
           <template v-else-if="kkMembers.length">
             <div style="overflow-x:auto;">
               <table class="kk-table">
@@ -111,7 +114,7 @@
                   <tr
                     v-for="m in kkMembers" :key="m.nomor_induk_kependudukan"
                     style="cursor:pointer;"
-                    @click="goToAnggota(m.nomor_induk_kependudukan)"
+                    @click="goToAnggota(m)"
                   >
                     <td>{{ m.nama ?? '-' }}</td>
                     <td style="font-family:monospace;font-size:11px;">
@@ -147,6 +150,7 @@ import api from '@/services/api'
 import { useBaselineRefs } from '@/composables/useBaselineRefs'
 import { useWatermark } from '@/composables/useWatermark'
 import { maskNik } from '@/utils/formatter'
+import { decryptDtsen } from '@/utils/dtsenCrypto'
 
 const route     = useRoute()
 const router    = useRouter()
@@ -155,6 +159,17 @@ const loading        = ref(true)
 const loadingMembers = ref(false)
 const kkDetail       = ref(null)
 const kkMembers      = ref([])
+const membersError = ref('')
+const membersLoaded = ref(false)
+const jumlahAnggota = computed(() => {
+  const raw = kkDetail.value?.jumlah_anggota_keluarga
+  if (raw !== null && raw !== undefined && raw !== '') {
+    const count = Number(raw)
+    if (Number.isInteger(count) && count >= 0) return count
+  }
+  return membersLoaded.value ? kkMembers.value.length : null
+})
+
 const keluargaGroups = ref([])
 
 const { resolveValue, getDetailFields } = useBaselineRefs()
@@ -165,6 +180,22 @@ const NIK_FIELDS = new Set([
   'nomor_kartu_keluarga', 'nkk',
 ])
 function isNikField(key) { return NIK_FIELDS.has(key) }
+
+// Field kode daerah yang disembunyikan — label tetap tampil lewat field teks pasangannya
+const KODE_FIELDS = new Set([
+  'kode_provinsi',
+  'kode_kabupaten_kota',
+  'kode_kecamatan',
+  'kode_kelurahan_desa',
+  'kode_wilayah',
+  'kode_desa',
+  'kode_dusun',
+])
+function isKodeField(key) {
+  if (!key) return false
+  const k = key.toLowerCase()
+  return KODE_FIELDS.has(k) || k.startsWith('kode_')
+}
 
 function isLakiVal(v) {
   const s = (v ?? '').toString()
@@ -245,31 +276,118 @@ function desilBadgeStyle(v) {
   return { padding:'2px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background:c.bg, color:c.text, border:`1px solid ${c.border}`, display:'inline-block' }
 }
 
-function goToAnggota(nik) {
-  if (!nik) return
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-  router.push({ name: 'baseline-anggota-detail', params: { nik } })
+function goToAnggota(row) {
+
+  router.push({
+    name:'baseline-anggota-detail',
+    params:{
+      nik: row.nomor_induk_kependudukan_encrypt
+    }
+  })
+
 }
 
-async function loadKKDetail(nkk) {
+async function loadKKDetail(nkkHash) {
+
   try {
-    const res = await api.get('/baseline/keluarga', { params: { search: nkk } })
-    const rows = res.data?.data ?? []
-    kkDetail.value = rows.find(r => String(r.nomor_kartu_keluarga ?? '').trim() === nkk) ?? rows[0] ?? null
-  } catch (e) {
-    console.error('[KeluargaDetail] gagal load KK:', e)
+
+    const res = await api.get(
+      `/baseline/keluarga/detail/${encodeURIComponent(nkkHash)}`
+    )
+
+
+    const data = res.data?.data ?? null
+
+
+    if (!data) {
+      kkDetail.value = null
+      return
+    }
+
+
+    kkDetail.value = {
+
+      ...data,
+
+
+      nomor_kartu_keluarga:
+        decryptDtsen(
+          data.nomor_kartu_keluarga_encrypt
+        ),
+
+
+      alamat:
+        decryptDtsen(
+          data.alamat_encrypt
+        ),
+
+    }
+
+
+  } catch(e) {
+
+    console.error(
+      '[KeluargaDetail] gagal load KK:',
+      e
+    )
+
   }
 }
 
-async function loadKKMembers(nkk) {
+async function loadKKMembers(nkkHash) {
+
   loadingMembers.value = true
+  membersError.value = ''
+  membersLoaded.value = false
+
   try {
-    const res = await api.get('/baseline/anggota/by-nkk', { params: { nkk } })
-    kkMembers.value = res.data?.data ?? []
-  } catch (e) {
-    console.error('[KeluargaDetail] gagal load anggota:', e)
+
+    const res = await api.get(
+      `/baseline/anggota/by-nkk/${encodeURIComponent(nkkHash)}`
+    )
+
+
+    kkMembers.value =
+      (res.data?.data ?? []).map(item => ({
+
+        ...item,
+
+
+        nomor_induk_kependudukan:
+          decryptDtsen(
+            item.nomor_induk_kependudukan_encrypt
+          ),
+
+
+        nomor_kartu_keluarga:
+          decryptDtsen(
+            item.nomor_kartu_keluarga_encrypt
+          ),
+
+
+        tanggal_lahir:
+          decryptDtsen(
+            item.tanggal_lahir_encrypt
+          ),
+
+
+      }))
+
+
+    membersLoaded.value = true
+
+  } catch(e) {
+
+    membersError.value = 'Gagal memuat daftar anggota: ' + (e?.response?.data?.error ?? e.message)
+    console.error(
+      '[KeluargaDetail] gagal load anggota:',
+      e
+    )
+
   } finally {
+
     loadingMembers.value = false
+
   }
 }
 
@@ -277,6 +395,9 @@ async function init(nkk) {
   loading.value  = true
   kkDetail.value = null
   kkMembers.value = []
+  membersError.value = ''
+  membersLoaded.value = false
+  loadingMembers.value = true
   const [kkGroups] = await Promise.all([
     getDetailFields('keluarga'),
     loadKKDetail(nkk),
@@ -311,3 +432,4 @@ onMounted(() => init(String(route.params.nkk)))
 .kk-table tbody tr:hover td { background:#f8fafc; }
 .nik-link { color:#2563eb; text-decoration:underline; cursor:pointer; }
 </style>
+

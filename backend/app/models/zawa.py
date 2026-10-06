@@ -39,10 +39,9 @@ def _s(val) -> str | None:
 class ZawaAnggota(db.Model):
     __tablename__ = "zawa_anggota"
 
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-
-    nomor_induk_kependudukan = db.Column(db.String(20), unique=True, nullable=False, index=True)
-    nomor_kartu_keluarga     = db.Column(db.String(20), nullable=True, index=True)
+    chunk_no = db.Column(db.Integer, nullable=True)
+    nomor_induk_kependudukan = db.Column(db.String(20), primary_key=True, nullable=False)
+    nomor_kartu_keluarga     = db.Column(db.String(20), nullable=True)
     nama                     = db.Column(db.String(255), nullable=True)
     jenis_kelamin            = db.Column(db.String(2),   nullable=True)
     tanggal_lahir            = db.Column(db.String(30),  nullable=True)
@@ -95,12 +94,15 @@ class ZawaAnggota(db.Model):
     pbi_pemda        = db.Column(db.String(5),  nullable=True)
     id_pelanggan_pln = db.Column(db.String(20), nullable=True)
 
-    provinsi_slug = db.Column(db.String(20), nullable=True, index=True)
+    provinsi_slug = db.Column(db.String(20), nullable=True)
     synced_at     = db.Column(db.DateTime,   default=datetime.utcnow)
     raw_data      = db.Column(db.JSON,       nullable=True)
 
     __table_args__ = (
-        db.Index("idx_anggota_prov_nik", "provinsi_slug", "nomor_induk_kependudukan"),
+        db.Index("idx_anggota_nik", "nomor_induk_kependudukan"),
+        db.Index("idx_anggota_kab_nik", "kode_kabupaten_kota_ktp", "nomor_induk_kependudukan"),
+        db.Index("idx_anggota_kec_nik", "kode_kabupaten_kota_ktp", "kode_kecamatan_ktp", "nomor_induk_kependudukan"),
+        {"schema": "db_staging_dtsen"},
     )
 
     @classmethod
@@ -160,23 +162,25 @@ class ZawaAnggota(db.Model):
 
 class ZawaKeluarga(db.Model):
     __tablename__ = "zawa_keluarga"
+    __table_args__ = (
+        db.Index("idx_keluarga_nkk", "nomor_kartu_keluarga"),
+        db.Index("idx_keluarga_kab_nkk", "kode_kabupaten_kota", "nomor_kartu_keluarga"),
+        db.Index("idx_keluarga_kec_nkk", "kode_kabupaten_kota", "kode_kecamatan", "nomor_kartu_keluarga"),
+        {"schema": "db_staging_dtsen"},
+    )
 
-    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
-
-    # API mengembalikan nomor_kartu_keluarga sebagai integer — simpan sebagai string
-    nomor_kartu_keluarga    = db.Column(db.String(20),  unique=True, nullable=False, index=True)
+    nomor_kartu_keluarga    = db.Column(db.String(20), primary_key=True, nullable=False)
     nama_anggota_keluarga   = db.Column(db.String(255), nullable=True)
     jumlah_anggota_keluarga = db.Column(db.Integer,     nullable=True)
-
-    alamat              = db.Column(db.Text,        nullable=True)
-    kelurahan_desa      = db.Column(db.String(100), nullable=True)
-    kecamatan           = db.Column(db.String(100), nullable=True)
-    kabupaten_kota      = db.Column(db.String(100), nullable=True)
-    provinsi            = db.Column(db.String(100), nullable=True, index=True)
-    kode_kelurahan_desa = db.Column(db.String(15),  nullable=True)
-    kode_kecamatan      = db.Column(db.String(10),  nullable=True)
-    kode_kabupaten_kota = db.Column(db.String(10),  nullable=True)
-    kode_provinsi       = db.Column(db.String(10),  nullable=True)
+    alamat                  = db.Column(db.Text,        nullable=True)
+    kelurahan_desa          = db.Column(db.String(100), nullable=True)
+    kecamatan               = db.Column(db.String(100), nullable=True)
+    kabupaten_kota          = db.Column(db.String(100), nullable=True)
+    provinsi                = db.Column(db.String(100), nullable=True)
+    kode_kelurahan_desa     = db.Column(db.String(15),  nullable=True)
+    kode_kecamatan          = db.Column(db.String(10),  nullable=True)
+    kode_kabupaten_kota     = db.Column(db.String(10),  nullable=True)
+    kode_provinsi           = db.Column(db.String(10),  nullable=True)
 
     luas_lantai               = db.Column(db.Integer,   nullable=True)
     jenis_lantai_terluas      = db.Column(db.Integer,   nullable=True)

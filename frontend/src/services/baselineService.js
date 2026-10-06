@@ -88,3 +88,61 @@ export async function fetchBaselineKeluargaByNkk(nkk) {
   const items = res.data?.data ?? []
   return items.find(r => r.nomor_kartu_keluarga === nkk) ?? items[0] ?? null
 }
+
+// Anggota detail by encrypted NIK
+import { decryptDtsen } from '@/utils/dtsenCrypto'
+
+
+export async function fetchBaselineAnggotaDetailByHash(nikHash) {
+
+  const res = await api.get(
+    `/baseline/anggota/detail/${encodeURIComponent(nikHash)}`
+  )
+
+
+  const data = res.data?.data ?? null
+
+
+  if (!data) return null
+
+
+  return {
+
+    ...data,
+
+
+    nomor_induk_kependudukan:
+      decryptDtsen(
+        data.nomor_induk_kependudukan_encrypt
+      ),
+
+
+    nomor_kartu_keluarga:
+      decryptDtsen(
+        data.nomor_kartu_keluarga_encrypt
+      ),
+
+
+    tanggal_lahir:
+      decryptDtsen(
+        data.tanggal_lahir_encrypt
+      ),
+
+
+    alamat_ktp:
+      decryptDtsen(
+        data.alamat_ktp_encrypt
+      ),
+
+  }
+}
+// Opsi data-baseline mengikuti penugasan t_dtsen_wilayah, termasuk kode null.
+export async function fetchBaselineKabkota(provinsi_kode) {
+  const res = await api.get('/baseline/kabkota', { params: { provinsi_kode } })
+  return res.data?.data ?? []
+}
+
+export async function fetchBaselineKecamatan(kabkota_kode) {
+  const res = await api.get('/baseline/kecamatan', { params: { kabkota_kode } })
+  return res.data?.data ?? []
+}
