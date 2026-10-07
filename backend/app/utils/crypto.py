@@ -33,7 +33,9 @@ def decrypt_identifier(value: str) -> str | None:
     if value is None:
         return None
 
-    data = base64.urlsafe_b64decode(value)
+    value = value.strip()
+    value += '=' * (-len(value) % 4)
+    data = base64.b64decode(value, altchars=b'-_', validate=True)
 
     key = DTSEN_SECRET_KEY.encode("utf-8")
 

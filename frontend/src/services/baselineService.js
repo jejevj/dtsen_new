@@ -48,8 +48,19 @@ export async function fetchBaselineAnggota(params = {}) {
  * NIK mengandung kode provinsi pada 2 digit pertama sehingga kita
  * coba provinsi yang sesuai lebih dulu agar cepat.
  */
-export async function fetchBaselineAnggotaByNik(nik) {
+export async function fetchBaselineAnggotaByNik(nik, wilayah = {}) {
   const nikStr = String(nik ?? '').trim()
+  const params = { search: nikStr }
+  for (const key of ['provinsi', 'kabkota_kode', 'kecamatan_kode']) {
+    const value = wilayah[key]
+    if (typeof value === 'string' && value.trim()) params[key] = value.trim()
+  }
+  if (params.provinsi) {
+    const res = await api.get('/baseline/anggota', { params })
+    return (res.data?.data ?? []).find(
+      row => String(row.nomor_induk_kependudukan ?? row.nik ?? '').trim() === nikStr,
+    ) ?? null
+  }
   const provinsiList = await fetchBaselineProvinsi()
 
   // Urutkan: provinsi yang kode BPS-nya cocok dengan 2 digit awal NIK didahulukan
@@ -62,11 +73,11 @@ export async function fetchBaselineAnggotaByNik(nik) {
   for (const prov of sorted) {
     try {
       const res = await api.get('/baseline/anggota', {
-        params: { provinsi: prov.kode, search: nikStr },
+        params: { ...params, provinsi: prov.kode },
       })
       const items = res.data?.data ?? []
       const found = items.find(
-        r => r.nomor_induk_kependudukan === nikStr || r.nik === nikStr,
+        r => String(r.nomor_induk_kependudukan ?? r.nik ?? '').trim() === nikStr,
       )
       if (found) return found
     } catch {
@@ -93,14 +104,11 @@ export async function fetchBaselineKeluargaByNkk(nkk) {
 import { decryptDtsen } from '@/utils/dtsenCrypto'
 
 
-export async function fetchBaselineAnggotaDetailByHash(nikHash) {
-
-  const res = await api.get(
-    `/baseline/anggota/detail/${encodeURIComponent(nikHash)}`
-  )
-
-
-  const data = res.data?.data ?? null
+export async function fetchBaselineAnggotaDetailByHash(nikHash, wilayah = {}) {
+  const value = String(nikHash ?? '').trim()
+  const nik = /^\d{16}$/.test(value) ? value : decryptDtsen(value)
+  if (!/^\d{16}$/.test(nik ?? '')) throw new Error('Token NIK tidak valid.')
+  const data = await fetchBaselineAnggotaByNik(nik, wilayah)
 
 
   if (!data) return null
@@ -112,27 +120,37 @@ export async function fetchBaselineAnggotaDetailByHash(nikHash) {
 
 
     nomor_induk_kependudukan:
-      decryptDtsen(
+      data.nomor_induk_kependudukan ?? decryptDtsen(
         data.nomor_induk_kependudukan_encrypt
       ),
 
 
     nomor_kartu_keluarga:
-      decryptDtsen(
+      data.nomor_kartu_keluarga ?? decryptDtsen(
         data.nomor_kartu_keluarga_encrypt
       ),
 
 
     tanggal_lahir:
-      decryptDtsen(
+      data.tanggal_lahir ?? decryptDtsen(
         data.tanggal_lahir_encrypt
       ),
 
 
     alamat_ktp:
-      decryptDtsen(
+      data.alamat_ktp ?? decryptDtsen(
         data.alamat_ktp_encrypt
       ),
 
   }
+}
+// Opsi data-baseline mengikuti penugasan t_dtsen_wilayah, termasuk kode null.
+export async function fetchBaselineKabkota(provinsi_kode) {
+  const res = await api.get('/baseline/kabkota', { params: { provinsi_kode } })
+  return res.data?.data ?? []
+}
+
+export async function fetchBaselineKecamatan(kabkota_kode) {
+  const res = await api.get('/baseline/kecamatan', { params: { kabkota_kode } })
+  return res.data?.data ?? []
 }

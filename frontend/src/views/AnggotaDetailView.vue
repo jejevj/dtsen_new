@@ -17,7 +17,7 @@
       <div v-else-if="!data"
         style="text-align:center;padding:60px 20px;background:white;border-radius:14px;border:1px solid #f1f5f9;">
         <i class="pi pi-user-minus" style="font-size:40px;color:#cbd5e1;"></i>
-        <p style="color:#64748b;margin:12px 0 0;">Data anggota tidak ditemukan</p>
+        <p style="color:#64748b;margin:12px 0 0;">{{ loadError || 'Data anggota tidak ditemukan' }}</p>
         <p style="color:#94a3b8;font-size:12px;margin-top:4px;">NIK: {{ maskNik(route.params.nik) }}</p>
       </div>
 
@@ -47,7 +47,7 @@
                 </tr>
                 <tr>
                   <td style="font-family:monospace;" width="1%">Desil</td>
-                  <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ (kkDetail.desil_nasional) }}
+                  <td style="color:#374151;font-family:monospace;font-weight:800;">: {{ kkDetail?.desil_nasional ?? '-' }}
                   </td>
                 </tr>
               </table>
@@ -478,7 +478,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import api from '@/services/api'
@@ -493,13 +493,24 @@ import {
 } from '@/data/dtsenRef'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
-import { decryptDtsen } from '@/utils/dtsenCrypto'
+import { decryptDtsen, encryptDtsen } from '@/utils/dtsenCrypto'
 
 const route = useRoute()
 const router = useRouter()
+const nikHash = computed(() => String(route.params.nik ?? '').trim())
+
+function wilayahParams() {
+  const params = {}
+  for (const key of ['provinsi', 'kabkota_kode', 'kecamatan_kode']) {
+    const value = route.query[key]
+    if (typeof value === 'string' && value.trim()) params[key] = value.trim()
+  }
+  return params
+}
 
 const loading = ref(true)
 const data = ref(null)
+const loadError = ref('')
 const detailGroups = ref([])
 const keluargaGroups = ref([])
 const loadingKK = ref(false)
@@ -785,20 +796,30 @@ function groupIcon(g) {
 function goToMember(nik) {
   if (!nik || nik === data.value?.nomor_induk_kependudukan) return
   window.scrollTo({ top: 0, behavior: 'smooth' })
-  router.push({ name: 'baseline-anggota-detail', params: { nik } })
+  const member = kkMembers.value.find(item => item.nomor_induk_kependudukan === nik)
+  router.push({
+    name: 'baseline-anggota-detail',
+    params: { nik: encryptDtsen(nik) },
+    query: {
+      provinsi: member?.kode_provinsi_ktp || route.query.provinsi,
+      kabkota_kode: member?.kode_kabupaten_kota_ktp || route.query.kabkota_kode,
+      kecamatan_kode: member?.kode_kecamatan_ktp || route.query.kecamatan_kode,
+    },
+  })
 }
 
-async function loadData(nikHash) {
+async function loadData(token) {
 
   data.value = null
+  loadError.value = ''
 
   try {
 
     data.value =
-      await fetchBaselineAnggotaDetailByHash(nikHash)
+      await fetchBaselineAnggotaDetailByHash(token, wilayahParams())
 
   } catch (e) {
-
+    loadError.value = 'Gagal memuat detail anggota: ' + (e?.response?.data?.error ?? e.message)
     console.error(
       '[AnggotaDetail] gagal load hash:',
       e
@@ -853,25 +874,24 @@ async function loadMustahikData(nikHash) {
   }
 }
 
-async function loadKKData(nkkHash) {
+async function loadKKData(nkkValue) {
 
-  if (!nkkHash) return
+  if (!nkkValue) return
 
   loadingKK.value = true
   kkMembers.value = []
   kkDetail.value = null
 
   try {
+    const value = String(nkkValue).trim()
+    const nkk = /^\d{16}$/.test(value) ? value : decryptDtsen(value)
+    const wilayah = wilayahParams()
 
     const [anggotaRes, keluargaRes] = await Promise.all([
 
-      api.get(
-        `/baseline/anggota/by-nkk/${encodeURIComponent(nkkHash)}`
-      ),
+      api.get('/baseline/anggota/by-nkk', { params: { nkk, ...wilayah } }),
 
-      api.get(
-        `/baseline/keluarga/detail/${encodeURIComponent(nkkHash)}`
-      )
+      api.get('/baseline/keluarga', { params: { search: nkk, ...wilayah } })
 
     ])
 
@@ -882,22 +902,22 @@ async function loadKKData(nkkHash) {
         ...item,
 
         nomor_induk_kependudukan:
-          decryptDtsen(
+          item.nomor_induk_kependudukan ?? decryptDtsen(
             item.nomor_induk_kependudukan_encrypt
           ),
 
         nomor_kartu_keluarga:
-          decryptDtsen(
+          item.nomor_kartu_keluarga ?? decryptDtsen(
             item.nomor_kartu_keluarga_encrypt
           ),
 
         tanggal_lahir:
-          decryptDtsen(
+          item.tanggal_lahir ?? decryptDtsen(
             item.tanggal_lahir_encrypt
           ),
 
         alamat_ktp:
-          decryptDtsen(
+          item.alamat_ktp ?? decryptDtsen(
             item.alamat_ktp_encrypt
           ),
 
@@ -910,7 +930,7 @@ async function loadKKData(nkkHash) {
 
     kkDetail.value =
       Array.isArray(kkRows)
-        ? (kkRows[0] ?? null)
+        ? (kkRows.find(row => String(row.nomor_kartu_keluarga ?? '').trim() === nkk) ?? null)
         : kkRows
 
 
@@ -928,29 +948,38 @@ async function loadKKData(nkkHash) {
   }
 }
 
-async function init(nik) {
+async function init(token) {
   loading.value = true
   data.value = null
   kkMembers.value = []
   kkDetail.value = null
   mustahikRiwayat.value = []
 
-  const [indGroups, kkGroups] = await Promise.all([
+  detailGroups.value = []
+  keluargaGroups.value = []
+  const fieldsTask = Promise.allSettled([
     getDetailFields('individu'),
     getDetailFields('keluarga'),
-    loadData(nik),
-  ])
-  detailGroups.value = indGroups
-  keluargaGroups.value = kkGroups
-  loading.value = false
+  ]).then(([individu, keluarga]) => {
+    detailGroups.value = individu.status === 'fulfilled' ? individu.value : []
+    keluargaGroups.value = keluarga.status === 'fulfilled' ? keluarga.value : []
+  })
+  try {
+    if (!token) throw new Error('Token NIK tidak tersedia pada URL.')
+    await loadData(token)
+  } catch (e) {
+    loadError.value = e.message
+  } finally {
+    loading.value = false
+  }
 
   const tasks = []
 
-  if (data.value?.nomor_kartu_keluarga_encrypt) {
+  if (data.value?.nomor_kartu_keluarga || data.value?.nomor_kartu_keluarga_encrypt) {
 
     tasks.push(
       loadKKData(
-        data.value.nomor_kartu_keluarga_encrypt
+        data.value.nomor_kartu_keluarga || data.value.nomor_kartu_keluarga_encrypt
       )
     )
 
@@ -958,15 +987,16 @@ async function init(nik) {
   // tasks.push(loadMustahikData(nik))
   tasks.push(
     loadMustahikData(
-      String(route.params.nik)
+      token
     )
   )
-  await Promise.allSettled(tasks)
+  await Promise.allSettled([...tasks, fieldsTask])
 }
 
 watch(
-  () => route.params.nik,
-  (newNik) => { if (newNik) init(String(newNik)) },
+  () => [nikHash.value, route.query.provinsi, route.query.kabkota_kode, route.query.kecamatan_kode],
+  ([token]) => init(token),
+  { immediate: true },
 )
 
 function renderFieldValue(key, val) {
@@ -1026,7 +1056,6 @@ function formatRupiah(n) {
   return 'Rp ' + Number(n).toLocaleString('id-ID')
 }
 
-onMounted(() => init(String(route.params.nik)))
 </script>
 
 <style scoped>

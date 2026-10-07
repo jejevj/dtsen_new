@@ -1,5 +1,21 @@
 const DTSEN_SECRET_KEY = "DTSEN#Secure2026";
 
+export function encryptDtsen(value) {
+    if (value == null || value === '') return null;
+
+    const data = new TextEncoder().encode(String(value));
+    const key = new TextEncoder().encode(DTSEN_SECRET_KEY);
+    const result = Uint8Array.from(data, (byte, i) => {
+        const shifted = ((byte ^ key[i % key.length]) + ((i * 17) % 256)) % 256;
+        return shifted ^ 0x5A;
+    });
+
+    return btoa(String.fromCharCode(...result))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+}
+
 
 function base64ToBytes(base64) {
 

@@ -316,10 +316,11 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Slider from 'primevue/slider'
 import {
-  fetchBaselineProvinsi, fetchKabkotaByBps, fetchKecamatan,
+  fetchBaselineProvinsi, fetchBaselineKabkota, fetchBaselineKecamatan,
   fetchBaselineAnggota, fetchBaselineKeluarga,
 } from '@/services/baselineService'
 import { fetchFilterFields } from '@/services/tampilanDtsenService'
+import { encryptDtsen } from '@/utils/dtsenCrypto'
 
 const router = useRouter()
 
@@ -377,7 +378,8 @@ const desilOptions = [
 
 function goToAnggotaDetail(row) {
 
-  const token = row.nomor_induk_kependudukan_encrypt
+  const nik = String(row.nomor_induk_kependudukan || row.nik || '').trim()
+  const token = nik ? encryptDtsen(nik) : row.nomor_induk_kependudukan_encrypt
 
   if (!token) return
 
@@ -385,7 +387,12 @@ function goToAnggotaDetail(row) {
     name: 'baseline-anggota-detail',
     params: {
       nik: String(token)
-    }
+    },
+    query: {
+      provinsi: row.kode_provinsi_ktp || anggota.provinsi || undefined,
+      kabkota_kode: row.kode_kabupaten_kota_ktp || undefined,
+      kecamatan_kode: row.kode_kecamatan_ktp || undefined,
+    },
   }).href
 
   window.open(url, '_blank')
@@ -393,6 +400,7 @@ function goToAnggotaDetail(row) {
 function goToKeluargaDetail(row) {
 
   const token = row.nomor_kartu_keluarga_encrypt
+    || encryptDtsen(row.nomor_kartu_keluarga || row.nkk)
 
   if (!token) return
 
@@ -400,7 +408,12 @@ function goToKeluargaDetail(row) {
     name: 'baseline-keluarga-detail',
     params: {
       nkk: String(token)
-    }
+    },
+    query: {
+      provinsi: row.kode_provinsi || keluarga.provinsi || undefined,
+      kabkota_kode: row.kode_kabupaten_kota || keluarga.kabkota || undefined,
+      kecamatan_kode: row.kode_kecamatan || keluarga.kecamatan || undefined,
+    },
   }).href
 
   window.open(url, '_blank')
@@ -447,7 +460,7 @@ async function loadAnggotaKabkota(bpsKode) {
   anggotaKabkotaOptions.value = []
   if (!bpsKode) return
   anggotaKabkotaLoading.value = true
-  try { anggotaKabkotaOptions.value = await fetchKabkotaByBps(bpsKode) }
+  try { anggotaKabkotaOptions.value = await fetchBaselineKabkota(bpsKode) }
   catch (e) { console.error('[Wilayah] kabkota anggota:', e) }
   finally { anggotaKabkotaLoading.value = false }
 }
@@ -464,7 +477,7 @@ function handleAnggotaKabkotaChange() {
   anggotaKecamatanOptions.value = []
   if (!anggota.kabkota) return
   anggotaKecamatanLoading.value = true
-  fetchKecamatan(anggota.kabkota)
+  fetchBaselineKecamatan(anggota.kabkota)
     .then(r => { anggotaKecamatanOptions.value = r })
     .catch(e => console.error('[Wilayah] kecamatan anggota:', e))
     .finally(() => { anggotaKecamatanLoading.value = false })
@@ -479,7 +492,7 @@ async function loadKeluargaKabkota(bpsKode) {
   keluargaKabkotaOptions.value = []
   if (!bpsKode) return
   keluargaKabkotaLoading.value = true
-  try { keluargaKabkotaOptions.value = await fetchKabkotaByBps(bpsKode) }
+  try { keluargaKabkotaOptions.value = await fetchBaselineKabkota(bpsKode) }
   catch (e) { console.error('[Wilayah] kabkota keluarga:', e) }
   finally { keluargaKabkotaLoading.value = false }
 }
@@ -496,7 +509,7 @@ function handleKeluargaKabkotaChange() {
   keluargaKecamatanOptions.value = []
   if (!keluarga.kabkota) return
   keluargaKecamatanLoading.value = true
-  fetchKecamatan(keluarga.kabkota)
+  fetchBaselineKecamatan(keluarga.kabkota)
     .then(r => { keluargaKecamatanOptions.value = r })
     .catch(e => console.error('[Wilayah] kecamatan keluarga:', e))
     .finally(() => { keluargaKecamatanLoading.value = false })
