@@ -119,6 +119,23 @@ class BaselineLoadingTests(unittest.TestCase):
         self.assertEqual(response.get_json()['meta']['source'], 'local_db')
         self.assertEqual([call.args[1] for call in kode_filter.call_args_list], ['11', '1107', '110725'])
 
+    def test_baseline_kecamatan_accepts_provinsi_kode_filter(self):
+        kec_q = MagicMock()
+        kec_q.filter_by.return_value = kec_q
+        kec_q.filter.return_value = kec_q
+        kec_q.order_by.return_value.all.return_value = [
+            MagicMock(kecamatan_kode='357901', kecamatan_nama='Kec. A', kabkota_kode='3579')
+        ]
+
+        with self.app.test_request_context('/baseline/kecamatan?provinsi_kode=35&kabkota_kode=3579'), \
+                patch.object(baseline, '_current_identity', return_value={'type': 'admin'}), \
+                patch.object(baseline, '_baseline_wilayah_queries', return_value=(None, None, kec_q)):
+            response, status = baseline.baseline_kecamatan_list.__wrapped__()
+
+        self.assertEqual(status, 200)
+        self.assertEqual(response.get_json()['data'][0]['kode'], '357901')
+        self.assertEqual(kec_q.filter.call_count, 2)
+
 
 if __name__ == '__main__':
     unittest.main()

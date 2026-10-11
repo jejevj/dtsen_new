@@ -477,7 +477,7 @@ function handleAnggotaKabkotaChange() {
   anggotaKecamatanOptions.value = []
   if (!anggota.kabkota) return
   anggotaKecamatanLoading.value = true
-  fetchBaselineKecamatan(anggota.kabkota)
+  fetchBaselineKecamatan(anggota.kabkota, anggota.provinsi)
     .then(r => { anggotaKecamatanOptions.value = r })
     .catch(e => console.error('[Wilayah] kecamatan anggota:', e))
     .finally(() => { anggotaKecamatanLoading.value = false })
@@ -509,7 +509,7 @@ function handleKeluargaKabkotaChange() {
   keluargaKecamatanOptions.value = []
   if (!keluarga.kabkota) return
   keluargaKecamatanLoading.value = true
-  fetchBaselineKecamatan(keluarga.kabkota)
+  fetchBaselineKecamatan(keluarga.kabkota, keluarga.provinsi)
     .then(r => { keluargaKecamatanOptions.value = r })
     .catch(e => console.error('[Wilayah] kecamatan keluarga:', e))
     .finally(() => { keluargaKecamatanLoading.value = false })

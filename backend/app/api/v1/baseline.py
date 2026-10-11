@@ -1155,7 +1155,10 @@ def baseline_kabkota_list():
 @jwt_required()
 def baseline_kecamatan_list():
     _, _, kec_q = _baseline_wilayah_queries(_current_identity())
+    prov = request.args.get('provinsi_kode', '').strip()
     kab = request.args.get('kabkota_kode', '').strip()
+    if prov:
+        kec_q = kec_q.filter(KabKota.provinsi_kode == prov)
     if kab:
         kec_q = kec_q.filter(Kecamatan.kabkota_kode == kab)
     return jsonify({"data": [
@@ -1170,23 +1173,10 @@ def _build_anggota_db_query(bps_kode: str,
                              usia_min=None, usia_max=None, provinsi_slug=None):
     if provinsi_slug is None:
         provinsi_slug, _ = _resolve_provinsi(bps_kode)
-    valid_nkk_sq = _valid_nkk_subquery()
+    # valid_nkk_sq = _valid_nkk_subquery()
 
-    q = ZawaAnggota.query.filter(
-        db.or_(
-            ZawaAnggota.kode_provinsi_ktp == bps_kode,
-            ZawaAnggota.kode_provinsi_ktp == bps_kode.lstrip('0'),
-            db.and_(
-                db.or_(
-                    ZawaAnggota.kode_provinsi_ktp.is_(None),
-                    ZawaAnggota.kode_provinsi_ktp == '',
-                ),
-                ZawaAnggota.provinsi_slug == provinsi_slug,
-            )
-        )
-    ).filter(
-        ZawaAnggota.nomor_kartu_keluarga.in_(valid_nkk_sq)
-    )
+    q = ZawaAnggota.query.filter(ZawaAnggota.kode_provinsi_ktp == bps_kode)
+    q = q.filter(ZawaAnggota.desil_nasional.in_(_DESIL_ALLOWED))
 
     if kabkota_filter:
         q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))

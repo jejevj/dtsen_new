@@ -96,6 +96,7 @@ class ZawaAnggota(db.Model):
 
     provinsi_slug = db.Column(db.String(20), nullable=True)
     synced_at     = db.Column(db.DateTime,   default=datetime.utcnow)
+    desil_nasional  = db.Column(db.String(5),  nullable=True)
     # raw_data      = db.Column(db.JSON,       nullable=True)
 
     __table_args__ = (
@@ -155,6 +156,7 @@ class ZawaAnggota(db.Model):
             pbi_nas                         = _s(item.get("pbi_nas")),
             pbi_pemda                       = _s(item.get("pbi_pemda")),
             id_pelanggan_pln                = _s(item.get("id_pelanggan_pln")),
+            desil_nasional                  = _s(item.get("desil_nasional")),
             provinsi_slug                   = provinsi_slug,
             # raw_data                        = item,
         )

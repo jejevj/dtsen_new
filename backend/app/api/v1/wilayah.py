@@ -389,26 +389,34 @@ def wilayah_kabkota():
 def wilayah_kecamatan():
     """Kecamatan berdasarkan kabkota_kode (query param)."""
     kabkota_kode = request.args.get('kabkota_kode', '').strip()
+    provinsi_kode = request.args.get('provinsi_kode', '').strip() or None
     if not kabkota_kode:
         return jsonify({"error": "kabkota_kode wajib diisi."}), 400
 
     identity = _identity()
 
     if _is_tuser(identity):
-        rows = Kecamatan.query.filter_by(
-            kabkota_kode=kabkota_kode, kecamatan_aktif='y'
-        ).order_by(Kecamatan.kecamatan_nama).all()
+        q = Kecamatan.query.filter_by(kabkota_kode=kabkota_kode, kecamatan_aktif='y')
+        if provinsi_kode:
+            q = q.join(KabKota, Kecamatan.kabkota_kode == KabKota.kabkota_kode).filter(
+                KabKota.provinsi_kode == provinsi_kode
+            )
+        rows = q.order_by(Kecamatan.kecamatan_nama).all()
     else:
         dtsen = _get_dtsen_akses(identity)
         if dtsen is None:
             return jsonify({"error": "Data akses tidak ditemukan."}), 403
         if dtsen.akun_types == 'external':
-            return _external_response(dtsen, 'kecamatan', kab=kabkota_kode)
+            return _external_response(dtsen, 'kecamatan', prov=provinsi_kode, kab=kabkota_kode)
 
         rows_wilayah = _wilayah_rows(dtsen.dtsen_akses_id)
         skala = dtsen.laz_skala or 0
 
         q = Kecamatan.query.filter_by(kabkota_kode=kabkota_kode, kecamatan_aktif='y')
+        if provinsi_kode:
+            q = q.join(KabKota, Kecamatan.kabkota_kode == KabKota.kabkota_kode).filter(
+                KabKota.provinsi_kode == provinsi_kode
+            )
         if skala in (1, 2):  # Nasional atau Provinsi — semua kecamatan
             rows = q.order_by(Kecamatan.kecamatan_nama).all()
         else:  # Kabkota — hanya kabkota yang diizinkan

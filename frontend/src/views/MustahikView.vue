@@ -798,7 +798,8 @@ async function loadKecamatan() {
     }
     const res = await api.get('/wilayah/kecamatan', {
         params: {
-            kabkota_kode: activeFilters.kabkota_kode
+            kabkota_kode: activeFilters.kabkota_kode,
+            provinsi_kode: activeFilters.provinsi_kode
         }
     })
     kecamatanOptions.value = [
@@ -879,7 +880,8 @@ async function loadKecamatanDomisili() {
     }
     const res = await api.get('/wilayah/kecamatan', {
         params: {
-            kabkota_kode: activeFilters.kabkota_kode_domisili
+            kabkota_kode: activeFilters.kabkota_kode_domisili,
+            provinsi_kode: activeFilters.provinsi_kode_domisili
         }
     })
     kecamatanDomisiliOptions.value = [

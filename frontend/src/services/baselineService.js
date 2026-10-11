@@ -30,9 +30,11 @@ export async function fetchKabkota(provinsi_kode) {
   return fetchKabkotaByBps(provinsi_kode)
 }
 
-// Kecamatan by kabkota
-export async function fetchKecamatan(kabkota_kode) {
-  const res = await api.get('/wilayah/kecamatan', { params: { kabkota_kode } })
+// Kecamatan by kabkota dan provinsi
+export async function fetchKecamatan(kabkota_kode, provinsi_kode = '') {
+  const params = { kabkota_kode }
+  if (provinsi_kode) params.provinsi_kode = provinsi_kode
+  const res = await api.get('/wilayah/kecamatan', { params })
   return res.data?.data ?? []
 }
 
@@ -150,7 +152,9 @@ export async function fetchBaselineKabkota(provinsi_kode) {
   return res.data?.data ?? []
 }
 
-export async function fetchBaselineKecamatan(kabkota_kode) {
-  const res = await api.get('/baseline/kecamatan', { params: { kabkota_kode } })
+export async function fetchBaselineKecamatan(kabkota_kode, provinsi_kode = '') {
+  const params = { kabkota_kode }
+  if (provinsi_kode) params.provinsi_kode = provinsi_kode
+  const res = await api.get('/baseline/kecamatan', { params })
   return res.data?.data ?? []
 }
