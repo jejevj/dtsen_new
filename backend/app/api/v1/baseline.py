@@ -4,9 +4,12 @@ import re
 import time
 import requests
 from datetime import date, datetime
-from flask import request, jsonify
+from functools import lru_cache
+from flask import request, jsonify, has_request_context
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy import distinct, select, func, and_, or_, false, true, text
+from sqlalchemy import MetaData, distinct, select, func, and_, or_, false, true, text, event
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import aliased
 from . import api_v1_bp
 from ...extensions import db
 from ...models.zawa import ZawaAnggota, ZawaKeluarga, ZawaSyncLog
@@ -18,6 +21,44 @@ from ...services.mustahik_service import MustahikService
 from ...utils.crypto import decrypt_identifier
 
 logger = logging.getLogger('app')
+
+
+@event.listens_for(Engine, 'before_cursor_execute')
+def _log_baseline_query_start(conn, cursor, statement, parameters, context, executemany):
+    if not has_request_context() or '/baseline/' not in request.path:
+        return
+    context._baseline_query_id = hex(id(context))
+    logger.info(
+        '[Baseline SQL] START query_id=%s path=%s sql=%s parameters=%r executemany=%s',
+        context._baseline_query_id, request.path, statement, parameters, executemany,
+    )
+    context._baseline_query_started_at = time.perf_counter()
+
+
+@event.listens_for(Engine, 'after_cursor_execute')
+def _log_baseline_query_end(conn, cursor, statement, parameters, context, executemany):
+    started_at = getattr(context, '_baseline_query_started_at', None)
+    if started_at is None:
+        return
+    logger.info(
+        '[Baseline SQL] END query_id=%s elapsed_ms=%.3f rowcount=%s',
+        context._baseline_query_id, (time.perf_counter() - started_at) * 1000,
+        cursor.rowcount,
+    )
+
+
+@event.listens_for(Engine, 'handle_error')
+def _log_baseline_query_error(exception_context):
+    context = exception_context.execution_context
+    started_at = getattr(context, '_baseline_query_started_at', None)
+    if started_at is None:
+        return
+    logger.error(
+        '[Baseline SQL] ERROR query_id=%s elapsed_ms=%.3f error=%s',
+        context._baseline_query_id, (time.perf_counter() - started_at) * 1000,
+        exception_context.original_exception,
+    )
+
 
 PROVINSI_MAP = {
     "aceh":      {"label": "Aceh",               "slug": "anggota",    "bps": "11"},
@@ -229,7 +270,8 @@ def _kode_filter(column, raw: str):
     dotted, plain = _normalize_kode(raw)
     if dotted == plain:
         return column == raw
-    return db.or_(column == dotted, column == plain)
+    # return db.or_(column == dotted, column == plain)
+    return column == dotted
 
 
 # ─── Provinsi resolver ──────────────────────────────────
@@ -700,7 +742,8 @@ def _apply_extra_filters(q, model, column_map: dict, extra_filters: dict):
         # --- Filter non-ternak ---
         col_type = str(col.property.columns[0].type).upper()
         if any(t in col_type for t in ('VARCHAR', 'TEXT', 'CHAR', 'STRING')):
-            q = q.filter(col.ilike(f"%{val}%"))
+            # q = q.filter(col.ilike(f"%{val}%"))
+            q = q.filter(col == val)
         else:
             try:
                 q = q.filter(col == type(col.property.columns[0].type.python_type())(val))
@@ -722,7 +765,7 @@ def _apply_extra_filters(q, model, column_map: dict, extra_filters: dict):
 #   tgl_lahir_min = '1986-07-23'  (usia maksimal 40)
 #   → filter: tanggal_lahir BETWEEN '1986-07-23' AND '2006-07-23'
 # ---------------------------------------------------------------------------
-def _apply_usia_filter(q, usia_min_raw, usia_max_raw):
+def _apply_usia_filter(q, usia_min_raw, usia_max_raw, model=ZawaAnggota):
     """Terapkan filter rentang usia ke query ZawaAnggota.
 
     Param:
@@ -759,7 +802,7 @@ def _apply_usia_filter(q, usia_min_raw, usia_max_raw):
         # Anggota dengan usia dalam rentang [usia_min, usia_max]
         tgl_lahir_min = subtract_years(today, usia_max).strftime('%Y-%m-%d')
         tgl_lahir_max = subtract_years(today, usia_min).strftime('%Y-%m-%d')
-        q = q.filter(ZawaAnggota.tanggal_lahir.between(tgl_lahir_min, tgl_lahir_max))
+        q = q.filter(model.tanggal_lahir.between(tgl_lahir_min, tgl_lahir_max))
         logger.debug(
             f"[Filter Usia] usia {usia_min}–{usia_max} → "
             f"tanggal_lahir BETWEEN '{tgl_lahir_min}' AND '{tgl_lahir_max}'"
@@ -767,12 +810,12 @@ def _apply_usia_filter(q, usia_min_raw, usia_max_raw):
     elif usia_min is not None:
         # Hanya batas bawah usia: lahir ≤ today - usia_min
         tgl_lahir_max = subtract_years(today, usia_min).strftime('%Y-%m-%d')
-        q = q.filter(ZawaAnggota.tanggal_lahir <= tgl_lahir_max)
+        q = q.filter(model.tanggal_lahir <= tgl_lahir_max)
         logger.debug(f"[Filter Usia] usia >= {usia_min} → tanggal_lahir <= '{tgl_lahir_max}'")
     elif usia_max is not None:
         # Hanya batas atas usia: lahir ≥ today - usia_max
         tgl_lahir_min = subtract_years(today, usia_max).strftime('%Y-%m-%d')
-        q = q.filter(ZawaAnggota.tanggal_lahir >= tgl_lahir_min)
+        q = q.filter(model.tanggal_lahir >= tgl_lahir_min)
         logger.debug(f"[Filter Usia] usia <= {usia_max} → tanggal_lahir >= '{tgl_lahir_min}'")
 
     return q
@@ -1167,6 +1210,17 @@ def baseline_kecamatan_list():
     ]}), 200
 
 
+@lru_cache(maxsize=38)
+def _anggota_provinsi_model(bps_kode: str):
+    """Pilih tabel anggota dari kode BPS yang sudah divalidasi."""
+    if bps_kode not in _BPS_TO_SLUG:
+        raise ValueError('Kode provinsi tidak dikenal.')
+    table = ZawaAnggota.__table__.to_metadata(
+        MetaData(), name=f'zawa_anggota_{bps_kode}'
+    )
+    return aliased(ZawaAnggota, alias=table, adapt_on_names=True)
+
+
 def _build_anggota_db_query(bps_kode: str,
                              kabkota_filter, kecamatan_filter, search: str,
                              extra_filters: dict = None,
@@ -1175,24 +1229,25 @@ def _build_anggota_db_query(bps_kode: str,
         provinsi_slug, _ = _resolve_provinsi(bps_kode)
     # valid_nkk_sq = _valid_nkk_subquery()
 
-    q = ZawaAnggota.query.filter(ZawaAnggota.kode_provinsi_ktp == bps_kode)
-    q = q.filter(ZawaAnggota.desil_nasional.in_(_DESIL_ALLOWED))
+    model = _anggota_provinsi_model(bps_kode)
+    q = db.session.query(model).filter(model.kode_provinsi_ktp == bps_kode)
+    # q = q.filter(model.desil_nasional.in_(_DESIL_ALLOWED))
 
     if kabkota_filter:
-        q = q.filter(_kode_filter(ZawaAnggota.kode_kabupaten_kota_ktp, kabkota_filter))
+        q = q.filter(_kode_filter(model.kode_kabupaten_kota_ktp, kabkota_filter))
     if kecamatan_filter:
-        q = q.filter(_kode_filter(ZawaAnggota.kode_kecamatan_ktp, kecamatan_filter))
+        q = q.filter(_kode_filter(model.kode_kecamatan_ktp, kecamatan_filter))
     if search:
         q_lower = f"%{search.lower()}%"
         q = q.filter(db.or_(
-            ZawaAnggota.nama.ilike(q_lower),
-            ZawaAnggota.nomor_induk_kependudukan.ilike(q_lower),
+            model.nama.ilike(q_lower),
+            model.nomor_induk_kependudukan.ilike(q_lower),
         ))
     if extra_filters:
-        q = _apply_extra_filters(q, ZawaAnggota, _ANGGOTA_COLUMN_MAP, extra_filters)
+        q = _apply_extra_filters(q, model, _ANGGOTA_COLUMN_MAP, extra_filters)
 
     # Filter usia: konversi ke rentang tanggal_lahir
-    q = _apply_usia_filter(q, usia_min, usia_max)
+    q = _apply_usia_filter(q, usia_min, usia_max, model=model)
 
     return q
 
@@ -1228,7 +1283,7 @@ def _count_anggota_db_query(bps_kode: str,
         search=search, extra_filters=extra_filters,
         usia_min=usia_min, usia_max=usia_max,
     )
-    return q.with_entities(func.count(ZawaAnggota.nomor_induk_kependudukan)).scalar() or 0
+    return q.with_entities(func.count(_anggota_provinsi_model(bps_kode).nomor_induk_kependudukan)).scalar() or 0
 
 
 def _build_keluarga_db_query(prov_bps, kabkota_filter, kecamatan_filter, search,
@@ -1270,7 +1325,7 @@ def _count_keluarga_db_query(prov_bps, kabkota_filter, kecamatan_filter, search,
 
 def _search_page_response(q, model, cursor, label, provinsi):
     """Ambil halaman dengan cursor dan total hasil filter tanpa OFFSET."""
-    key = model.__mapper__.primary_key[0]
+    key = getattr(model, model.__mapper__.primary_key[0].key)
     page, last_key = 1, None
     if cursor:
         try:
@@ -1345,6 +1400,7 @@ def baseline_anggota():
         return jsonify({"error": "Akses ditolak. Provinsi ini tidak termasuk wilayah Anda."}), 403
 
     bps_kode = info["bps"]
+    model = _anggota_provinsi_model(bps_kode)
 
     kabkota_dotted = kabkota_plain = None
     if kabkota_filter:
@@ -1370,7 +1426,7 @@ def baseline_anggota():
             search='', extra_filters=extra_filters,
             usia_min=usia_min_raw, usia_max=usia_max_raw,
         )
-        db_row = q.filter(ZawaAnggota.nomor_induk_kependudukan == search).first()
+        db_row = q.filter(model.nomor_induk_kependudukan == search).first()
         if db_row:
             return _ok_payload([_row_to_dict(db_row)], info['label'], provinsi_raw,
                                {'searchMode': 'db_cache', 'source': 'local_db'})
@@ -1386,7 +1442,7 @@ def baseline_anggota():
             search=search, extra_filters=extra_filters,
             usia_min=usia_min_raw, usia_max=usia_max_raw,
         )
-        return _search_page_response(q, ZawaAnggota, cursor, info['label'], provinsi_raw)
+        return _search_page_response(q, model, cursor, info['label'], provinsi_raw)
 
     db_page = _parse_db_cursor(cursor) if cursor else 1
     if db_page is None:
@@ -1407,7 +1463,7 @@ def baseline_anggota():
         )
         total_pages = max(1, -(-total_count // DB_PAGE_SIZE))
         offset      = (db_page - 1) * DB_PAGE_SIZE
-        db_rows     = q.order_by(ZawaAnggota.nomor_induk_kependudukan).offset(offset).limit(DB_PAGE_SIZE).all()
+        db_rows     = q.order_by(model.nomor_induk_kependudukan).offset(offset).limit(DB_PAGE_SIZE).all()
         items       = [_row_to_dict(r) for r in db_rows]
         has_next    = db_page < total_pages
         next_cur    = _build_db_cursor(db_page + 1) if has_next else None

@@ -79,7 +79,35 @@ class BaselineLoadingTests(unittest.TestCase):
                     bps_kode='32', kabkota_filter=None, kecamatan_filter=None,
                     search='', provinsi_slug=slug,
                 )
-                self.assertIn('jabar', query.statement.compile().params.values())
+                self.assertIn('32', query.statement.compile().params.values())
+                self.assertEqual(
+                    [table.name for table in query.statement.get_final_froms()],
+                    ['zawa_anggota_32'],
+                )
+
+    def test_anggota_filters_and_count_use_only_province_table(self):
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
+        baseline.db.init_app(self.app)
+        with self.app.app_context():
+            for code in ('32', '33'):
+                model = baseline._anggota_provinsi_model(code)
+                query = baseline._build_anggota_db_query(
+                    code, '3201', '320101', 'nama',
+                    extra_filters={'jenis_kelamin': '1'}, usia_min='20', usia_max='50',
+                ).filter(model.nomor_induk_kependudukan == '3201000000000001')
+                key = getattr(model, model.__mapper__.primary_key[0].key)
+                for statement in (
+                    query.order_by(key).statement,
+                    query.with_entities(baseline.func.count(key)).statement,
+                ):
+                    self.assertEqual(
+                        [table.name for table in statement.get_final_froms()],
+                        [f'zawa_anggota_{code}'],
+                    )
+
+    def test_anggota_table_rejects_unknown_province(self):
+        with self.assertRaises(ValueError):
+            baseline._anggota_provinsi_model('32; DROP TABLE zawa_anggota')
 
     def test_province_access_preserves_scope(self):
         for codes, expected in ((None, None), ([], []), (['32'], ['jabar'])):
