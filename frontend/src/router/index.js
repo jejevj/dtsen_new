@@ -88,7 +88,8 @@ router.beforeEach(async (to, _from, next) => {
   const loginModal = useLoginModalStore()
 
   if (to.meta.requiresOtp) {
-    if (!auth.pendingOtpKey) {
+    if (auth.isAuthenticated) return next({ name: 'dashboard' })
+    if (!auth.hasPendingOtp && !auth.hasPendingWaOtp) {
       return next({ name: 'home' })
     }
     return next()

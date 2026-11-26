@@ -128,7 +128,11 @@
             </svg>
           </div>
           <h2>Verifikasi Selesai</h2>
-          <p>Mengalihkan ke dashboard…</p>
+          <p v-if="!redirectError">Mengalihkan ke dashboard…</p>
+          <template v-else>
+            <p class="error-msg" role="alert">{{ redirectError }}</p>
+            <button class="btn-primary" @click="goToDashboard">Coba buka dashboard lagi</button>
+          </template>
         </div>
       </transition>
 
@@ -152,6 +156,7 @@ const code     = ref('')
 const waCode   = ref('')
 const otpError = ref('')
 const waError  = ref('')
+const redirectError = ref('')
 const loading  = ref(false)
 const resending = ref(false)
 const otpInput = ref(null)
@@ -159,7 +164,7 @@ const waInput  = ref(null)
 
 onMounted(async () => {
   if (!auth.hasPendingOtp && !auth.hasPendingWaOtp) {
-    router.replace({ name: 'home' })
+    router.replace({ name: auth.isAuthenticated ? 'dashboard' : 'home' })
     return
   }
   // Jika reload saat step 2
@@ -263,11 +268,22 @@ async function submitWa() {
   try {
     await auth.verifyWaOtp(waCode.value)
     step.value = 3
-    setTimeout(() => router.push({ name: 'dashboard' }), 1200)
+    await goToDashboard()
   } catch (e) {
     waError.value = e.message
     waCode.value = ''; waInput.value?.focus()
   } finally { loading.value = false }
+}
+
+async function goToDashboard() {
+  redirectError.value = ''
+  try {
+    const failure = await router.replace({ name: 'dashboard' })
+    if (failure) redirectError.value = 'Dashboard belum dapat dibuka. Silakan coba lagi.'
+  } catch (error) {
+    console.error('Gagal membuka dashboard:', error)
+    redirectError.value = 'Dashboard belum dapat dimuat. Periksa koneksi lalu coba lagi.'
+  }
 }
 
 async function handleResendEmail() {
