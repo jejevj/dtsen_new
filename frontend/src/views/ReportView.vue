@@ -18,7 +18,7 @@
             <DatePicker v-model="dateRange" selection-mode="range" :manual-input="false" placeholder="Pilih rentang" size="small" class="w-full" />
           </div>
           <div class="flex flex-col gap-1">
-            <label class="text-sm font-medium">Skala LAZ</label>
+            <label class="text-sm font-medium">Skala Lembaga</label>
             <SelectButton v-model="filters.skala" :options="skalaOptions" option-label="label" option-value="value" />
           </div>
           <div class="flex flex-col gap-1">

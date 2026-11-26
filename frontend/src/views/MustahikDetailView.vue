@@ -202,7 +202,7 @@
             </div>
 
             <div class="stat-box" style="background:#eff6ff;">
-                <p class="stat-label">Total LAZ Berkontribusi</p>
+                <p class="stat-label">Total Lembaga Zakat Berkontribusi</p>
 
                 <template v-if="loadingRiwayat">
                     <p class="stat-loading">Memuat...</p>
@@ -214,7 +214,7 @@
                 </template>
 
                 <p style="font-size:11px;color:#64748b;margin-top:4px;">
-                    LAZ berbeda yang pernah menyalurkan bantuan
+                    Lembaga Zakat berbeda yang pernah menyalurkan bantuan
                 </p>
             </div>
           </div>
@@ -304,7 +304,7 @@
                 <thead>
                   <tr>
                     <th>Tahun</th>
-                    <th>Laz</th>
+                    <th>Lembaga Zakat</th>
                     <th>Periode</th>
                     <th>Program</th>
                     <th>Bidang</th>

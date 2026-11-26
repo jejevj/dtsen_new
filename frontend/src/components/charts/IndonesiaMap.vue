@@ -70,7 +70,7 @@
             <span style="font-size:12px;font-weight:600;color:#15803d;">{{ formatRupiah(hovered.penyaluran||0) }}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:12px;color:#64748b;"><i class="pi pi-building" style="font-size:10px;color:#7c3aed;"></i> LAZ Aktif</span>
+            <span style="font-size:12px;color:#64748b;"><i class="pi pi-building" style="font-size:10px;color:#7c3aed;"></i> Lembaga Zakat Aktif</span>
             <span style="font-size:12px;font-weight:600;color:#1e293b;">{{ hovered.laz_count||0 }}</span>
           </div>
           <div v-if="currentLevel < 3" style="margin-top:4px;padding-top:6px;border-top:1px solid #f1f5f9;">
@@ -342,7 +342,7 @@ async function renderProvinsiLayer() {
       const data = props.mapData.find(d => normMapData(d.provinsi_nama) === normMapData(raw)) || {}
       layer.on({
         mouseover(e) { e.target.setStyle({ weight: 2.5, fillOpacity: 1, color: '#15803d' }); hovered.value = { nama: raw, ...data } },
-        mouseout(e)  { geojsonLayer.resetStyle(e.target); hovered.value = null },
+        mouseout(e)  { resetRegionStyle(e.target); hovered.value = null },
         click()      { drillDownKabkota(data.provinsi_kode || null, raw, layer) },
       })
     },
@@ -436,7 +436,7 @@ function renderKabkotaLayer(geojson) {
       const data = kabkotaData.value.find(d => normKab(d.kabkota_nama) === normKab(raw)) || {}
       layer.on({
         mouseover(e) { e.target.setStyle({ weight: 2, fillOpacity: 1, color: '#15803d' }); hovered.value = { nama: raw, ...data } },
-        mouseout(e)  { geojsonLayer.resetStyle(e.target); hovered.value = null },
+        mouseout(e)  { resetRegionStyle(e.target); hovered.value = null },
         // click()      { drillDownKecamatan(data.kabkota_kode || null, raw, layer) },
       })
     },
@@ -485,7 +485,7 @@ function renderKecamatanLayer(geojson) {
       const data = kecamatanData.value.find(d => normKec(d.kecamatan_nama) === normKec(raw)) || {}
       layer.on({
         mouseover(e) { e.target.setStyle({ weight: 2, fillOpacity: 1, color: '#d97706' }); hovered.value = { nama: raw, ...data } },
-        mouseout(e)  { geojsonLayer.resetStyle(e.target); hovered.value = null },
+        mouseout(e)  { resetRegionStyle(e.target); hovered.value = null },
         click()      { leafletMap.fitBounds(layer.getBounds(), { padding: [20, 20] }) },
       })
     },
@@ -557,8 +557,10 @@ async function initMap() {
       scrollWheelZoom: false, attributionControl: false, dragging: true,
     })
     L.control.zoom({ position: 'topright' }).addTo(leafletMap)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-      maxZoom: 14, subdomains: 'abcd',
+    L.control.attribution({ position: 'bottomleft' }).addTo(leafletMap)
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 14,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(leafletMap)
     await renderProvinsiLayer()
     loading.value = false
@@ -568,13 +570,10 @@ async function initMap() {
   }
 }
 
-watch(() => [props.metric, props.mapData], () => {
-  if (!leafletMap || !L || !geojsonLayer?.eachLayer) return
+function updateRegionColor(layer) {
+  if (!layer.feature) return
   const lv = currentLevel.value
   const scale = getScaleByLevel(lv)
-  currentLegend.value = getLegendByLevel(lv)
-  geojsonLayer.eachLayer(layer => {
-    if (!layer.feature) return
     const p = layer.feature.properties
     let raw, dataset, key
     if (lv === 3)      { raw = p.NAME_3 || ''; dataset = kecamatanData.value; key = 'kecamatan_nama' }
@@ -582,8 +581,18 @@ watch(() => [props.metric, props.mapData], () => {
     else               { raw = getProvNama(p); dataset = props.mapData; key = 'provinsi_nama' }
     const norm = lv === 3 ? normKec : lv === 2 ? normKab : normMapData
     const data = dataset.find(d => norm(d[key]) === norm(raw)) || {}
-    layer.setStyle({ fillColor: getColor(data[props.metric]||0, scale), fillOpacity: data[props.metric] > 0 ? 0.85 : 0.3 })
-  })
+    layer.setStyle({ fillColor: getColor(data[props.metric]||0, scale), fillOpacity: data[props.metric] > 0 ? 0.85 : lv === 1 ? 0.3 : 0.35 })
+}
+
+function resetRegionStyle(layer) {
+  geojsonLayer.resetStyle(layer)
+  updateRegionColor(layer)
+}
+
+watch(() => [props.metric, props.mapData], () => {
+  if (!leafletMap || !L || !geojsonLayer?.eachLayer) return
+  currentLegend.value = getLegendByLevel(currentLevel.value)
+  geojsonLayer.eachLayer(updateRegionColor)
 }, { deep: true })
 
 onMounted(initMap)
@@ -591,6 +600,7 @@ onUnmounted(() => { if (leafletMap) { leafletMap.remove(); leafletMap = null } }
 </script>
 
 <style scoped>
+:deep(.leaflet-control-attribution) { background: transparent; }
 .map-spinner { width:36px;height:36px;border:3px solid #dcfce7;border-top-color:#16a34a;border-radius:50%;animation:spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }

@@ -1,12 +1,21 @@
 import os
 from datetime import timedelta
+from pathlib import Path
+from dotenv import load_dotenv
+
+
+load_dotenv(Path(__file__).resolve().parent / '.env')
 
 
 class BaseConfig:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret')
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 3600)))
+    # Durasi sesi login dalam detik; tetap mendukung variabel JWT lama.
+    LOGIN_SESSION_TIMEOUT = int(os.environ.get(
+        'LOGIN_SESSION_TIMEOUT', os.environ.get('JWT_ACCESS_TOKEN_EXPIRES', 7200)
+    ))
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=LOGIN_SESSION_TIMEOUT)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(seconds=int(os.environ.get('JWT_REFRESH_TOKEN_EXPIRES', 2592000)))
     DEFAULT_PAGE_SIZE = int(os.environ.get('DEFAULT_PAGE_SIZE', 20))
     MAX_PAGE_SIZE = int(os.environ.get('MAX_PAGE_SIZE', 100))

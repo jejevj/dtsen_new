@@ -67,7 +67,7 @@
               <td
                 v-for="col in displayColumns" :key="col"
                 class="px-4 py-2.5 text-slate-700 max-w-[220px] truncate"
-                :title="isNikCol(col) ? String(row[col] ?? '') : displayValue(col, row[col])"
+                :title="isNikCol(col) ? null : displayValue(col, row[col])"
               >
                 <template v-if="col === 'jenis_kelamin'">
                   <span
