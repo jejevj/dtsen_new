@@ -155,6 +155,7 @@
               <p>
                 <span style="font-size:13px;font-weight:700;color:#374151;margin:0 0 16px;">{{ stat.agg_sub }}</span><br>
                 <span style="font-size:1.6rem;font-weight:800;color:#1e293b;margin:0;">{{ stat.agg_val }}</span>
+                <span v-if="stat.showDtsenPeriod" style="display:block;font-size:10px;color:#94a3b8;">Berdasarkan data DTSEN per {{ dtsenPeriod }}</span>
               </p>
             </div>
           </div>
@@ -512,11 +513,16 @@ const aggStats = computed(() => [
   { label:'Desil 4',  base_val:'' + formatAngka(summary.value?.desil_4_sub||0), base_sub:'Data DTSEN', icon:'pi pi-users', iconBg:'#f0fdf4', iconColor:'#16a34a', lap_val:'' + formatAngka(summary.value?.desil_4||0), agg_val:'Rp ' + formatShortM(summary.value?.desil_4_agg||0), lap_sub:'Penerima Manfaat Lembaga', agg_sub:'Pendistribusian dan Pendayagunaan' },
 ])
 
+const nowJakarta = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric', month: 'numeric' }).formatToParts(new Date())
+const currentMonth = Number(nowJakarta.find(part => part.type === 'month').value)
+const currentYear = Number(nowJakarta.find(part => part.type === 'year').value)
+const dtsenPeriod = currentMonth === 1 ? `Juni ${currentYear - 1}` : currentMonth <= 6 ? `Januari ${currentYear}` : `Juni ${currentYear}`
+
 const cummulStats = computed(() => [
   { icon:'pi pi-wallet', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'Rp ' + formatShortM(summary.value?.desil_agg||0), agg_sub:'Total Pendistribusian dan Pendayagunaan Pada Desil 1 - 4' },
   { icon:'pi pi-wallet', iconBg:'#f1f0fd', iconColor:'#1645a3', agg_val:'Rp ' + formatShortM(summary.value?.desil_non_agg||0), agg_sub:'Total Pendistribusian dan Pendayagunaan Pada Desil 5 - 10' },
-  { icon:'pi pi-users', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'' + formatAngka(summary.value?.desil_all||0), agg_sub:'Jumlah Penerima Manfaat Pada Desil 1 - 4' },
-  { icon:'pi pi-users', iconBg:'#f1f0fd', iconColor:'#1645a3', agg_val:'' + formatAngka(summary.value?.desil_non||0), agg_sub:'Jumlah Penerima Manfaat Pada Desil 5 - 10' },
+  { icon:'pi pi-users', iconBg:'#f0fdf4', iconColor:'#16a34a', agg_val:'' + formatAngka(summary.value?.desil_all||0), agg_sub:'Jumlah Penerima Manfaat Pada Desil 1 - 4', showDtsenPeriod:true },
+  { icon:'pi pi-users', iconBg:'#f1f0fd', iconColor:'#1645a3', agg_val:'' + formatAngka(summary.value?.desil_non||0), agg_sub:'Jumlah Penerima Manfaat Pada Desil 5 - 10', showDtsenPeriod:true },
 ])
 
 const genderChartData = computed(() => ({
